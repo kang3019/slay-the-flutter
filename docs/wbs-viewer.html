@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Slay the Flutter — WBS Gantt Chart</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0f1117;
+      --card:      #1a1d27;
+      --border:    #2d2f3e;
+      --text:      #e2e8f0;
+      --muted:     #64748b;
+      --accent:    #6366f1;
+      --color-a:   #34d399;
+      --color-b:   #f472b6;
+      --color-ab:  #60a5fa;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', 'Noto Sans KR', system-ui, sans-serif;
+      padding: 28px 32px;
+      min-height: 100vh;
+    }
+
+    header { margin-bottom: 20px; }
+    header h1 { font-size: 26px; font-weight: 700; color: var(--accent); }
+    header p  { font-size: 13px; color: var(--muted); margin-top: 4px; }
+
+    .error-box {
+      display: none;
+      background: #1f0a0a;
+      border: 1px solid #7f1d1d;
+      border-radius: 8px;
+      padding: 16px 20px;
+      margin-bottom: 20px;
+      font-size: 13px;
+      line-height: 1.7;
+      color: #fca5a5;
+    }
+    .error-box.show { display: block; }
+    .error-box code {
+      background: #2a0f0f;
+      padding: 2px 7px;
+      border-radius: 3px;
+      font-family: monospace;
+      color: #fde68a;
+    }
+
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 18px;
+    }
+    .chip {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 4px 14px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .chip strong { color: var(--text); }
+
+    .legends {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+    .legend-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px 18px;
+      min-width: 200px;
+    }
+    .legend-card h3 {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+    .legend-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      margin-bottom: 7px;
+    }
+    .dot  { width:12px; height:12px; border-radius:50%; flex-shrink:0; }
+    .rect { width:12px; height:10px; border-radius:2px; flex-shrink:0; }
+    .sub  { font-size:11px; color:var(--muted); display:block; }
+
+    .chart-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 20px;
+      overflow-x: auto;
+    }
+    #chart { min-width: 900px; }
+    #chart svg { width: 100%; }
+
+    .loading {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    details {
+      margin-top: 16px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    details summary { cursor: pointer; margin-bottom: 6px; }
+    details pre {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 12px;
+      overflow-x: auto;
+      font-family: monospace;
+      font-size: 11px;
+      color: #94a3b8;
+      white-space: pre;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Slay the Flutter</h1>
+  <p id="subtitle">7주 개발 WBS — 간트 차트 &nbsp;|&nbsp; 데이터: .planning/02-wbs.json</p>
+</header>
+
+<div class="error-box" id="err">
+  <strong>⚠️ JSON 로드 실패</strong><br>
+  <code>file://</code> 프로토콜에서는 CORS 제한으로 파일을 읽을 수 없습니다.<br>
+  프로젝트 루트에서 아래 명령 중 하나를 실행한 뒤 브라우저를 새로고침 해주세요.<br><br>
+  Python: <code>python -m http.server 8080</code> → 접속: <code>http://localhost:8080/docs/wbs-viewer.html</code><br>
+  VS Code: <code>Live Server 익스텐션 → Open with Live Server</code>
+</div>
+
+<div class="chips" id="chips"></div>
+
+<div class="legends">
+  <div class="legend-card">
+    <h3>팀 구성</h3>
+    <div class="legend-row">
+      <span class="dot" style="background:var(--color-a)"></span>
+      <div><strong id="name-a">A</strong><span class="sub" id="role-a"></span></div>
+    </div>
+    <div class="legend-row">
+      <span class="dot" style="background:var(--color-b)"></span>
+      <div><strong id="name-b">B</strong><span class="sub" id="role-b"></span></div>
+    </div>
+    <div class="legend-row">
+      <span class="dot" style="background:var(--color-ab)"></span>
+      <div><strong>공동 작업</strong><span class="sub">A + B 협업</span></div>
+    </div>
+  </div>
+  <div class="legend-card">
+    <h3>태스크 상태</h3>
+    <div class="legend-row"><span class="rect" style="background:#6b7280"></span> 완료 (done)</div>
+    <div class="legend-row"><span class="rect" style="background:#f59e0b"></span> 진행 중 (active)</div>
+    <div class="legend-row"><span class="rect" style="background:#3b82f6"></span> 예정 (pending)</div>
+    <div class="legend-row"><span class="rect" style="background:#a78bfa"></span> 마일스톤</div>
+  </div>
+</div>
+
+<div class="chart-card">
+  <div id="chart"><div class="loading">📊 간트 차트 렌더링 중…</div></div>
+</div>
+
+<details id="def-details" style="display:none">
+  <summary>생성된 Mermaid 정의 보기 (디버그용)</summary>
+  <pre id="def-pre"></pre>
+</details>
+
+<script>
+mermaid.initialize({ startOnLoad: false, theme: 'dark' });
+
+function nextDay(dateStr) {
+  const d = new Date(dateStr + 'T12:00:00Z');
+  d.setUTCDate(d.getUTCDate() + 1);
+  return d.toISOString().slice(0, 10);
+}
+
+function buildDef(data) {
+  const nameMap = {};
+  data.team.forEach(m => { nameMap[m.id] = m.name; });
+
+  const lines = [
+    "%%{init: {'theme': 'dark', 'gantt': {'barHeight': 18, 'barGap': 4, 'fontSize': 11, 'sidePadding': 60}}}%%",
+    'gantt',
+    '    title ' + data.project + ' — 7주 개발 WBS',
+    '    dateFormat YYYY-MM-DD',
+    '    axisFormat %m/%d',
+    ''
+  ];
+
+  for (const ms of data.milestones) {
+    lines.push('    section ' + ms.id + ' ' + ms.name);
+    for (const t of ms.tasks) {
+      const who = t.assignee === 'A+B'
+        ? '공동'
+        : (nameMap[t.assignee] || t.assignee);
+      const label = t.id + ' ' + t.name + ' (' + who + ')';
+      const id    = t.id.toLowerCase();
+
+      if (t.status === 'milestone') {
+        lines.push('    ' + label + ' :milestone, ' + id + ', ' + t.start + ', 0d');
+      } else {
+        const mod = t.status === 'done'   ? 'done, '   :
+                    t.status === 'active' ? 'active, ' : '';
+        lines.push('    ' + label + ' :' + mod + id + ', ' + t.start + ', ' + nextDay(t.end));
+      }
+    }
+    lines.push('');
+  }
+  return lines.join('\n');
+}
+
+function showChips(data) {
+  let done = 0, active = 0, pending = 0, total = 0;
+  data.milestones.forEach(ms => ms.tasks.forEach(t => {
+    if (t.status === 'milestone') return;
+    total++;
+    if (t.status === 'done')   done++;
+    if (t.status === 'active') active++;
+    if (t.status === 'pending') pending++;
+  }));
+  const pct = total ? Math.round(done / total * 100) : 0;
+  document.getElementById('chips').innerHTML = [
+    ['기간', data.startDate + ' ~ ' + data.presentationDate],
+    ['전체', total + '개'],
+    ['완료', done + '개'],
+    ['진행 중', active + '개'],
+    ['예정', pending + '개'],
+    ['진행률', pct + '%']
+  ].map(([k, v]) => `<div class="chip">${k} <strong>${v}</strong></div>`).join('');
+
+  const ta = data.team.find(t => t.id === 'A');
+  const tb = data.team.find(t => t.id === 'B');
+  if (ta) { document.getElementById('name-a').textContent = ta.name; document.getElementById('role-a').textContent = ta.role; }
+  if (tb) { document.getElementById('name-b').textContent = tb.name; document.getElementById('role-b').textContent = tb.role; }
+}
+
+async function main() {
+  try {
+    const res = await fetch('../.planning/02-wbs.json');
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+
+    showChips(data);
+    const def = buildDef(data);
+
+    document.getElementById('def-pre').textContent = def;
+    document.getElementById('def-details').style.display = '';
+
+    const { svg } = await mermaid.render('wbs-gantt', def);
+    document.getElementById('chart').innerHTML = svg;
+
+  } catch (e) {
+    document.getElementById('err').classList.add('show');
+    document.getElementById('chart').innerHTML =
+      '<div class="loading" style="color:#fca5a5">차트 로드 실패 — 위 안내를 확인하세요.</div>';
+    console.error('WBS viewer error:', e);
+  }
+}
+
+main();
+</script>
+</body>
+</html>
