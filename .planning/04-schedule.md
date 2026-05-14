@@ -14,14 +14,14 @@
 │   ├── 02-wbs.json           # WBS 데이터 (이 파일을 편집)
 │   └── 04-schedule.md        # 이 문서
 └── docs/
-    └── wbs-viewer.html       # 간트 차트 시각화 도구
+    └── index.html            # 간트 차트 시각화 도구
 ```
 
 ---
 
 ## 간트 차트 열기
 
-`wbs-viewer.html`은 로컬 파일을 `fetch`로 읽기 때문에 **반드시 로컬 서버** 경유로 열어야 합니다.
+`index.html`은 로컬 파일을 `fetch`로 읽기 때문에 **반드시 로컬 서버** 경유로 열어야 합니다.
 
 ### 방법 A — Python (설치 없이 가능)
 
@@ -30,12 +30,12 @@
 python -m http.server 8080
 ```
 
-브라우저에서 `http://localhost:8080/docs/wbs-viewer.html` 접속
+브라우저에서 `http://localhost:8080/docs/index.html` 접속
 
 ### 방법 B — VS Code Live Server
 
 1. VS Code 확장에서 `Live Server` 설치
-2. `docs/wbs-viewer.html` 파일을 열고 우클릭 → **Open with Live Server**
+2. `docs/index.html` 파일을 열고 우클릭 → **Open with Live Server**
 
 ### 방법 C — Flutter Web Dev Server (이미 실행 중인 경우)
 
@@ -152,6 +152,6 @@ flutter run -d chrome
 ## 빠른 참조
 
 - WBS 데이터: `.planning/02-wbs.json`
-- 시각화 도구: `docs/wbs-viewer.html`
+- 시각화 도구: `docs/index.html`
 - 요구사항: `.planning/01-requirements.md`
 - 비전: `.planning/00-vision.md`

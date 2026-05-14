@@ -109,4 +109,4 @@ Energy per turn    = 3  |  Draw per turn = 5
 | `.planning/02-wbs.json` | WBS task data (edit to update progress) |
 | `.planning/04-schedule.md` | WBS update guide and weekly review checklist |
 | `SPECS.md` | Complete game rules, card stats, map structure |
-| `docs/wbs-viewer.html` | Gantt chart viewer (requires local HTTP server) |
+| `docs/index.html` | Gantt chart viewer (requires local HTTP server) |
