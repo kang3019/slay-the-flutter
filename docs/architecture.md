@@ -1,159 +1,115 @@
-# 아키텍처
+# architecture.md — 아키텍처 설계 문서
 
-## 한 줄 요약
+**버전**: 1.0 | **날짜**: 2026-05-19
 
-> 새 파일을 만들 때 "어디에 둘지 모르겠다"면 아래 질문 네 개 중 하나에 답하면 된다.
-
-| 질문 | 폴더 |
-|------|------|
-| 새 **화면**이나 **위젯**인가? | `presentation/screens/` |
-| **상태**를 들고 있거나 **흐름**을 조율하는가? | `application/view_models/` |
-| **게임 규칙** 또는 **계산 로직**인가? | `domain/` |
-| **저장/불러오기** (DB, 파일, 설정)인가? | `data/` |
+> 이 문서만 보고 60초 안에 앱 구조를 설명할 수 있도록 작성되었습니다.
 
 ---
 
-## 레이어 다이어그램
+## 4계층 구조 한 줄 정의
+
+| 계층 | 폴더 | 한 줄 책임 |
+|------|------|-----------|
+| **Presentation** | `lib/presentation/` | 화면에 그림을 그리고, 버튼 입력을 아래로 전달한다 |
+| **Application** | `lib/application/` | "무슨 일이 일어났는지"를 듣고, 게임 규칙을 호출해 상태를 바꾼다 |
+| **Domain** | `lib/domain/` | 데미지 계산·카드 효과·덱 셔플 등 순수 게임 규칙만 담당한다 |
+| **Data** | `lib/data/` | XP·레벨·해금 카드를 기기에 저장하고 불러온다 |
+
+> **의존 방향**: `Presentation → Application → Domain ← Data`  
+> 상위 계층은 하위 계층만 알 수 있다. 역방향 임포트는 금지한다.
+
+---
+
+## 계층 간 의존성 흐름 (Mermaid)
 
 ```mermaid
-flowchart LR
-    P["🖥️ Presentation\npresentation/screens/\n\nUI · Screen · View"]
-    A["⚙️ Application\napplication/view_models/\n\nViewModel · UseCase"]
-    D["🎲 Domain\ndomain/\n\nEntity · Rule · Service"]
-    R["💾 Data\ndata/\n\nRepository · DB"]
+graph TD
+    P["🖥️ Presentation<br/>(위젯 · 화면)"]
+    A["⚙️ Application<br/>(Riverpod Notifier)"]
+    D["📐 Domain<br/>(게임 규칙 · 순수 Dart)"]
+    DS["💾 Data<br/>(SharedPreferences)"]
 
-    P -->|"사용자 이벤트\n(카드 선택, 버튼 탭)"| A
-    A -->|"규칙 계산 요청"| D
-    R -->|"저장된 데이터 제공"| A
-    A -->|"상태 업데이트 → ref.watch"| P
+    P -->|"ref.watch / 이벤트 호출"| A
+    A -->|"BattleEngine · Deck 호출"| D
+    DS -->|"저장된 값 제공"| A
 
-    style P fill:#dbeafe,stroke:#3b82f6
-    style A fill:#ede9fe,stroke:#8b5cf6
-    style D fill:#dcfce7,stroke:#22c55e
-    style R fill:#fee2e2,stroke:#ef4444
-```
-
-**의존성 방향**: 바깥 레이어가 안쪽을 참조한다. 역방향은 금지.
-
-```
-presentation → application → domain ← data
+    style P fill:#4A90D9,color:#fff
+    style A fill:#7B68EE,color:#fff
+    style D fill:#2ECC71,color:#fff
+    style DS fill:#E67E22,color:#fff
 ```
 
 ---
 
-## 레이어별 설명
+## 핵심 기능 3가지의 계층 흐름
 
-### Presentation — `lib/presentation/screens/`
-
-화면을 그리고 사용자 입력을 받는다. **로직은 없다.**
-
-여기에 두는 이유: Flutter 위젯이기 때문이다. `ref.watch`로 상태를 읽고, 버튼을 누르면 ViewModel 메서드를 호출할 뿐이다. 3줄 이상의 조건문이 생기면 ViewModel로 옮긴다.
-
-```
-lib/presentation/
-└── screens/
-    ├── battle_screen.dart      # 전투 화면 (손패·몬스터·HP 표시)
-    ├── map_screen.dart         # 스테이지 맵 (1 → 2 → 3 → Boss)
-    ├── reward_screen.dart      # 전투 후 카드 보상 선택
-    └── widgets/
-        ├── card_widget.dart    # 개별 카드 UI
-        └── monster_widget.dart # 몬스터 HP·상태이상 표시
-```
+| 핵심 기능 | Presentation | Application | Domain | Data |
+|-----------|-------------|-------------|--------|------|
+| **1. 전투 시스템** | 카드를 드래그해 `playCard()` 호출 | `BattleProvider`가 명령 수신·상태 갱신 | `BattleEngine`이 데미지·상태이상 계산 | — |
+| **2. 카드 / 덱 관리** | 핸드 카드 위젯 표시 | `DeckProvider`가 드로우·셔플 조율 | `Deck`이 순수 로직 처리 | — |
+| **3. 로그라이크 런 진행** | 스테이지 지도·결과 화면 표시 | `RunProvider`가 스테이지 전환·XP 산정 | `Player` · `Monster` 엔티티 상태 계산 | `LocalStorage`에 XP·레벨·해금 카드 저장 |
 
 ---
 
-### Application — `lib/application/view_models/`
-
-화면이 필요한 상태를 들고, Domain 레이어의 규칙을 조율한다.
-
-여기에 두는 이유: Riverpod `Notifier`로 상태를 관리하기 때문이다. Presentation이 직접 Domain을 호출하면 화면마다 로직이 흩어진다. ViewModel이 중간에서 조율하면 Presentation은 상태만 구독하면 된다.
-
-```
-lib/application/
-└── view_models/
-    ├── battle_provider.dart    # 전투 상태 (턴·에너지·손패·HP)
-    ├── map_provider.dart       # 현재 스테이지·런 진행
-    └── reward_provider.dart    # 보상 카드 후보·선택 처리
-```
-
-**규칙**
-- 파일명은 `*_provider.dart`
-- `BuildContext`를 인자로 받지 않는다
-- `ref.watch`는 `build()` 안에서만 사용한다
-- `views/` 또는 `screens/`를 import하지 않는다
-
----
-
-### Domain — `lib/domain/`
-
-게임의 핵심 규칙과 데이터 구조가 모인다. **Flutter도, Riverpod도 없는 순수 Dart**다.
-
-여기에 두는 이유: 게임 규칙은 UI나 저장 방식이 바뀌어도 변하지 않아야 한다. 순수 Dart로 격리하면 Flutter 없이도 테스트할 수 있고, 규칙이 여러 곳에 흩어지지 않는다.
-
-```
-lib/domain/
-├── card.dart               # Card 엔티티 (이름·비용·효과 타입)
-├── character.dart          # 플레이어 상태 (HP·방어도·덱)
-├── monster.dart            # 몬스터 엔티티 (HP·공격 패턴)
-├── relic.dart              # 유물 엔티티 (패시브 효과)
-├── battle_engine.dart      # 전투 계산 — 데미지·상태이상 공식
-└── enums/
-    ├── card_type.dart      # Attack / Defense / Special
-    └── status_effect.dart  # Vulnerable / Weak
-```
-
-**핵심 공식 (모두 이 레이어에 구현)**
-
-```dart
-monsterHp     = 20 + (stage * 10)
-monsterAttack =  8 + (stage *  2)
-vulnerableMul = 1.5   // 받는 데미지 배율
-weakMul       = 0.75  // 주는 데미지 배율 (floor 적용)
-```
-
----
-
-### Data — `lib/data/`
-
-영속 데이터를 저장하고 불러온다. 현재는 `SharedPreferences`만 사용한다.
-
-여기에 두는 이유: 저장 로직이 Domain이나 ViewModel에 섞이면 나중에 저장소를 바꿀 때 (예: Hive, SQLite) 코드 전체를 뒤져야 한다. Repository 패턴으로 분리하면 저장소가 바뀌어도 이 파일만 교체하면 된다.
-
-```
-lib/data/
-└── game_repository.dart    # XP·레벨·해금 카드/유물 목록 저장·불러오기
-```
-
-**저장 대상**: 런이 끝난 후 영구적으로 남는 데이터만 저장한다.
-
-| 저장 O | 저장 X |
-|--------|--------|
-| 플레이어 XP, 레벨 | 현재 턴의 손패 |
-| 해금된 카드·유물 목록 | 진행 중인 전투 상태 |
-
----
-
-## 전체 디렉토리 구조
+## 디렉토리 트리
 
 ```
 lib/
-├── main.dart
-├── presentation/
-│   └── screens/        # Presentation — Flutter 위젯
-├── application/
-│   └── view_models/    # Application  — Riverpod 프로바이더
-├── domain/             # Domain       — 순수 Dart 게임 규칙
-└── data/               # Data         — SharedPreferences 영속화
-
-test/
-├── domain/             # 단위 테스트 (커버리지 ≥ 80%)
-│   ├── card_test.dart
-│   ├── character_test.dart
-│   ├── monster_test.dart
-│   └── battle_engine_test.dart
-├── application/        # ViewModel 테스트 (커버리지 ≥ 70%)
-│   ├── battle_provider_test.dart
-│   └── map_provider_test.dart
-└── data/
-    └── game_repository_test.dart
+├── presentation/              # 화면에 그리는 위젯만
+│   ├── battle/
+│   │   ├── battle_screen.dart
+│   │   └── widgets/
+│   │       ├── card_widget.dart
+│   │       ├── hand_widget.dart
+│   │       └── monster_widget.dart
+│   ├── map/
+│   │   └── map_screen.dart
+│   └── shared/
+│       └── hp_bar_widget.dart
+│
+├── application/               # 상태 소유 + 명령 처리 (Riverpod Notifier)
+│   ├── battle_provider.dart
+│   ├── deck_provider.dart
+│   └── run_provider.dart
+│
+├── domain/                    # 게임 규칙 순수 Dart (Flutter 임포트 없음)
+│   ├── entities/
+│   │   ├── card.dart
+│   │   ├── monster.dart
+│   │   └── player.dart
+│   ├── battle_engine.dart
+│   ├── deck.dart
+│   └── status_effect.dart
+│
+├── data/                      # 저장·불러오기
+│   └── local_storage.dart
+│
+└── main.dart
 ```
+
+---
+
+## 교수님 Q&A 방어 핵심 논리
+
+**Q. 왜 4계층으로 나눴나요?**
+> 게임 규칙(Domain)이 화면(Presentation)이나 저장소(Data)와 섞이면 테스트가 불가능해집니다.
+> `flutter test`로 데미지 계산을 화면 없이 검증하려면 Domain이 독립적이어야 합니다.
+
+**Q. Riverpod은 어느 계층인가요?**
+> Application 계층입니다. `Notifier`가 MVVM의 ViewModel 역할을 하며,
+> Domain의 `BattleEngine`을 호출하고 결과를 상태로 저장합니다.
+
+**Q. Data 계층이 Domain을 몰라도 되나요?**
+> 네. Data는 단순 키-값 저장소(SharedPreferences)이고,
+> 비즈니스 의미(XP가 뭔지)는 Application이 해석합니다.
+
+---
+
+## 관련 ADR
+
+| ADR | 제목 |
+|-----|------|
+| [ADR-0001](decisions/ADR-0001-mobile-platform.md) | 플랫폼 — Flutter |
+| [ADR-0002](decisions/ADR-0002-architecture-mvvm.md) | 아키텍처 — MVVM |
+| [ADR-0003](decisions/ADR-0003-state-management-riverpod.md) | 상태관리 — Riverpod |
+| [ADR-0004](decisions/ADR-0004-persistence-local.md) | 영속성 — 로컬 우선 |
