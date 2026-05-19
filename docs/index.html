@@ -3,112 +3,325 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Slay the Flutter — WBS Gantt Chart</title>
+  <title>Slay the Flutter — WBS</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg:        #0f1117;
-      --card:      #1a1d27;
-      --border:    #2d2f3e;
-      --text:      #e2e8f0;
-      --muted:     #64748b;
-      --accent:    #6366f1;
-      --color-a:   #34d399;
-      --color-b:   #f472b6;
-      --color-ab:  #60a5fa;
+      --bg:       #07080d;
+      --surface:  #0d1117;
+      --surface2: #161b22;
+      --border:   #21262d;
+      --text:     #e6edf3;
+      --muted:    #7d8590;
+      --accent:   #8b5cf6;
+      --accent2:  #6d28d9;
+      --glow:     rgba(139, 92, 246, 0.22);
+      --done:     #10b981;
+      --active:   #f59e0b;
+      --pending:  #38bdf8;
+      --ms:       #a78bfa;
+      --ca:       #34d399;
+      --cb:       #f472b6;
+      --cab:      #60a5fa;
     }
 
     body {
       background: var(--bg);
       color: var(--text);
-      font-family: 'Segoe UI', 'Noto Sans KR', system-ui, sans-serif;
-      padding: 28px 32px;
+      font-family: 'Inter', 'Noto Sans KR', system-ui, sans-serif;
       min-height: 100vh;
     }
 
-    header { margin-bottom: 20px; }
-    header h1 { font-size: 26px; font-weight: 700; color: var(--accent); }
-    header p  { font-size: 13px; color: var(--muted); margin-top: 4px; }
+    /* ── HEADER ───────────────────────────────────────────── */
+    .header {
+      background: linear-gradient(160deg, #0d1117 0%, #130a2e 55%, #0d1117 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 36px 48px 30px;
+      position: relative;
+      overflow: hidden;
+    }
+    .header::before {
+      content: '';
+      position: absolute;
+      top: -80px; left: -80px;
+      width: 320px; height: 320px;
+      background: var(--glow);
+      border-radius: 50%;
+      filter: blur(100px);
+      pointer-events: none;
+    }
+    .header::after {
+      content: '';
+      position: absolute;
+      bottom: -60px; right: 120px;
+      width: 200px; height: 200px;
+      background: rgba(99, 102, 241, 0.12);
+      border-radius: 50%;
+      filter: blur(80px);
+      pointer-events: none;
+    }
+    .header-inner {
+      max-width: 1400px;
+      margin: 0 auto;
+      position: relative;
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+    .header-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(139, 92, 246, 0.14);
+      border: 1px solid rgba(139, 92, 246, 0.35);
+      border-radius: 20px;
+      padding: 4px 14px;
+      font-size: 11px;
+      font-weight: 600;
+      color: #c4b5fd;
+      letter-spacing: .07em;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+    .header-title {
+      font-size: 38px;
+      font-weight: 800;
+      letter-spacing: -.8px;
+      background: linear-gradient(135deg, #ede9fe 0%, #8b5cf6 50%, #4f46e5 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 6px;
+      line-height: 1.15;
+    }
+    .header-sub {
+      font-size: 14px;
+      color: var(--muted);
+    }
+    .header-sub strong { color: var(--text); font-weight: 500; }
+    .header-date {
+      text-align: right;
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.8;
+    }
+    .header-date strong { color: var(--accent); font-weight: 600; font-size: 13px; }
 
+    /* ── MAIN ─────────────────────────────────────────────── */
+    .main { max-width: 1400px; margin: 0 auto; padding: 28px 48px 48px; }
+
+    /* ── ERROR ────────────────────────────────────────────── */
     .error-box {
       display: none;
-      background: #1f0a0a;
-      border: 1px solid #7f1d1d;
-      border-radius: 8px;
+      background: #160606;
+      border: 1px solid rgba(239,68,68,.4);
+      border-radius: 10px;
       padding: 16px 20px;
       margin-bottom: 20px;
       font-size: 13px;
-      line-height: 1.7;
+      line-height: 1.8;
       color: #fca5a5;
     }
     .error-box.show { display: block; }
     .error-box code {
-      background: #2a0f0f;
+      background: rgba(239,68,68,.1);
       padding: 2px 7px;
-      border-radius: 3px;
-      font-family: monospace;
+      border-radius: 4px;
+      font-family: 'JetBrains Mono', monospace;
       color: #fde68a;
-    }
-
-    .chips {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin-bottom: 18px;
-    }
-    .chip {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      padding: 4px 14px;
       font-size: 12px;
-      color: var(--muted);
     }
-    .chip strong { color: var(--text); }
 
-    .legends {
-      display: flex;
+    /* ── STATS ────────────────────────────────────────────── */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr) 2fr;
       gap: 12px;
-      flex-wrap: wrap;
-      margin-bottom: 20px;
+      margin-bottom: 16px;
     }
-    .legend-card {
-      background: var(--card);
+    .stat-card {
+      background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 14px 18px;
-      min-width: 200px;
+      border-radius: 12px;
+      padding: 18px 22px;
+      transition: border-color .2s;
     }
-    .legend-card h3 {
+    .stat-card:hover { border-color: rgba(139,92,246,.4); }
+    .stat-label {
+      display: flex;
+      align-items: center;
+      gap: 7px;
       font-size: 11px;
+      font-weight: 600;
+      color: var(--muted);
       text-transform: uppercase;
       letter-spacing: .08em;
-      color: var(--muted);
       margin-bottom: 10px;
     }
+    .stat-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+    .stat-val {
+      font-size: 32px;
+      font-weight: 700;
+      font-family: 'JetBrains Mono', monospace;
+      letter-spacing: -1.5px;
+      line-height: 1;
+    }
+    .stat-unit { font-size: 14px; font-weight: 400; color: var(--muted); margin-left: 3px; }
+
+    /* Progress card */
+    .stat-card.prog {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    .prog-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 12px;
+    }
+    .prog-label { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
+    .prog-pct {
+      font-size: 26px;
+      font-weight: 700;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--accent);
+      letter-spacing: -1px;
+    }
+    .prog-track {
+      background: rgba(255,255,255,.06);
+      border-radius: 99px;
+      height: 6px;
+      overflow: hidden;
+    }
+    .prog-fill {
+      height: 100%;
+      border-radius: 99px;
+      background: linear-gradient(90deg, var(--accent2), var(--accent));
+      box-shadow: 0 0 8px var(--glow);
+      transition: width .8s cubic-bezier(.4,0,.2,1);
+    }
+    .prog-sub { margin-top: 10px; font-size: 12px; color: var(--muted); }
+
+    /* ── META ROW ─────────────────────────────────────────── */
+    .meta-row {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+    .meta-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px 20px;
+    }
+    .meta-card h3 {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      color: var(--muted);
+      margin-bottom: 14px;
+    }
+    .member-row {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      margin-bottom: 9px;
+      font-size: 13px;
+    }
+    .member-row:last-child { margin-bottom: 0; }
+    .color-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+    .member-name { font-weight: 600; }
+    .member-role { color: var(--muted); font-size: 12px; }
     .legend-row {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 9px;
+      margin-bottom: 8px;
       font-size: 13px;
-      margin-bottom: 7px;
     }
-    .dot  { width:12px; height:12px; border-radius:50%; flex-shrink:0; }
-    .rect { width:12px; height:10px; border-radius:2px; flex-shrink:0; }
-    .sub  { font-size:11px; color:var(--muted); display:block; }
+    .legend-row:last-child { margin-bottom: 0; }
+    .legend-rect { width: 14px; height: 8px; border-radius: 2px; flex-shrink: 0; }
 
-    .chart-card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 20px;
-      overflow-x: auto;
+    /* ── VIEW TOGGLE ──────────────────────────────────────── */
+    .toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+      gap: 10px;
     }
+    .view-toggle {
+      display: flex;
+      gap: 3px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      padding: 3px;
+    }
+    .toggle-btn {
+      padding: 7px 20px;
+      border-radius: 7px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      transition: all .18s;
+      font-family: inherit;
+    }
+    .toggle-btn.active {
+      background: var(--accent);
+      color: #fff;
+      box-shadow: 0 0 14px var(--glow);
+    }
+    .toolbar-info {
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .toolbar-info strong { color: var(--text); }
+
+    /* ── CHART CARD ───────────────────────────────────────── */
+    .chart-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 0;
+      overflow: hidden;
+    }
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 16px 22px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface2);
+    }
+    .card-header-bar {
+      width: 3px; height: 16px;
+      background: linear-gradient(180deg, var(--accent), var(--accent2));
+      border-radius: 2px;
+      flex-shrink: 0;
+    }
+    .card-header-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+    }
+    .card-header-sub { font-size: 12px; color: var(--muted); margin-left: auto; }
+    .chart-body { padding: 20px; overflow-x: auto; }
     #chart { min-width: 900px; }
     #chart svg { width: 100%; }
-
     .loading {
       text-align: center;
       padding: 60px 20px;
@@ -116,112 +329,374 @@
       font-size: 14px;
     }
 
-    details {
-      margin-top: 16px;
-      font-size: 12px;
-      color: var(--muted);
-    }
-    details summary { cursor: pointer; margin-bottom: 6px; }
-    details pre {
-      background: var(--card);
+    /* ── TASK TABLE ───────────────────────────────────────── */
+    .table-card {
+      background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 12px;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .table-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface2);
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .filter-btns { display: flex; gap: 4px; }
+    .filter-btn {
+      padding: 5px 14px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      transition: all .15s;
+      font-family: inherit;
+    }
+    .filter-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .filter-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); box-shadow: 0 0 8px var(--glow); }
+
+    table { width: 100%; border-collapse: collapse; }
+    thead th {
+      text-align: left;
+      padding: 10px 18px;
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .09em;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+    tbody tr {
+      border-bottom: 1px solid rgba(33,38,45,.8);
+      transition: background .12s;
+    }
+    tbody tr:hover { background: var(--surface2); }
+    tbody tr:last-child { border-bottom: none; }
+    tbody td { padding: 11px 18px; font-size: 13px; vertical-align: middle; }
+
+    .task-id {
+      color: var(--muted);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      white-space: nowrap;
+    }
+    .task-name { font-weight: 500; }
+    .task-ms-badge {
+      display: inline-block;
+      background: rgba(139,92,246,.12);
+      border: 1px solid rgba(139,92,246,.25);
+      color: #c4b5fd;
+      border-radius: 4px;
+      padding: 2px 8px;
+      font-size: 11px;
+      font-weight: 500;
+      white-space: nowrap;
+    }
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .status-pill::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+    .status-pill.done      { background: rgba(16,185,129,.12); color: var(--done); }
+    .status-pill.active    { background: rgba(245,158,11,.12);  color: var(--active); }
+    .status-pill.pending   { background: rgba(56,189,248,.1);   color: var(--pending); }
+    .status-pill.milestone { background: rgba(167,139,250,.12); color: var(--ms); }
+    .assignee-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 500;
+      white-space: nowrap;
+    }
+    .assignee-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+    .date-str {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+    .priority-dot {
+      width: 6px; height: 6px; border-radius: 50%; display: inline-block;
+    }
+
+    /* ── VIEWS ────────────────────────────────────────────── */
+    .view-sec { display: none; }
+    .view-sec.show { display: block; }
+
+    /* ── DEBUG ────────────────────────────────────────────── */
+    details { margin-top: 14px; font-size: 12px; color: var(--muted); }
+    details summary { cursor: pointer; margin-bottom: 6px; user-select: none; }
+    details pre {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px;
       overflow-x: auto;
-      font-family: monospace;
+      font-family: 'JetBrains Mono', monospace;
       font-size: 11px;
       color: #94a3b8;
-      white-space: pre;
+    }
+
+    /* ── RESPONSIVE ───────────────────────────────────────── */
+    @media (max-width: 900px) {
+      .header { padding: 24px 20px 20px; }
+      .main   { padding: 20px; }
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+      .stats-grid .prog { grid-column: 1 / -1; }
+      .header-inner { flex-direction: column; align-items: flex-start; }
+      .header-date { text-align: left; }
     }
   </style>
 </head>
 <body>
 
-<header>
-  <h1>Slay the Flutter</h1>
-  <p id="subtitle">7주 개발 WBS — 간트 차트 &nbsp;|&nbsp; 데이터: docs/02-wbs.json</p>
+<header class="header">
+  <div class="header-inner">
+    <div>
+      <div class="header-badge">6주 개발 계획</div>
+      <h1 class="header-title">Slay the Flutter<br>WBS — Gantt Chart</h1>
+      <p class="header-sub">슬레이 더 스파이어에서 영감을 받은 &nbsp;<strong>Flutter 덱빌딩 로그라이크 카드 게임</strong></p>
+    </div>
+    <div class="header-date" id="header-date">
+      로딩 중…
+    </div>
+  </div>
 </header>
 
-<div class="error-box" id="err">
-  <strong>⚠️ JSON 로드 실패</strong><br>
-  <code>file://</code> 프로토콜에서는 CORS 제한으로 파일을 읽을 수 없습니다.<br>
-  프로젝트 루트에서 아래 명령 중 하나를 실행한 뒤 브라우저를 새로고침 해주세요.<br><br>
-  Python: <code>python -m http.server 8080</code> → 접속: <code>http://localhost:8080/docs/wbs-viewer.html</code><br>
-  VS Code: <code>Live Server 익스텐션 → Open with Live Server</code>
-</div>
+<main class="main">
 
-<div class="chips" id="chips"></div>
+  <div class="error-box" id="err">
+    <strong>JSON 로드 실패</strong><br>
+    <code>file://</code> 프로토콜에서는 CORS 제한으로 파일을 읽을 수 없습니다.<br>
+    프로젝트 루트에서 아래 명령 중 하나를 실행한 후 브라우저를 새로고침하세요.<br><br>
+    Python: <code>python -m http.server 8080</code> &nbsp;→&nbsp; <code>http://localhost:8080/docs/</code><br>
+    VS Code: <code>Live Server 익스텐션 → Open with Live Server</code>
+  </div>
 
-<div class="legends">
-  <div class="legend-card">
-    <h3>팀 구성</h3>
-    <div class="legend-row">
-      <span class="dot" style="background:var(--color-a)"></span>
-      <div><strong id="name-a">A</strong><span class="sub" id="role-a"></span></div>
+  <!-- Stats -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-label"><span class="stat-dot" style="background:var(--text)"></span>전체 태스크</div>
+      <div class="stat-val" id="s-total">—<span class="stat-unit">개</span></div>
     </div>
-    <div class="legend-row">
-      <span class="dot" style="background:var(--color-b)"></span>
-      <div><strong id="name-b">B</strong><span class="sub" id="role-b"></span></div>
+    <div class="stat-card">
+      <div class="stat-label"><span class="stat-dot" style="background:var(--done)"></span>완료</div>
+      <div class="stat-val" style="color:var(--done)" id="s-done">—<span class="stat-unit">개</span></div>
     </div>
-    <div class="legend-row">
-      <span class="dot" style="background:var(--color-ab)"></span>
-      <div><strong>공동 작업</strong><span class="sub">A + B 협업</span></div>
+    <div class="stat-card">
+      <div class="stat-label"><span class="stat-dot" style="background:var(--active)"></span>진행 중</div>
+      <div class="stat-val" style="color:var(--active)" id="s-active">—<span class="stat-unit">개</span></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label"><span class="stat-dot" style="background:var(--pending)"></span>예정</div>
+      <div class="stat-val" style="color:var(--pending)" id="s-pending">—<span class="stat-unit">개</span></div>
+    </div>
+    <div class="stat-card prog">
+      <div class="prog-header">
+        <span class="prog-label">전체 진행률</span>
+        <span class="prog-pct" id="s-pct">0%</span>
+      </div>
+      <div class="prog-track"><div class="prog-fill" id="prog-fill" style="width:0%"></div></div>
+      <div class="prog-sub" id="s-sub">로딩 중…</div>
     </div>
   </div>
-  <div class="legend-card">
-    <h3>태스크 상태</h3>
-    <div class="legend-row"><span class="rect" style="background:#6b7280"></span> 완료 (done)</div>
-    <div class="legend-row"><span class="rect" style="background:#f59e0b"></span> 진행 중 (active)</div>
-    <div class="legend-row"><span class="rect" style="background:#3b82f6"></span> 예정 (pending)</div>
-    <div class="legend-row"><span class="rect" style="background:#a78bfa"></span> 마일스톤</div>
+
+  <!-- Meta -->
+  <div class="meta-row">
+    <div class="meta-card">
+      <h3>팀 구성</h3>
+      <div class="member-row">
+        <span class="color-dot" style="background:var(--ca)"></span>
+        <span class="member-name" id="name-a">A</span>
+        <span class="member-role" id="role-a"></span>
+      </div>
+      <div class="member-row">
+        <span class="color-dot" style="background:var(--cb)"></span>
+        <span class="member-name" id="name-b">B</span>
+        <span class="member-role" id="role-b"></span>
+      </div>
+      <div class="member-row">
+        <span class="color-dot" style="background:var(--cab)"></span>
+        <span class="member-name">공동 작업</span>
+        <span class="member-role">A + B 협업</span>
+      </div>
+    </div>
+    <div class="meta-card">
+      <h3>태스크 상태</h3>
+      <div class="legend-row"><span class="legend-rect" style="background:#6b7280"></span>완료 (done)</div>
+      <div class="legend-row"><span class="legend-rect" style="background:#f59e0b"></span>진행 중 (active)</div>
+      <div class="legend-row"><span class="legend-rect" style="background:#3b82f6"></span>예정 (pending)</div>
+      <div class="legend-row"><span class="legend-rect" style="background:#a78bfa"></span>마일스톤</div>
+    </div>
+    <div class="meta-card">
+      <h3>우선순위</h3>
+      <div class="legend-row"><span class="priority-dot" style="background:#ef4444"></span>높음 (high)</div>
+      <div class="legend-row"><span class="priority-dot" style="background:#f59e0b"></span>보통 (medium)</div>
+      <div class="legend-row"><span class="priority-dot" style="background:#6b7280"></span>낮음 (low)</div>
+    </div>
   </div>
-</div>
 
-<div class="chart-card">
-  <div id="chart"><div class="loading">📊 간트 차트 렌더링 중…</div></div>
-</div>
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <div class="view-toggle">
+      <button class="toggle-btn active" id="btn-gantt" onclick="switchView('gantt')">간트 차트</button>
+      <button class="toggle-btn"        id="btn-list"  onclick="switchView('list')">태스크 목록</button>
+    </div>
+    <div class="toolbar-info" id="toolbar-info"></div>
+  </div>
 
-<details id="def-details" style="display:none">
-  <summary>생성된 Mermaid 정의 보기 (디버그용)</summary>
-  <pre id="def-pre"></pre>
-</details>
+  <!-- Gantt View -->
+  <div class="view-sec show" id="view-gantt">
+    <div class="chart-card">
+      <div class="card-header">
+        <span class="card-header-bar"></span>
+        <span class="card-header-title">6주 개발 일정</span>
+        <span class="card-header-sub" id="gantt-sub">M1 ~ M7 · 42 태스크</span>
+      </div>
+      <div class="chart-body">
+        <div id="chart"><div class="loading">간트 차트 렌더링 중…</div></div>
+      </div>
+    </div>
+    <details id="def-details" style="display:none">
+      <summary>Mermaid 정의 보기 (디버그)</summary>
+      <pre id="def-pre"></pre>
+    </details>
+  </div>
+
+  <!-- List View -->
+  <div class="view-sec" id="view-list">
+    <div class="table-card">
+      <div class="table-toolbar">
+        <div class="card-header-title" style="display:flex;align-items:center;gap:8px">
+          <span class="card-header-bar" style="width:3px;height:14px;background:linear-gradient(180deg,var(--accent),var(--accent2));border-radius:2px"></span>
+          전체 태스크 목록
+        </div>
+        <div class="filter-btns">
+          <button class="filter-btn active" onclick="filterTasks('all')">전체</button>
+          <button class="filter-btn"        onclick="filterTasks('done')">완료</button>
+          <button class="filter-btn"        onclick="filterTasks('active')">진행 중</button>
+          <button class="filter-btn"        onclick="filterTasks('pending')">예정</button>
+        </div>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>태스크명</th>
+            <th>마일스톤</th>
+            <th>담당</th>
+            <th>기간</th>
+            <th>우선순위</th>
+            <th>상태</th>
+          </tr>
+        </thead>
+        <tbody id="task-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+</main>
 
 <script>
 mermaid.initialize({ startOnLoad: false, theme: 'dark' });
 
-function nextDay(dateStr) {
-  const d = new Date(dateStr + 'T12:00:00Z');
-  d.setUTCDate(d.getUTCDate() + 1);
-  return d.toISOString().slice(0, 10);
+let allTasks = [];
+let currentFilter = 'all';
+
+/* ── VIEW SWITCH ── */
+function switchView(v) {
+  ['gantt','list'].forEach(id => {
+    document.getElementById('view-' + id).classList.toggle('show', id === v);
+    document.getElementById('btn-'  + id).classList.toggle('active', id === v);
+  });
 }
 
-function buildDef(data) {
-  const nameMap = {};
-  data.team.forEach(m => { nameMap[m.id] = m.name; });
+/* ── FILTER ── */
+const filterLabels = { all: '전체', done: '완료', active: '진행 중', pending: '예정' };
 
+function filterTasks(status) {
+  currentFilter = status;
+  document.querySelectorAll('.filter-btn').forEach(b => {
+    b.classList.toggle('active', b.textContent.trim() === filterLabels[status]);
+  });
+  renderTable();
+}
+
+/* ── HELPERS ── */
+function aColor(a) {
+  return a === 'A+B' ? 'var(--cab)' : a === 'A' ? 'var(--ca)' : 'var(--cb)';
+}
+function statusLabel(s) {
+  return { done: '완료', active: '진행 중', pending: '예정', milestone: '마일스톤' }[s] || s;
+}
+function priorityColor(p) {
+  return { high: '#ef4444', medium: '#f59e0b', low: '#6b7280' }[p] || '#6b7280';
+}
+function nextDay(d) {
+  const dt = new Date(d + 'T12:00:00Z');
+  dt.setUTCDate(dt.getUTCDate() + 1);
+  return dt.toISOString().slice(0, 10);
+}
+
+/* ── RENDER TABLE ── */
+function renderTable() {
+  const tasks = currentFilter === 'all'
+    ? allTasks
+    : allTasks.filter(t => t.status === currentFilter);
+
+  document.getElementById('task-tbody').innerHTML = tasks.map(t => `
+    <tr>
+      <td><span class="task-id">${t.id}</span></td>
+      <td><span class="task-name">${t.name}</span></td>
+      <td><span class="task-ms-badge">${t.msId} ${t.msName}</span></td>
+      <td>
+        <span class="assignee-pill">
+          <span class="assignee-dot" style="background:${aColor(t.assignee)}"></span>
+          ${t.assigneeLabel}
+        </span>
+      </td>
+      <td><span class="date-str">${t.start} ~ ${t.end}</span></td>
+      <td><span class="priority-dot" style="background:${priorityColor(t.priority)}"></span></td>
+      <td><span class="status-pill ${t.status}">${statusLabel(t.status)}</span></td>
+    </tr>
+  `).join('');
+}
+
+/* ── BUILD MERMAID DEF ── */
+function buildDef(data, nameMap) {
   const lines = [
-    "%%{init: {'theme': 'dark', 'gantt': {'barHeight': 18, 'barGap': 4, 'fontSize': 11, 'sidePadding': 60}}}%%",
+    "%%{init: {'theme': 'dark', 'gantt': {'barHeight': 14, 'barGap': 3, 'fontSize': 10, 'sidePadding': 180, 'gridLineStartPadding': 35, 'topPadding': 50}}}%%",
     'gantt',
-    '    title ' + data.project + ' — 7주 개발 WBS',
+    '    title ' + data.project + ' — 6주 개발 WBS',
     '    dateFormat YYYY-MM-DD',
     '    axisFormat %m/%d',
     ''
   ];
-
   for (const ms of data.milestones) {
     lines.push('    section ' + ms.id + ' ' + ms.name);
     for (const t of ms.tasks) {
-      const who = t.assignee === 'A+B'
-        ? '공동'
-        : (nameMap[t.assignee] || t.assignee);
+      const who   = t.assignee === 'A+B' ? '공동' : (nameMap[t.assignee] || t.assignee);
       const label = t.id + ' ' + t.name + ' (' + who + ')';
       const id    = t.id.toLowerCase();
-
       if (t.status === 'milestone') {
         lines.push('    ' + label + ' :milestone, ' + id + ', ' + t.start + ', 0d');
       } else {
-        const mod = t.status === 'done'   ? 'done, '   :
-                    t.status === 'active' ? 'active, ' : '';
+        const mod = t.status === 'done' ? 'done, ' : t.status === 'active' ? 'active, ' : '';
         lines.push('    ' + label + ' :' + mod + id + ', ' + t.start + ', ' + nextDay(t.end));
       }
     }
@@ -230,40 +705,59 @@ function buildDef(data) {
   return lines.join('\n');
 }
 
-function showChips(data) {
+/* ── SHOW STATS ── */
+function showStats(data, nameMap) {
   let done = 0, active = 0, pending = 0, total = 0;
+  allTasks = [];
+
   data.milestones.forEach(ms => ms.tasks.forEach(t => {
+    const row = { ...t, msId: ms.id, msName: ms.name,
+      assigneeLabel: t.assignee === 'A+B' ? '공동' : (nameMap[t.assignee] || t.assignee) };
+    allTasks.push(row);
     if (t.status === 'milestone') return;
     total++;
-    if (t.status === 'done')   done++;
-    if (t.status === 'active') active++;
+    if (t.status === 'done')    done++;
+    if (t.status === 'active')  active++;
     if (t.status === 'pending') pending++;
   }));
+
   const pct = total ? Math.round(done / total * 100) : 0;
-  document.getElementById('chips').innerHTML = [
-    ['기간', data.startDate + ' ~ ' + data.presentationDate],
-    ['전체', total + '개'],
-    ['완료', done + '개'],
-    ['진행 중', active + '개'],
-    ['예정', pending + '개'],
-    ['진행률', pct + '%']
-  ].map(([k, v]) => `<div class="chip">${k} <strong>${v}</strong></div>`).join('');
+
+  document.getElementById('s-total').innerHTML  = total  + '<span class="stat-unit">개</span>';
+  document.getElementById('s-done').innerHTML   = done   + '<span class="stat-unit">개</span>';
+  document.getElementById('s-active').innerHTML = active + '<span class="stat-unit">개</span>';
+  document.getElementById('s-pending').innerHTML= pending+ '<span class="stat-unit">개</span>';
+  document.getElementById('s-pct').textContent  = pct + '%';
+  document.getElementById('prog-fill').style.width = pct + '%';
+  document.getElementById('s-sub').textContent  = '완료 ' + done + ' / 전체 ' + total + ' 태스크';
+  document.getElementById('gantt-sub').textContent = 'M1 ~ M7  ·  ' + total + ' 태스크';
+  document.getElementById('toolbar-info').innerHTML =
+    '<strong>' + data.startDate + '</strong> ~ <strong>' + data.presentationDate + '</strong>';
+  document.getElementById('header-date').innerHTML =
+    '기간 &nbsp;<strong>' + data.startDate + '</strong> ~ <strong>' + data.presentationDate + '</strong><br>' +
+    '업데이트 &nbsp;<strong>' + (data.updatedAt || '') + '</strong>';
 
   const ta = data.team.find(t => t.id === 'A');
   const tb = data.team.find(t => t.id === 'B');
   if (ta) { document.getElementById('name-a').textContent = ta.name; document.getElementById('role-a').textContent = ta.role; }
   if (tb) { document.getElementById('name-b').textContent = tb.name; document.getElementById('role-b').textContent = tb.role; }
+
+  renderTable();
 }
 
+/* ── MAIN ── */
 async function main() {
   try {
     const res = await fetch('./02-wbs.json');
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const data = await res.json();
 
-    showChips(data);
-    const def = buildDef(data);
+    const nameMap = {};
+    data.team.forEach(m => { nameMap[m.id] = m.name; });
 
+    showStats(data, nameMap);
+
+    const def = buildDef(data, nameMap);
     document.getElementById('def-pre').textContent = def;
     document.getElementById('def-details').style.display = '';
 
