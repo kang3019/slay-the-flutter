@@ -1,165 +1,256 @@
-# docs/setup.md — 개발 환경 설정 및 실행 가이드
+# 개발 환경 설정 가이드
+
+Windows · macOS · Linux 공통 가이드입니다. 이 문서만 보고 5분 안에 앱을 실행할 수 있습니다.
 
 ---
 
-## 사전 요구사항
+## 필요한 도구
 
-| 도구 | 최소 버전 | 확인 명령어 |
-|------|-----------|-------------|
-| Flutter SDK | 3.9.2 이상 | `flutter --version` |
-| Dart SDK | 3.9.2 이상 | `dart --version` |
-| Android Studio / VS Code | 최신 권장 | — |
-| Android SDK | API 23 (Android 6.0) 이상 | `flutter doctor` |
-| Xcode (iOS 빌드 시) | 15 이상 | `xcodebuild -version` |
+| 도구 | 버전 | 용도 | 확인 명령어 |
+|------|------|------|-------------|
+| Flutter SDK | 3.x (^3.9.2) | 앱 빌드 및 실행 (Dart 포함) | `flutter --version` |
+| JDK | 17 이상 | Android 빌드 | `java -version` |
+| Node.js | 20.x (LTS) | 빌드 스크립트 및 자동화 도구 | `node --version` |
+| Android Studio | 최신 | Android 에뮬레이터 및 SDK | `flutter doctor` |
+| Xcode | 15 이상 | iOS 빌드 **(macOS 전용)** | `xcodebuild -version` |
+| Git | 2.x 이상 | 저장소 클론 | `git --version` |
+
+> **Dart는 별도 설치 불필요** — Flutter SDK에 번들되어 있습니다.
 
 ---
 
-## 1. Flutter SDK 설치
-
-공식 Flutter 설치 가이드: https://docs.flutter.dev/get-started/install
+## 1단계: Flutter SDK 설치
 
 ### Windows
 
-1. [Flutter 공식 사이트](https://docs.flutter.dev/get-started/install/windows)에서 SDK zip 다운로드
-2. `C:\flutter` 등 원하는 경로에 압축 해제
-3. 환경 변수 `PATH`에 `C:\flutter\bin` 추가
-4. PowerShell에서 확인:
-   ```powershell
-   flutter doctor
-   ```
+```powershell
+# winget으로 설치 (권장)
+winget install --id Google.Flutter
+
+# 설치 확인
+flutter doctor
+```
+
+> winget이 없다면 [Flutter 공식 사이트](https://docs.flutter.dev/get-started/install/windows)에서 zip을 다운로드하여
+> `C:\flutter`에 압축 해제 후 `PATH`에 `C:\flutter\bin`을 추가합니다.
+
+### macOS
+
+```bash
+# Homebrew로 설치 (권장)
+brew install flutter
+
+# 설치 확인
+flutter doctor
+```
+
+### Linux
+
+```bash
+# snap으로 설치 (권장)
+sudo snap install flutter --classic
+
+# snap이 없는 경우 (수동 설치)
+cd ~
+git clone https://github.com/flutter/flutter.git -b stable
+echo 'export PATH="$PATH:$HOME/flutter/bin"' >> ~/.bashrc
+source ~/.bashrc
+
+# 설치 확인
+flutter doctor
+```
+
+---
+
+## 2단계: Node.js 20 설치
+
+빌드 스크립트 및 자동화 도구 실행에 사용됩니다.
+
+### Windows
+
+```powershell
+winget install --id OpenJS.NodeJS.LTS
+node --version   # v20.x.x 확인
+```
+
+### macOS
+
+```bash
+brew install node@20
+node --version   # v20.x.x 확인
+```
+
+### Linux
+
+```bash
+# NodeSource 공식 저장소 사용
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+sudo apt install -y nodejs          # Debian/Ubuntu
+# sudo dnf install nodejs           # Fedora/RHEL
+node --version   # v20.x.x 확인
+```
+
+---
+
+## 3단계: JDK 17 설치
+
+Android 에뮬레이터 또는 실기기에서 실행하려면 JDK 17이 필요합니다.
+
+### Windows
+
+```powershell
+winget install --id Microsoft.OpenJDK.17
+```
+
+### macOS
+
+```bash
+brew install --cask temurin@17
+```
+
+### Linux
+
+```bash
+sudo apt update && sudo apt install openjdk-17-jdk   # Debian/Ubuntu
+sudo dnf install java-17-openjdk                      # Fedora/RHEL
+```
+
+---
+
+## 4단계: 저장소 클론 및 의존성 설치
+
+```bash
+git clone https://github.com/kang3019/slay-the-flutter.git
+cd slay-the-flutter
+flutter pub get
+```
+
+---
+
+## 5단계: 환경 변수 설정
+
+프로젝트 루트의 `.env.example`을 복사하여 `.env` 파일을 생성합니다.
 
 ### macOS / Linux
 
 ```bash
-# Homebrew 사용 시 (macOS)
-brew install flutter
-
-# 또는 공식 설치 스크립트
-# https://docs.flutter.dev/get-started/install/macos
+cp .env.example .env
 ```
+
+### Windows
+
+```powershell
+copy .env.example .env
+```
+
+`.env` 파일을 열어 필요한 값을 채워 넣습니다.
+
+```dotenv
+FLUTTER_ENV=development      # development | production
+APP_LOG_LEVEL=debug          # debug | info | warn | error
+```
+
+> `.env`는 `.gitignore`에 포함되어 있어 저장소에 커밋되지 않습니다.
+> 실제 운영 값은 팀 내부 채널을 통해 공유됩니다.
 
 ---
 
-## 2. 프로젝트 클론 및 의존성 설치
+## 6단계: 환경 확인
 
 ```bash
-# 저장소 클론
-git clone <repository-url>
-cd slay-the-flutter
-
-# 패키지 의존성 설치
-flutter pub get
-```
-
----
-
-## 3. 환경 확인
-
-```bash
-# Flutter 환경 전체 점검
 flutter doctor -v
+```
 
-# 연결된 디바이스 목록 확인
+모든 항목에 ✓ 가 표시되어야 합니다. `flutter doctor`가 제안하는 수정 사항을 먼저 해결하세요.
+
+연결된 디바이스 목록 확인:
+
+```bash
 flutter devices
 ```
 
-모든 항목에 체크(✓)가 표시되어야 합니다. 미해결 이슈가 있으면 출력된 안내에 따라 해결합니다.
-
 ---
 
-## 4. 앱 실행 명령어
-
-### 에뮬레이터 / 시뮬레이터 실행
+## 7단계: 첫 실행
 
 ```bash
-# Android 에뮬레이터 (AVD Manager에서 먼저 기기 생성 필요)
-flutter emulators --launch <emulator-id>
-
-# iOS 시뮬레이터 (macOS 전용)
-open -a Simulator
-```
-
-### 앱 빌드 및 실행
-
-```bash
-# 연결된 기기(에뮬레이터 또는 실기기)에서 디버그 모드 실행
+# 연결된 기기(에뮬레이터 또는 실기기)에서 실행
 flutter run
 
-# 특정 기기 지정 실행
+# 기기가 여러 개라면 ID를 지정
 flutter run -d <device-id>
-
-# 릴리즈 모드로 실행 (성능 테스트용)
-flutter run --release
-
-# 웹 브라우저에서 실행 (기능 제한 있음)
-flutter run -d chrome
 ```
 
-### 빌드 산출물 생성
+> 에뮬레이터가 없다면 Android Studio → **Device Manager → Create Virtual Device**에서 먼저 생성합니다.
+> macOS에서 iOS 시뮬레이터를 사용하려면: `open -a Simulator`
+
+---
+
+## 자주 쓰는 명령어
 
 ```bash
-# Android APK 빌드
-flutter build apk --release
-
-# Android App Bundle (Play Store 배포용)
-flutter build appbundle --release
-
-# iOS 빌드 (macOS + Xcode 필요)
-flutter build ios --release
+flutter analyze          # 정적 분석 (커밋 전 경고 0건 필수)
+dart format lib/ test/   # 코드 자동 포맷
+flutter test             # 전체 테스트 실행
+flutter clean && flutter pub get  # 빌드 캐시 초기화
 ```
 
 ---
 
-## 5. 코드 분석
+## 문제 해결 (FAQ)
+
+### Q1. `flutter pub get` 실행 시 네트워크 오류가 발생합니다
 
 ```bash
-# 정적 분석 실행 (경고 0건 유지 필수)
-flutter analyze
-
-# 코드 자동 포맷
-dart format lib/ test/
-```
-
----
-
-## 6. 주요 파일 구조
-
-```
-slay-the-flutter/
-├── lib/
-│   ├── main.dart              # 앱 진입점
-│   ├── models/                # 데이터 모델 (Card, Character, Monster, Quest)
-│   ├── viewmodels/            # 상태 관리 (Riverpod Providers)
-│   └── views/                 # UI 위젯 (Battle, Quest, Reward 화면)
-├── test/                      # 단위 테스트
-├── pubspec.yaml               # 의존성 정의
-├── AGENTS.md                  # AI 개발 원칙
-├── SPECS.md                   # 게임 규칙 명세
-├── .planning/                 # 기획 문서
-└── docs/                      # 개발 가이드
-```
-
----
-
-## 7. 개발 시 권장 VS Code 확장
-
-- **Flutter** (Dart Code): Flutter/Dart 통합 지원
-- **Dart** (Dart Code): Dart 언어 지원
-- **Riverpod Snippets**: Riverpod 코드 스니펫
-
----
-
-## 8. 트러블슈팅
-
-### `flutter pub get` 실패 시
-
-```bash
-# pub 캐시 초기화
+# pub 캐시를 초기화한 뒤 재시도합니다
 flutter pub cache repair
 flutter pub get
 ```
 
-### 빌드 캐시 문제
+중국 등 일부 국가에서는 pub.dev 접근이 차단됩니다. 아래 미러를 환경 변수로 설정하세요.
+
+```bash
+# macOS / Linux
+export PUB_HOSTED_URL=https://pub.flutter-io.cn
+export FLUTTER_STORAGE_BASE_URL=https://storage.flutter-io.cn
+
+# Windows PowerShell
+$env:PUB_HOSTED_URL="https://pub.flutter-io.cn"
+$env:FLUTTER_STORAGE_BASE_URL="https://storage.flutter-io.cn"
+```
+
+---
+
+### Q2. `flutter run` 시 기기가 표시되지 않습니다
+
+1. Android 에뮬레이터: Android Studio → **Device Manager**에서 에뮬레이터를 시작합니다.
+2. 실기기(Android): USB 디버깅이 활성화되어 있는지 확인합니다 (설정 → 개발자 옵션).
+3. iOS 시뮬레이터(macOS): `open -a Simulator` 로 시뮬레이터를 먼저 실행합니다.
+4. `flutter devices` 로 인식 여부를 재확인합니다.
+
+---
+
+### Q3. Android 라이선스 오류 (`Android license status unknown`)가 납니다
+
+```bash
+flutter doctor --android-licenses
+# 프롬프트가 나타나면 모두 y 입력
+```
+
+---
+
+### Q4. `flutter doctor`에서 Xcode 관련 오류가 표시됩니다 (macOS)
+
+Xcode 명령줄 도구가 설치되지 않은 경우입니다.
+
+```bash
+sudo xcode-select --install
+sudo xcodebuild -license accept
+```
+
+---
+
+### Q5. 빌드 캐시 문제로 앱이 실행되지 않거나 이상하게 동작합니다
 
 ```bash
 flutter clean
@@ -167,9 +258,4 @@ flutter pub get
 flutter run
 ```
 
-### Android 라이선스 미동의 오류
-
-```bash
-flutter doctor --android-licenses
-# 모든 라이선스에 'y' 입력
-```
+이후에도 문제가 지속되면 Android Studio에서 **File → Invalidate Caches / Restart**를 실행합니다.
