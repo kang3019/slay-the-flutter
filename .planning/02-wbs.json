@@ -1,368 +1,96 @@
 {
   "project": "Slay the Flutter",
-  "version": "1.0",
-  "updatedAt": "2026-05-12",
+  "version": "2.0",
+  "updatedAt": "2026-05-19",
   "startDate": "2026-05-12",
   "presentationDate": "2026-06-20",
   "team": [
-    {
-      "id": "A",
-      "name": "kang",
-      "role": "게임 로직 / ViewModel / 테스트"
-    },
-    {
-      "id": "B",
-      "name": "동료",
-      "role": "UI / 모델 / 문서화"
-    }
+    { "id": "A", "name": "kang", "role": "게임 로직 / ViewModel / 테스트" },
+    { "id": "B", "name": "동료", "role": "UI / 모델 / 문서화" }
   ],
   "milestones": [
     {
       "id": "M1",
-      "name": "기획",
+      "name": "기획 & 환경 설정",
       "tasks": [
-        {
-          "id": "T001",
-          "name": "비전 문서 작성",
-          "assignee": "A",
-          "start": "2026-05-12",
-          "end": "2026-05-12",
-          "status": "done",
-          "priority": "high"
-        },
-        {
-          "id": "T002",
-          "name": "요구사항 MoSCoW 정의",
-          "assignee": "B",
-          "start": "2026-05-12",
-          "end": "2026-05-12",
-          "status": "done",
-          "priority": "high"
-        },
-        {
-          "id": "T003",
-          "name": "WBS 및 일정 계획 수립",
-          "assignee": "A",
-          "start": "2026-05-13",
-          "end": "2026-05-14",
-          "status": "active",
-          "priority": "high"
-        },
-        {
-          "id": "T004",
-          "name": "팀 역할 분담 확정",
-          "assignee": "A+B",
-          "start": "2026-05-13",
-          "end": "2026-05-13",
-          "status": "active",
-          "priority": "medium"
-        }
+        { "id": "T001", "name": "비전 문서 작성",     "assignee": "A",   "start": "2026-05-12", "end": "2026-05-12", "status": "done",    "priority": "high"   },
+        { "id": "T002", "name": "MoSCoW 요구사항",    "assignee": "B",   "start": "2026-05-12", "end": "2026-05-12", "status": "done",    "priority": "high"   },
+        { "id": "T003", "name": "WBS 일정 수립",      "assignee": "A",   "start": "2026-05-13", "end": "2026-05-14", "status": "done",    "priority": "high"   },
+        { "id": "T004", "name": "팀 역할 분담",       "assignee": "A+B", "start": "2026-05-13", "end": "2026-05-13", "status": "done",    "priority": "medium" },
+        { "id": "T005", "name": "개발 환경 구성",     "assignee": "A",   "start": "2026-05-14", "end": "2026-05-15", "status": "done",    "priority": "high"   },
+        { "id": "T006", "name": "GitHub 레포 설정",   "assignee": "A",   "start": "2026-05-15", "end": "2026-05-16", "status": "done",    "priority": "medium" }
       ]
     },
     {
       "id": "M2",
       "name": "아키텍처 설계",
       "tasks": [
-        {
-          "id": "T005",
-          "name": "MVVM 폴더 구조 셋업",
-          "assignee": "A",
-          "start": "2026-05-13",
-          "end": "2026-05-14",
-          "status": "done",
-          "priority": "high"
-        },
-        {
-          "id": "T006",
-          "name": "데이터 모델 인터페이스 정의",
-          "assignee": "B",
-          "start": "2026-05-14",
-          "end": "2026-05-16",
-          "status": "active",
-          "priority": "high"
-        },
-        {
-          "id": "T007",
-          "name": "Riverpod 프로바이더 구조 설계",
-          "assignee": "A",
-          "start": "2026-05-15",
-          "end": "2026-05-16",
-          "status": "active",
-          "priority": "high"
-        },
-        {
-          "id": "T008",
-          "name": "로컬 저장소 기술 선정 Hive vs sqflite",
-          "assignee": "A+B",
-          "start": "2026-05-19",
-          "end": "2026-05-20",
-          "status": "pending",
-          "priority": "medium"
-        }
+        { "id": "T007", "name": "아키텍처 문서",      "assignee": "A",   "start": "2026-05-15", "end": "2026-05-17", "status": "done",    "priority": "high"   },
+        { "id": "T008", "name": "ADR 3종 작성",       "assignee": "B",   "start": "2026-05-16", "end": "2026-05-17", "status": "done",    "priority": "high"   },
+        { "id": "T009", "name": "폴더 구조 생성",     "assignee": "A",   "start": "2026-05-18", "end": "2026-05-18", "status": "done",    "priority": "high"   },
+        { "id": "T010", "name": "도메인 모델 설계",   "assignee": "B",   "start": "2026-05-19", "end": "2026-05-21", "status": "active",  "priority": "high"   },
+        { "id": "T011", "name": "Riverpod 구조 설계", "assignee": "A",   "start": "2026-05-19", "end": "2026-05-20", "status": "active",  "priority": "high"   },
+        { "id": "T012", "name": "저장소 기술 선정",   "assignee": "A+B", "start": "2026-05-20", "end": "2026-05-21", "status": "pending", "priority": "medium" }
       ]
     },
     {
       "id": "M3",
-      "name": "UI 개발 카드 및 전투",
+      "name": "핵심 로직 구현",
       "tasks": [
-        {
-          "id": "T009",
-          "name": "카드 컴포넌트 CardWidget",
-          "assignee": "B",
-          "start": "2026-05-26",
-          "end": "2026-05-28",
-          "status": "pending",
-          "priority": "high"
-        },
-        {
-          "id": "T010",
-          "name": "전투 화면 BattleView 레이아웃",
-          "assignee": "B",
-          "start": "2026-05-29",
-          "end": "2026-06-03",
-          "status": "pending",
-          "priority": "high"
-        },
-        {
-          "id": "T011",
-          "name": "보상 선택 화면 RewardView",
-          "assignee": "B",
-          "start": "2026-06-04",
-          "end": "2026-06-06",
-          "status": "pending",
-          "priority": "high"
-        },
-        {
-          "id": "T012",
-          "name": "런 시작 화면 RunStartView",
-          "assignee": "B",
-          "start": "2026-06-09",
-          "end": "2026-06-10",
-          "status": "pending",
-          "priority": "medium"
-        },
-        {
-          "id": "T013",
-          "name": "메타 진행 화면 MetaView",
-          "assignee": "B",
-          "start": "2026-06-11",
-          "end": "2026-06-12",
-          "status": "pending",
-          "priority": "medium"
-        }
+        { "id": "T013", "name": "BattleEngine 데미지", "assignee": "A",  "start": "2026-05-22", "end": "2026-05-24", "status": "pending", "priority": "high"   },
+        { "id": "T014", "name": "방어도 시스템",       "assignee": "A",  "start": "2026-05-24", "end": "2026-05-25", "status": "pending", "priority": "high"   },
+        { "id": "T015", "name": "상태이상 취약/약화",  "assignee": "A",  "start": "2026-05-25", "end": "2026-05-27", "status": "pending", "priority": "high"   },
+        { "id": "T016", "name": "에너지/드로우",       "assignee": "A",  "start": "2026-05-26", "end": "2026-05-28", "status": "pending", "priority": "high"   },
+        { "id": "T017", "name": "덱 관리 시스템",      "assignee": "A",  "start": "2026-05-28", "end": "2026-05-30", "status": "pending", "priority": "high"   },
+        { "id": "T018", "name": "몬스터 AI 패턴",      "assignee": "A",  "start": "2026-05-29", "end": "2026-05-31", "status": "pending", "priority": "high"   },
+        { "id": "T019", "name": "BattleProvider",      "assignee": "A",  "start": "2026-05-31", "end": "2026-06-02", "status": "pending", "priority": "high"   }
       ]
     },
     {
       "id": "M4",
-      "name": "로직 구현 Riverpod",
+      "name": "UI 개발",
       "tasks": [
-        {
-          "id": "T014",
-          "name": "Card Character Monster 모델 구현",
-          "assignee": "B",
-          "start": "2026-05-19",
-          "end": "2026-05-23",
-          "status": "pending",
-          "priority": "high"
-        },
-        {
-          "id": "T015",
-          "name": "상태이상 로직 취약 및 약화",
-          "assignee": "A",
-          "start": "2026-05-22",
-          "end": "2026-05-26",
-          "status": "pending",
-          "priority": "high"
-        },
-        {
-          "id": "T016",
-          "name": "에너지 및 드로우 시스템",
-          "assignee": "A",
-          "start": "2026-05-26",
-          "end": "2026-05-30",
-          "status": "pending",
-          "priority": "high"
-        },
-        {
-          "id": "T017",
-          "name": "BattleViewModel 핵심 전투 로직",
-          "assignee": "A",
-          "start": "2026-05-29",
-          "end": "2026-06-03",
-          "status": "pending",
-          "priority": "high"
-        },
-        {
-          "id": "T018",
-          "name": "몬스터 AI 의도 시스템",
-          "assignee": "A",
-          "start": "2026-06-04",
-          "end": "2026-06-05",
-          "status": "pending",
-          "priority": "high"
-        },
-        {
-          "id": "T019",
-          "name": "XP 레벨업 해금 시스템",
-          "assignee": "A",
-          "start": "2026-06-05",
-          "end": "2026-06-06",
-          "status": "pending",
-          "priority": "medium"
-        },
-        {
-          "id": "T020",
-          "name": "GameState Riverpod 프로바이더 통합",
-          "assignee": "A+B",
-          "start": "2026-06-09",
-          "end": "2026-06-11",
-          "status": "pending",
-          "priority": "high"
-        },
-        {
-          "id": "T021",
-          "name": "데이터 영속성 Hive 구현",
-          "assignee": "B",
-          "start": "2026-06-09",
-          "end": "2026-06-12",
-          "status": "pending",
-          "priority": "medium"
-        }
+        { "id": "T020", "name": "CardWidget 디자인",   "assignee": "B",  "start": "2026-05-26", "end": "2026-05-29", "status": "pending", "priority": "high"   },
+        { "id": "T021", "name": "BattleScreen 레이아웃","assignee": "B", "start": "2026-05-29", "end": "2026-06-02", "status": "pending", "priority": "high"   },
+        { "id": "T022", "name": "플레이어 상태 위젯",  "assignee": "B",  "start": "2026-06-02", "end": "2026-06-04", "status": "pending", "priority": "high"   },
+        { "id": "T023", "name": "몬스터 위젯",         "assignee": "B",  "start": "2026-06-03", "end": "2026-06-05", "status": "pending", "priority": "high"   },
+        { "id": "T024", "name": "RewardScreen",        "assignee": "B",  "start": "2026-06-05", "end": "2026-06-07", "status": "pending", "priority": "high"   },
+        { "id": "T025", "name": "MapScreen 스테이지",  "assignee": "B",  "start": "2026-06-06", "end": "2026-06-08", "status": "pending", "priority": "medium" },
+        { "id": "T026", "name": "MetaScreen 해금",     "assignee": "B",  "start": "2026-06-07", "end": "2026-06-08", "status": "pending", "priority": "medium" }
       ]
     },
     {
       "id": "M5",
-      "name": "테스트 작성",
+      "name": "통합 & 영속성",
       "tasks": [
-        {
-          "id": "T022",
-          "name": "BattleViewModel 단위 테스트",
-          "assignee": "A",
-          "start": "2026-06-09",
-          "end": "2026-06-11",
-          "status": "pending",
-          "priority": "high"
-        },
-        {
-          "id": "T023",
-          "name": "카드 상태이상 단위 테스트",
-          "assignee": "A",
-          "start": "2026-06-12",
-          "end": "2026-06-13",
-          "status": "pending",
-          "priority": "high"
-        },
-        {
-          "id": "T024",
-          "name": "위젯 테스트 CardWidget",
-          "assignee": "B",
-          "start": "2026-06-13",
-          "end": "2026-06-16",
-          "status": "pending",
-          "priority": "medium"
-        },
-        {
-          "id": "T025",
-          "name": "통합 테스트 커버리지 80% 확인",
-          "assignee": "A+B",
-          "start": "2026-06-17",
-          "end": "2026-06-18",
-          "status": "pending",
-          "priority": "high"
-        }
+        { "id": "T027", "name": "GameRepository",      "assignee": "B",   "start": "2026-06-02", "end": "2026-06-04", "status": "pending", "priority": "high"   },
+        { "id": "T028", "name": "XP/레벨업 시스템",    "assignee": "A",   "start": "2026-06-05", "end": "2026-06-07", "status": "pending", "priority": "medium" },
+        { "id": "T029", "name": "해금 시스템",         "assignee": "A",   "start": "2026-06-06", "end": "2026-06-08", "status": "pending", "priority": "medium" },
+        { "id": "T030", "name": "맵/런 진행 Provider", "assignee": "A",   "start": "2026-06-08", "end": "2026-06-10", "status": "pending", "priority": "high"   },
+        { "id": "T031", "name": "UI-ViewModel 통합",   "assignee": "A+B", "start": "2026-06-10", "end": "2026-06-12", "status": "pending", "priority": "high"   }
       ]
     },
     {
       "id": "M6",
-      "name": "문서화",
+      "name": "테스트",
       "tasks": [
-        {
-          "id": "T026",
-          "name": "아키텍처 다이어그램 MVVM",
-          "assignee": "A",
-          "start": "2026-06-16",
-          "end": "2026-06-17",
-          "status": "pending",
-          "priority": "medium"
-        },
-        {
-          "id": "T027",
-          "name": "API 기능 명세서 작성",
-          "assignee": "B",
-          "start": "2026-06-11",
-          "end": "2026-06-12",
-          "status": "pending",
-          "priority": "medium"
-        },
-        {
-          "id": "T028",
-          "name": "README 최종 업데이트",
-          "assignee": "B",
-          "start": "2026-06-17",
-          "end": "2026-06-17",
-          "status": "pending",
-          "priority": "medium"
-        },
-        {
-          "id": "T029",
-          "name": "테스트 결과 리포트 작성",
-          "assignee": "A",
-          "start": "2026-06-18",
-          "end": "2026-06-18",
-          "status": "pending",
-          "priority": "medium"
-        }
+        { "id": "T032", "name": "BattleEngine 테스트", "assignee": "A",   "start": "2026-06-09", "end": "2026-06-11", "status": "pending", "priority": "high"  },
+        { "id": "T033", "name": "모델 단위 테스트",    "assignee": "A",   "start": "2026-06-11", "end": "2026-06-12", "status": "pending", "priority": "high"  },
+        { "id": "T034", "name": "ViewModel 테스트",    "assignee": "A",   "start": "2026-06-12", "end": "2026-06-13", "status": "pending", "priority": "high"  },
+        { "id": "T035", "name": "위젯 테스트",         "assignee": "B",   "start": "2026-06-12", "end": "2026-06-14", "status": "pending", "priority": "medium"},
+        { "id": "T036", "name": "통합 테스트 80%",     "assignee": "A+B", "start": "2026-06-14", "end": "2026-06-15", "status": "pending", "priority": "high"  }
       ]
     },
     {
       "id": "M7",
-      "name": "발표 준비",
+      "name": "QA & 발표 준비",
       "tasks": [
-        {
-          "id": "T030",
-          "name": "최종 빌드 QA 및 버그 수정",
-          "assignee": "A+B",
-          "start": "2026-06-16",
-          "end": "2026-06-17",
-          "status": "pending",
-          "priority": "high"
-        },
-        {
-          "id": "T031",
-          "name": "발표 슬라이드 제작",
-          "assignee": "B",
-          "start": "2026-06-17",
-          "end": "2026-06-19",
-          "status": "pending",
-          "priority": "high"
-        },
-        {
-          "id": "T032",
-          "name": "데모 시나리오 작성",
-          "assignee": "A",
-          "start": "2026-06-17",
-          "end": "2026-06-18",
-          "status": "pending",
-          "priority": "high"
-        },
-        {
-          "id": "T033",
-          "name": "전체 리허설",
-          "assignee": "A+B",
-          "start": "2026-06-19",
-          "end": "2026-06-19",
-          "status": "pending",
-          "priority": "high"
-        },
-        {
-          "id": "T034",
-          "name": "6주차 최종 발표",
-          "assignee": "A+B",
-          "start": "2026-06-20",
-          "end": "2026-06-20",
-          "status": "milestone",
-          "priority": "high"
-        }
+        { "id": "T037", "name": "버그 수정 & QA",      "assignee": "A+B", "start": "2026-06-16", "end": "2026-06-17", "status": "pending",   "priority": "high"  },
+        { "id": "T038", "name": "README 업데이트",     "assignee": "B",   "start": "2026-06-17", "end": "2026-06-17", "status": "pending",   "priority": "medium"},
+        { "id": "T039", "name": "발표 슬라이드",       "assignee": "B",   "start": "2026-06-17", "end": "2026-06-19", "status": "pending",   "priority": "high"  },
+        { "id": "T040", "name": "데모 시나리오",       "assignee": "A",   "start": "2026-06-17", "end": "2026-06-18", "status": "pending",   "priority": "high"  },
+        { "id": "T041", "name": "전체 리허설",         "assignee": "A+B", "start": "2026-06-19", "end": "2026-06-19", "status": "pending",   "priority": "high"  },
+        { "id": "T042", "name": "최종 발표",           "assignee": "A+B", "start": "2026-06-20", "end": "2026-06-20", "status": "milestone", "priority": "high"  }
       ]
     }
   ]
