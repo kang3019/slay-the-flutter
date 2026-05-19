@@ -6,7 +6,7 @@
   "presentationDate": "2026-06-20",
   "team": [
     { "id": "A", "name": "kang", "role": "게임 로직 / ViewModel / 테스트" },
-    { "id": "B", "name": "동료", "role": "UI / 모델 / 문서화" }
+    { "id": "B", "name": "kim", "role": "UI / 모델 / 문서화" }
   ],
   "milestones": [
     {
