@@ -1,0 +1,29 @@
+{
+  "recommendations": [
+    // ── Dart / Flutter 필수 ──────────────────────────────
+    // Dart 언어 지원 (자동완성, 디버거, 포매터)
+    "Dart-Code.dart-code",
+    // Flutter 디바이스 선택, Hot Reload, Widget Inspector
+    "Dart-Code.flutter",
+
+    // ── 상태 관리 ────────────────────────────────────────
+    // Riverpod Notifier / Provider / AsyncNotifier 스니펫
+    "robert-brunhage.flutter-riverpod-snippets",
+
+    // ── 코드 품질 ────────────────────────────────────────
+    // flutter analyze 경고를 코드 옆에 인라인 표시
+    "usernamehw.errorlens",
+    // 주석 색상 구분 (TODO / FIXME / ! / ? 등)
+    "aaron-bond.better-comments",
+    // 코드 내 영문 오타 감지
+    "streetsidesoftware.code-spell-checker",
+
+    // ── pubspec / 패키지 관리 ─────────────────────────────
+    // pubspec.yaml 의존성 버전 자동완성 및 최신 버전 힌트
+    "jeroen-meijer.pubspec-assist",
+
+    // ── UI / 가독성 ──────────────────────────────────────
+    // 파일·폴더 아이콘 테마 (Dart, Flutter 아이콘 포함)
+    "PKief.material-icon-theme"
+  ]
+}
