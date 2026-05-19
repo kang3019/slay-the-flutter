@@ -139,7 +139,7 @@
 
 <header>
   <h1>Slay the Flutter</h1>
-  <p id="subtitle">7주 개발 WBS — 간트 차트 &nbsp;|&nbsp; 데이터: .planning/02-wbs.json</p>
+  <p id="subtitle">7주 개발 WBS — 간트 차트 &nbsp;|&nbsp; 데이터: docs/02-wbs.json</p>
 </header>
 
 <div class="error-box" id="err">
@@ -257,7 +257,7 @@ function showChips(data) {
 
 async function main() {
   try {
-    const res = await fetch('../.planning/02-wbs.json');
+    const res = await fetch('./02-wbs.json');
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const data = await res.json();
 
