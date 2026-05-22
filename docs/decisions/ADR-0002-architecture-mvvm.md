@@ -30,16 +30,18 @@ Slay the Flutter는 데미지 계산, 상태 이상(취약·약화) 적용, 턴 
 
 ## 결정
 
-**MVVM(Model–View–ViewModel)** 을 채택한다.
+**MVVM** 원칙을 바탕으로, 실제 구현은 **4-Layer 아키텍처**를 채택한다.  
+Riverpod `Notifier`가 ViewModel 역할을 수행하며, Domain과 Data를 분리해 테스트 가능성을 극대화한다.
 
 ```
 lib/
-├── models/      ← 게임 규칙만 담당 (순수 Dart, Flutter 임포트 없음)
-├── viewmodels/  ← 상태 소유 + 명령 처리 (Riverpod Notifier)
-└── views/       ← 화면에 그리고 버튼 이벤트만 전달
+├── presentation/ ← 화면에 그리고 버튼 이벤트만 전달 (Flutter 위젯)
+├── application/  ← 상태 소유 + 명령 처리 (Riverpod Notifier — ViewModel)
+├── domain/       ← 게임 규칙만 담당 (순수 Dart, Flutter·Riverpod 임포트 없음)
+└── data/         ← SharedPreferences 읽기/쓰기 캡슐화
 ```
 
-계층 간 의존 방향은 단방향으로 고정한다: `views → viewmodels → models`  
+계층 간 의존 방향은 단방향으로 고정한다: `Presentation → Application → Domain ← Data`  
 역방향 임포트는 금지한다.
 
 ---
@@ -48,14 +50,14 @@ lib/
 
 ### 긍정적
 
-- `models/` 단위 테스트 커버리지 80% 목표를 현실적으로 달성할 수 있다.
-- View는 표시만 담당하므로 디자인 변경이 게임 규칙에 영향을 주지 않는다.
-- ViewModel을 `ProviderContainer`로 격리해 Flutter 없이 테스트 가능하다.
+- `domain/` 단위 테스트 커버리지 80% 목표를 현실적으로 달성할 수 있다.
+- `presentation/`은 표시만 담당하므로 디자인 변경이 게임 규칙에 영향을 주지 않는다.
+- `application/` Provider를 `ProviderContainer`로 격리해 Flutter 없이 테스트 가능하다.
 
 ### 부정적 / 감수하는 트레이드오프
 
-- 소규모 기능에도 Model / ViewModel / View 세 파일을 작성해야 해 파일 수가 늘어난다.
-- `BuildContext`를 ViewModel로 넘기는 실수를 코드 리뷰에서 반드시 차단해야 한다.
+- 소규모 기능에도 domain / application / presentation 세 레이어 파일을 작성해야 해 파일 수가 늘어난다.
+- `BuildContext`를 Application 계층으로 넘기는 실수를 코드 리뷰에서 반드시 차단해야 한다.
 
 ---
 

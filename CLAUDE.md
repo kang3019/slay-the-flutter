@@ -24,8 +24,8 @@ dart format lib/ test/
 
 # Tests
 flutter test                                      # all tests
-flutter test test/models/card_test.dart           # single file
-flutter test test/models/                         # directory
+flutter test test/domain/card_test.dart           # single file
+flutter test test/domain/                         # directory
 flutter test --reporter=expanded                  # verbose output
 flutter test --coverage                           # generate coverage/lcov.info
 
@@ -35,46 +35,47 @@ flutter clean && flutter pub get
 
 ## Architecture
 
-MVVM with Riverpod. The three layers have strict import rules enforced by `AGENTS.md`:
+4-Layer architecture with Riverpod. Import direction is strictly one-way: `Presentation → Application → Domain ← Data`. Reverse imports are forbidden.
 
 ```
 lib/
-├── models/        # Pure Dart — data structures + business logic only
-│                  # No Flutter, no Riverpod imports allowed here
-├── viewmodels/    # Riverpod Notifier/AsyncNotifier providers
+├── presentation/  # Widgets only — reads state, dispatches events to Application
+│                  # No business logic; >3 lines of conditional logic → extract
+├── application/   # Riverpod Notifier/AsyncNotifier providers
 │                  # Files named with _provider.dart suffix
-│                  # Never imports views/
-└── views/         # Widgets only — reads state, dispatches events to ViewModel
-                   # No business logic; >3 lines of conditional logic → extract
+│                  # Never imports presentation/
+├── domain/        # Pure Dart — game rules, damage calculation, deck logic
+│                  # No Flutter, no Riverpod imports allowed here
+└── data/          # SharedPreferences read/write — XP, level, unlocks
 ```
 
-**Provider pattern**: Use `Notifier` / `AsyncNotifier` (not deprecated `StateNotifier`). `ref.watch` is only valid inside `build()` or Widget tree. `BuildContext` must never be passed into a ViewModel.
+**Provider pattern**: Use `Notifier` / `AsyncNotifier` (not deprecated `StateNotifier`). `ref.watch` is only valid inside `build()` or Widget tree. `BuildContext` must never be passed into Application layer.
 
 ## Test Structure
 
-`test/` mirrors `lib/`:
+`test/` mirrors the Domain and Application layers of `lib/`:
 
 ```
 test/
-├── models/
+├── domain/
 │   ├── card_test.dart
-│   ├── character_test.dart
+│   ├── player_test.dart
 │   ├── monster_test.dart
-│   ├── quest_test.dart
+│   ├── deck_test.dart
 │   └── battle_engine_test.dart
-└── viewmodels/
-    ├── battle_viewmodel_test.dart
-    └── quest_viewmodel_test.dart
+└── application/
+    ├── battle_provider_test.dart
+    └── run_provider_test.dart
 ```
 
-ViewModel tests use `ProviderContainer` directly — no widget tree needed:
+Application layer tests use `ProviderContainer` directly — no widget tree needed:
 
 ```dart
 setUp(() => container = ProviderContainer());
 tearDown(() => container.dispose());
 ```
 
-Coverage targets: `models/` ≥ 80% (required), `viewmodels/` ≥ 70% (recommended).
+Coverage targets: `domain/` ≥ 80% (required), `application/` ≥ 70% (recommended).
 
 ## TDD Requirement
 

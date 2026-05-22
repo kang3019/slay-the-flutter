@@ -79,7 +79,7 @@
 
 ### 긍정적
 
-- `lib/models/`, `lib/viewmodels/`, `lib/views/` 3-레이어 MVVM 구조를 언어 수준에서 강제할 수 있다.
+- `lib/presentation/`, `lib/application/`, `lib/domain/`, `lib/data/` 4-계층 구조를 언어 수준에서 강제할 수 있다.
 - `flutter analyze` 정적 분석 + `flutter test` 단위 테스트 파이프라인이 즉시 사용 가능하다.
 - 향후 웹·데스크톱 확장 시 동일 코드베이스 재활용 가능.
 

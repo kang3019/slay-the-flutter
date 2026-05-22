@@ -7,7 +7,7 @@
 ![Platform](https://img.shields.io/badge/Platform-Android%20%7C%20iOS-lightgrey)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
-Android / iOS 크로스플랫폼. 4-Layer MVVM + Riverpod 아키텍처.
+Android / iOS 크로스플랫폼. 4-Layer + Riverpod 아키텍처.
 
 ---
 
@@ -55,7 +55,7 @@ flutter clean && flutter pub get  # 빌드 캐시 초기화
 
 ## 아키텍처
 
-4-Layer MVVM + Riverpod. 상위 계층은 하위 계층만 알 수 있으며 역방향 임포트는 금지한다.
+4-Layer + Riverpod. 상위 계층은 하위 계층만 알 수 있으며 역방향 임포트는 금지한다.
 
 ```
 Presentation → Application → Domain ← Data
