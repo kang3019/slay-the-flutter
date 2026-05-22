@@ -127,7 +127,12 @@ tearDown(() => container.dispose());
 |------|------|
 | [docs/setup.md](docs/setup.md) | 개발 환경 설정 (Flutter 설치 → 첫 실행까지) |
 | [docs/architecture.md](docs/architecture.md) | 4계층 구조 상세 및 의존성 흐름 |
+| [docs/testing.md](docs/testing.md) | TDD 가이드 + 테스트 작성 예시 |
 | [docs/decisions/](docs/decisions/) | ADR 0001–0004 (플랫폼·아키텍처·상태관리·영속성 결정) |
 | `.planning/00-vision.md` | 게임 비전 및 단계 로드맵 |
 | `.planning/01-requirements.md` | MoSCoW 기능 요구사항 |
+| `.planning/02-wbs.json` | WBS 태스크 데이터 (상태 업데이트 시 직접 편집) |
+| `.planning/03-risks.md` | 위험 등록부 (R-01~R-05) |
+| `.planning/04-schedule.md` | 6주 마일스톤 + 간트 차트 사용법 |
 | `SPECS.md` | 카드, 몬스터, 전투 규칙 전체 명세 |
+| `BONUS.md` | 가산점 항목 트래킹 (+6점) |
