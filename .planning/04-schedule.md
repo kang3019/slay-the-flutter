@@ -1,6 +1,6 @@
 # 04-schedule.md — WBS 업데이트 및 확인 매뉴얼
 
-**버전**: 1.0 | **날짜**: 2026-05-12
+**버전**: 1.1 | **날짜**: 2026-05-22
 
 ---
 
@@ -11,11 +11,18 @@
 ├── .planning/
 │   ├── 00-vision.md          # 비전 & 게임 컨셉
 │   ├── 01-requirements.md    # 요구사항 MoSCoW
-│   ├── 02-wbs.json           # WBS 데이터 (이 파일을 편집)
+│   ├── 02-wbs.json           # WBS 데이터 원본 (이 파일을 편집)
 │   └── 04-schedule.md        # 이 문서
 └── docs/
-    └── index.html            # 간트 차트 시각화 도구
+    ├── index.html            # 간트 차트 시각화 도구
+    └── 02-wbs.json           # 시각화 도구가 읽는 WBS 사본
+                              # ⚠️ .planning/02-wbs.json 수정 후 반드시 동기화
 ```
+
+> **동기화 방법**: `.planning/02-wbs.json` 수정 후 아래 명령 실행
+> ```bash
+> cp .planning/02-wbs.json docs/02-wbs.json
+> ```
 
 ---
 
@@ -30,26 +37,18 @@
 python -m http.server 8080
 ```
 
-브라우저에서 `http://localhost:8080/docs/index.html` 접속
+브라우저에서 `http://localhost:8080/docs/` 접속
 
 ### 방법 B — VS Code Live Server
 
 1. VS Code 확장에서 `Live Server` 설치
 2. `docs/index.html` 파일을 열고 우클릭 → **Open with Live Server**
 
-### 방법 C — Flutter Web Dev Server (이미 실행 중인 경우)
-
-```bash
-flutter run -d chrome
-```
-
-`lib/` 외부 파일은 서빙되지 않으므로, 별도 서버 사용 권장
-
 ---
 
 ## WBS JSON 업데이트 방법
 
-`.planning/02-wbs.json`을 직접 편집합니다.
+`.planning/02-wbs.json`을 직접 편집한 뒤 `docs/02-wbs.json`에 복사합니다.
 
 ### 태스크 상태(status) 정의
 
@@ -70,11 +69,11 @@ flutter run -d chrome
 
 ```json
 {
-  "id": "T009",
-  "name": "카드 컴포넌트 CardWidget",
-  "assignee": "B",
-  "start": "2026-05-26",
-  "end": "2026-05-28",
+  "id": "T013",
+  "name": "BattleEngine 데미지",
+  "assignee": "A",
+  "start": "2026-05-22",
+  "end": "2026-05-24",
   "status": "done"
 }
 ```
@@ -83,15 +82,15 @@ flutter run -d chrome
 
 ### 예시: 새 태스크 추가
 
-기존 밀스톤의 `"tasks"` 배열에 추가합니다. `id`는 다음 번호를 사용하세요 (현재 마지막: T034).
+기존 마일스톤의 `"tasks"` 배열에 추가합니다. `id`는 다음 번호를 사용하세요 (현재 마지막: T042).
 
 ```json
 {
-  "id": "T035",
+  "id": "T043",
   "name": "추가 태스크명",
   "assignee": "A",
-  "start": "2026-06-09",
-  "end": "2026-06-10",
+  "start": "2026-06-16",
+  "end": "2026-06-17",
   "status": "pending",
   "priority": "medium"
 }
@@ -111,12 +110,24 @@ flutter run -d chrome
 
 | 주차 | 기간 | 마일스톤 | 주 담당 |
 |------|------|----------|---------|
-| 1주 | 05/12 ~ 05/16 | M1 기획 + M2 아키텍처 설계 | A+B |
-| 2주 | 05/19 ~ 05/23 | M2 마무리 + M4 모델 구현 시작 | A+B |
-| 3주 | 05/26 ~ 05/30 | M3 UI 시작 + M4 전투 로직 | B / A |
-| 4주 | 06/02 ~ 06/06 | M3 UI 완성 + M4 BattleViewModel 완성 | B / A |
-| 5주 | 06/09 ~ 06/13 | M4 통합 + M5 테스트 + M6 문서화 병행 | A / B |
-| 6주 | 06/16 ~ 06/20 | M5 마무리 + M6 완성 + M7 발표 준비 + **최종 발표** | A+B |
+| 1주 | 05/12 ~ 05/16 | M1 기획 & 환경 설정 | A+B |
+| 2주 | 05/19 ~ 05/23 | M2 아키텍처 설계 마무리 | A+B |
+| 3주 | 05/26 ~ 05/30 | M3 핵심 로직 시작 + M4 UI 개발 시작 | A / B |
+| 4주 | 06/02 ~ 06/06 | M3 핵심 로직 완성 + M4 UI 개발 + M5 통합 시작 | A / B |
+| 5주 | 06/09 ~ 06/13 | M5 통합 완성 + M6 테스트 | A+B |
+| 6주 | 06/16 ~ 06/20 | M6 테스트 완성 + M7 QA & 발표 준비 + **최종 발표** | A+B |
+
+### 마일스톤별 태스크 범위
+
+| 마일스톤 | 태스크 | 기간 |
+|----------|--------|------|
+| M1 기획 & 환경 설정 | T001 ~ T006 | 05/12 ~ 05/16 |
+| M2 아키텍처 설계 | T007 ~ T012 | 05/15 ~ 05/21 |
+| M3 핵심 로직 구현 | T013 ~ T019 | 05/22 ~ 06/02 |
+| M4 UI 개발 | T020 ~ T026 | 05/26 ~ 06/08 |
+| M5 통합 & 영속성 | T027 ~ T031 | 06/02 ~ 06/12 |
+| M6 테스트 | T032 ~ T036 | 06/09 ~ 06/15 |
+| M7 QA & 발표 준비 | T037 ~ T042 | 06/16 ~ 06/20 |
 
 ---
 
@@ -129,12 +140,13 @@ flutter run -d chrome
 [ ] 이번 주 태스크 status → "active" 로 변경
 [ ] 일정 지연 태스크 있으면 end 날짜 조정
 [ ] updatedAt 필드를 오늘 날짜로 갱신
+[ ] cp .planning/02-wbs.json docs/02-wbs.json 실행
 [ ] 간트 차트 열어서 시각적으로 확인
 ```
 
 `updatedAt` 갱신 예시:
 ```json
-"updatedAt": "2026-05-19"
+"updatedAt": "2026-05-22"
 ```
 
 ---
@@ -151,7 +163,8 @@ flutter run -d chrome
 
 ## 빠른 참조
 
-- WBS 데이터: `.planning/02-wbs.json`
+- WBS 데이터 원본: `.planning/02-wbs.json`
+- WBS 데이터 사본 (시각화용): `docs/02-wbs.json`
 - 시각화 도구: `docs/index.html`
 - 요구사항: `.planning/01-requirements.md`
 - 비전: `.planning/00-vision.md`
