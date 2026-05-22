@@ -11,20 +11,20 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg:       #080818;
-      --surface:  #0f0f2a;
-      --surface2: #181838;
-      --border:   #2a2a55;
-      --text:     #eeeeff;
-      --muted:    #7878a8;
+      --bg:       #0c0c20;
+      --surface:  #14142e;
+      --surface2: #1c1c40;
+      --border:   #32325e;
+      --text:     #f0f0ff;
+      --muted:    #9090be;
       --accent:   #a78bfa;
       --accent2:  #7c3aed;
-      --glow:     rgba(167, 139, 250, 0.3);
-      --done:     #22d3a5;
+      --glow:     rgba(167, 139, 250, 0.35);
+      --done:     #34d399;
       --active:   #fbbf24;
       --pending:  #60a5fa;
       --ms:       #f472b6;
-      --ca:       #22d3a5;
+      --ca:       #34d399;
       --cb:       #f472b6;
       --cab:      #60a5fa;
     }
@@ -34,6 +34,7 @@
       color: var(--text);
       font-family: 'Inter', 'Noto Sans KR', system-ui, sans-serif;
       min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
     }
 
     /* ── HEADER ───────────────────────────────────────────── */
@@ -203,16 +204,16 @@
       letter-spacing: -1px;
     }
     .prog-track {
-      background: rgba(255,255,255,.07);
+      background: rgba(255,255,255,.10);
       border-radius: 99px;
-      height: 7px;
+      height: 8px;
       overflow: hidden;
     }
     .prog-fill {
       height: 100%;
       border-radius: 99px;
       background: linear-gradient(90deg, #7c3aed, #a78bfa, #c4b5fd);
-      box-shadow: 0 0 12px rgba(167,139,250,.55);
+      box-shadow: 0 0 14px rgba(167,139,250,.65);
       transition: width .9s cubic-bezier(.4,0,.2,1);
     }
     .prog-sub { margin-top: 10px; font-size: 12px; color: var(--muted); }
@@ -557,7 +558,7 @@
     </div>
     <div class="meta-card">
       <h3>태스크 상태</h3>
-      <div class="legend-row"><span class="legend-rect" style="background:#4b5563"></span>완료 (done)</div>
+      <div class="legend-row"><span class="legend-rect" style="background:#6b7280"></span>완료 (done)</div>
       <div class="legend-row"><span class="legend-rect" style="background:var(--active)"></span>진행 중 (active)</div>
       <div class="legend-row"><span class="legend-rect" style="background:#3b82f6"></span>예정 (pending)</div>
       <div class="legend-row"><span class="legend-rect" style="background:var(--ms)"></span>마일스톤</div>
@@ -636,35 +637,35 @@ mermaid.initialize({
   startOnLoad: false,
   theme: 'base',
   themeVariables: {
-    background: '#0f0f2a',
-    mainBkg: '#181838',
-    lineColor: '#3a3a70',
-    primaryColor: '#6d28d9',
-    primaryTextColor: '#eeeeff',
-    primaryBorderColor: '#7c3aed',
-    gridColor: '#2a2a55',
-    sectionBkgColor: '#12122e',
-    altSectionBkgColor: '#1a1a3a',
-    taskBkgColor: '#5b21b6',
-    taskBorderColor: '#7c3aed',
-    taskTextColor: '#f0ebff',
+    background: '#14142e',
+    mainBkg: '#1c1c40',
+    lineColor: '#4040780',
+    primaryColor: '#7c3aed',
+    primaryTextColor: '#f0f0ff',
+    primaryBorderColor: '#9d77fb',
+    gridColor: '#32325e',
+    sectionBkgColor: '#1a1a42',
+    altSectionBkgColor: '#22224e',
+    taskBkgColor: '#8b5cf6',
+    taskBorderColor: '#a78bfa',
+    taskTextColor: '#ffffff',
     taskTextOutsideColor: '#c4b5fd',
-    activeTaskBkgColor: '#b45309',
+    activeTaskBkgColor: '#d97706',
     activeTaskBorderColor: '#fbbf24',
-    doneTaskBkgColor: '#374151',
-    doneTaskBorderColor: '#4b5563',
-    doneTaskTextColor: '#9ca3af',
-    critBkgColor: '#991b1b',
-    critBorderColor: '#ef4444',
+    doneTaskBkgColor: '#4b5563',
+    doneTaskBorderColor: '#6b7280',
+    doneTaskTextColor: '#e5e7eb',
+    critBkgColor: '#b91c1c',
+    critBorderColor: '#f87171',
     todayLineColor: '#f472b6',
-    cScale0: '#5b21b6',
-    cScale1: '#9d174d',
-    cScale2: '#1e40af',
-    cScale3: '#065f46',
-    cScale4: '#92400e',
-    cScale5: '#991b1b',
-    cScale6: '#3730a3',
-    cScale7: '#134e4a',
+    cScale0: '#8b5cf6',
+    cScale1: '#db2777',
+    cScale2: '#3b82f6',
+    cScale3: '#10b981',
+    cScale4: '#f59e0b',
+    cScale5: '#ef4444',
+    cScale6: '#6366f1',
+    cScale7: '#14b8a6',
   }
 });
 
@@ -735,39 +736,39 @@ function buildDef(data, nameMap) {
   const initCfg = {
     theme: 'base',
     themeVariables: {
-      background: '#0f0f2a',
-      mainBkg: '#181838',
-      lineColor: '#3a3a70',
-      primaryColor: '#6d28d9',
-      primaryTextColor: '#eeeeff',
-      gridColor: '#2a2a55',
-      sectionBkgColor: '#12122e',
-      altSectionBkgColor: '#1a1a3a',
-      taskBkgColor: '#5b21b6',
-      taskBorderColor: '#7c3aed',
-      taskTextColor: '#f0ebff',
+      background: '#14142e',
+      mainBkg: '#1c1c40',
+      lineColor: '#404078',
+      primaryColor: '#7c3aed',
+      primaryTextColor: '#f0f0ff',
+      gridColor: '#32325e',
+      sectionBkgColor: '#1a1a42',
+      altSectionBkgColor: '#22224e',
+      taskBkgColor: '#8b5cf6',
+      taskBorderColor: '#a78bfa',
+      taskTextColor: '#ffffff',
       taskTextOutsideColor: '#c4b5fd',
-      activeTaskBkgColor: '#b45309',
+      activeTaskBkgColor: '#d97706',
       activeTaskBorderColor: '#fbbf24',
-      doneTaskBkgColor: '#374151',
-      doneTaskBorderColor: '#4b5563',
-      doneTaskTextColor: '#9ca3af',
-      critBkgColor: '#991b1b',
-      critBorderColor: '#ef4444',
+      doneTaskBkgColor: '#4b5563',
+      doneTaskBorderColor: '#6b7280',
+      doneTaskTextColor: '#e5e7eb',
+      critBkgColor: '#b91c1c',
+      critBorderColor: '#f87171',
       todayLineColor: '#f472b6',
-      cScale0: '#5b21b6',
-      cScale1: '#9d174d',
-      cScale2: '#1e40af',
-      cScale3: '#065f46',
-      cScale4: '#92400e',
-      cScale5: '#991b1b',
-      cScale6: '#3730a3',
-      cScale7: '#134e4a',
+      cScale0: '#8b5cf6',
+      cScale1: '#db2777',
+      cScale2: '#3b82f6',
+      cScale3: '#10b981',
+      cScale4: '#f59e0b',
+      cScale5: '#ef4444',
+      cScale6: '#6366f1',
+      cScale7: '#14b8a6',
     },
     gantt: {
-      barHeight: 20,
-      barGap: 5,
-      fontSize: 11,
+      barHeight: 22,
+      barGap: 6,
+      fontSize: 12,
       sidePadding: 200,
       gridLineStartPadding: 40,
       topPadding: 60
