@@ -73,6 +73,6 @@ abstract class LocalStorage {
 
 ## 관련 문서
 
-- [ADR-0002: 아키텍처 — MVVM](ADR-0002-architecture-mvvm.md)
+- [ADR-0002: 아키텍처 — Layered Architecture](ADR-0002-architecture-mvvm.md)
 - [ADR-0003: 상태관리 — Riverpod](ADR-0003-state-management-riverpod.md)
 - `.planning/03-risks.md` — R-04 외부 의존 위험 대응 참고

@@ -96,7 +96,7 @@ lib/
 > `flutter test`로 데미지 계산을 화면 없이 검증하려면 Domain이 독립적이어야 합니다.
 
 **Q. Riverpod은 어느 계층인가요?**
-> Application 계층입니다. `Notifier`가 MVVM의 ViewModel 역할을 하며,
+> Application 계층입니다. `Notifier`가 ViewModel 역할을 하며,
 > Domain의 `BattleEngine`을 호출하고 결과를 상태로 저장합니다.
 
 **Q. Data 계층이 Domain을 몰라도 되나요?**
@@ -110,6 +110,6 @@ lib/
 | ADR | 제목 |
 |-----|------|
 | [ADR-0001](decisions/ADR-0001-mobile-platform.md) | 플랫폼 — Flutter |
-| [ADR-0002](decisions/ADR-0002-architecture-mvvm.md) | 아키텍처 — MVVM |
+| [ADR-0002](decisions/ADR-0002-architecture-mvvm.md) | 아키텍처 — Layered Architecture |
 | [ADR-0003](decisions/ADR-0003-state-management-riverpod.md) | 상태관리 — Riverpod |
 | [ADR-0004](decisions/ADR-0004-persistence-local.md) | 영속성 — 로컬 우선 |

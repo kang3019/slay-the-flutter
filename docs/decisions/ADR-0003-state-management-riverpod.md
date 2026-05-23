@@ -13,7 +13,7 @@
 카드 게임은 전투 중 플레이어 HP, 에너지, 핸드 카드, 덱 상태, 몬스터 상태, 유물 효과 등 여러 전역 상태가 동시에 맞물린다. 상태 관리 라이브러리를 고를 때 아래 세 가지가 핵심 기준이었다.
 
 1. **테스트 격리** — 테스트마다 독립적인 상태를 가져야 한다. 전역 싱글톤은 테스트 간 상태 누출을 유발한다.
-2. **`BuildContext` 없이 Provider 참조** — ViewModel이 Flutter 위젯 트리를 몰라야 MVVM 원칙이 지켜진다.
+2. **`BuildContext` 없이 Provider 참조** — Application 계층이 Flutter 위젯 트리를 몰라야 Layered Architecture 원칙이 지켜진다.
 3. **비동기 상태 명시** — 저장소 로드·레벨업 이펙트 등 비동기 작업의 로딩·에러 상태를 타입으로 표현해야 한다.
 
 ---
@@ -22,7 +22,7 @@
 
 | 옵션 | 설명 | 탈락 이유 |
 |------|------|-----------|
-| **Provider** (flutter_provider) | Flutter 팀 기본 패키지 | `BuildContext` 없이 다른 Provider를 읽을 수 없어 MVVM 원칙이 무너짐 |
+| **Provider** (flutter_provider) | Flutter 팀 기본 패키지 | `BuildContext` 없이 다른 Provider를 읽을 수 없어 Layered Architecture 원칙이 무너짐 |
 | **Bloc/Cubit** | 이벤트 기반 상태 기계 | 카드 한 장의 효과조차 Event → State 변환 코드가 과도하게 장황해짐 |
 | **GetX** | 올인원 프레임워크 | 전역 싱글톤 기반으로 테스트 격리가 근본적으로 불가, 컴파일 타임 안전성 없음 |
 | **Riverpod** | `ref` 기반 Provider 그래프 | 세 가지 기준을 모두 충족 |
@@ -71,5 +71,5 @@ tearDown(() => container.dispose());
 ## 관련 문서
 
 - [ADR-0001: 플랫폼 — Flutter](ADR-0001-mobile-platform.md)
-- [ADR-0002: 아키텍처 — MVVM](ADR-0002-architecture-mvvm.md)
+- [ADR-0002: 아키텍처 — Layered Architecture](ADR-0002-architecture-mvvm.md)
 - [ADR-0004: 영속성 — 로컬 우선](ADR-0004-persistence-local.md)

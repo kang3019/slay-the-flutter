@@ -15,7 +15,7 @@
 - 개발자 1인 (풀스택 · 게임 로직 · UI 모두 담당)
 - Android · iOS 동시 지원 필수
 - 제한된 개발 기간 — 빠른 이터레이션 필요
-- MVVM + 상태 관리 아키텍처 적용 요구
+- Layered Architecture + 상태 관리 아키텍처 적용 요구
 - 로컬 영속성 (레벨업·해금 데이터 저장) 필요
 
 아래 5가지 플랫폼 선택지를 비교 검토하였다.
@@ -69,7 +69,7 @@
 
 1. **양 플랫폼 동시 지원** — 단일 코드베이스로 Android·iOS를 커버, 1인 개발 공수 최소화
 2. **커스텀 카드 UI 친화적** — Flutter의 독자 렌더링 엔진은 네이티브 컴포넌트에 의존하지 않아 카드 애니메이션·레이아웃을 자유롭게 구현 가능
-3. **Riverpod 기반 MVVM** — `Notifier` / `AsyncNotifier` API가 MVVM 레이어 분리 요구 사항과 자연스럽게 매핑됨
+3. **Riverpod 기반 Layered Architecture** — `Notifier` / `AsyncNotifier` API가 계층 분리 요구 사항과 자연스럽게 매핑됨
 4. **Hot Reload** — 짧은 개발 사이클에서 UI 이터레이션 속도를 크게 높여줌
 5. **Dart 학습 비용 수용 가능** — 강타입 언어 경험이 있으면 Dart 문법 적응에 1~2일이면 충분하고, 이후 생산성 이득이 이를 상쇄함
 
@@ -79,7 +79,7 @@
 
 ### 긍정적
 
-- `lib/models/`, `lib/viewmodels/`, `lib/views/` 3-레이어 MVVM 구조를 언어 수준에서 강제할 수 있다.
+- `lib/presentation/`, `lib/application/`, `lib/domain/`, `lib/data/` 4-레이어 Layered Architecture 구조를 언어 수준에서 강제할 수 있다.
 - `flutter analyze` 정적 분석 + `flutter test` 단위 테스트 파이프라인이 즉시 사용 가능하다.
 - 향후 웹·데스크톱 확장 시 동일 코드베이스 재활용 가능.
 
@@ -95,4 +95,4 @@
 
 - `.planning/00-vision.md` — 기술 스택 결정 컨텍스트
 - `.planning/01-requirements.md` — MoSCoW 기능 요구 사항
-- `AGENTS.md` — MVVM·Riverpod 코딩 원칙
+- `AGENTS.md` — Layered Architecture·Riverpod 코딩 원칙

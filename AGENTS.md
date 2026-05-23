@@ -4,9 +4,9 @@
 
 ---
 
-## 1. 아키텍처 원칙: 4-Layer MVVM 엄수
+## 1. 아키텍처 원칙: 4-Layer Layered Architecture 엄수
 
-**모든 코드는 4계층 MVVM 패턴을 따른다.**
+**모든 코드는 4계층 Layered Architecture 패턴을 따른다.**
 
 | 계층 | 폴더 | 책임 | 제약 |
 |------|------|------|------|

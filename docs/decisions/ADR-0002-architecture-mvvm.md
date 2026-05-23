@@ -1,4 +1,4 @@
-# ADR-0002: 아키텍처 패턴으로 MVVM 선택
+# ADR-0002: 아키텍처 패턴 — 4-Layer Layered Architecture + Riverpod
 
 | 항목 | 내용 |
 |------|------|
@@ -30,16 +30,18 @@ Slay the Flutter는 데미지 계산, 상태 이상(취약·약화) 적용, 턴 
 
 ## 결정
 
-**MVVM(Model–View–ViewModel)** 을 채택한다.
+**4-Layer Layered Architecture + Riverpod** 를 채택한다.  
+Use Case 레이어는 프로젝트 규모(1인 단기 개발)에 맞게 Application 계층에 통합한다.
 
 ```
 lib/
-├── models/      ← 게임 규칙만 담당 (순수 Dart, Flutter 임포트 없음)
-├── viewmodels/  ← 상태 소유 + 명령 처리 (Riverpod Notifier)
-└── views/       ← 화면에 그리고 버튼 이벤트만 전달
+├── presentation/ ← 화면에 그리고 버튼 이벤트만 전달 (Flutter 위젯)
+├── application/  ← 상태 소유 + 명령 처리 (Riverpod Notifier, Use Case 겸임)
+├── domain/       ← 게임 규칙만 담당 (순수 Dart, Flutter 임포트 없음)
+└── data/         ← 로컬 저장소 읽기/쓰기 캡슐화 (SharedPreferences)
 ```
 
-계층 간 의존 방향은 단방향으로 고정한다: `views → viewmodels → models`  
+계층 간 의존 방향은 단방향으로 고정한다: `Presentation → Application → Domain ← Data`  
 역방향 임포트는 금지한다.
 
 ---
@@ -63,4 +65,4 @@ lib/
 
 - [ADR-0001: 플랫폼 — Flutter](ADR-0001-mobile-platform.md)
 - [ADR-0003: 상태관리 — Riverpod](ADR-0003-state-management-riverpod.md)
-- `AGENTS.md` — MVVM 임포트 규칙 강제 원칙
+- `AGENTS.md` — Layered Architecture 임포트 규칙 강제 원칙

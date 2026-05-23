@@ -72,7 +72,7 @@
 | 핵심 전투 루프 | 카드 사용 → 데미지 → 몬스터 처치 → 보상 선택 동작 |
 | 런 진행 구조 | 스테이지 1→2→3→보스 클리어 후 런 종료 |
 | 메타 진행 | XP 획득 → 레벨업 → 카드/유물 해금 동작 |
-| MVVM 아키텍처 | 레이어 간 의존성 역전 원칙 준수 |
+| Layered Architecture | 레이어 간 의존성 역전 원칙 준수 |
 | 테스트 커버리지 | 게임 로직 핵심 메서드 80% 이상 |
 | 코드 품질 | `flutter analyze` 경고 0건 |
 
@@ -85,7 +85,7 @@
 | 프레임워크 | Flutter (Dart) |
 | 상태 관리 | Riverpod (flutter_riverpod) |
 | 로컬 저장소 | (추후 결정: Hive 또는 sqflite) |
-| 아키텍처 | MVVM |
+| 아키텍처 | 4-Layer Layered Architecture + Riverpod |
 | 테스트 | flutter_test + mockito |
 
 ---
@@ -95,7 +95,7 @@
 ```
 Phase 1 — 기반 (완료)
   ├─ 프로젝트 스캐폴딩 및 문서화
-  └─ MVVM 폴더 구조 세팅
+  └─ Layered Architecture 폴더 구조 세팅
 
 Phase 2 — 게임 코어
   ├─ 카드/캐릭터/몬스터 Model 구현

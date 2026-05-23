@@ -189,6 +189,6 @@ abstract class LocalStorage {
 | 결정 | ADR |
 |------|-----|
 | Flutter 선택 이유 | [ADR-0001](../docs/decisions/ADR-0001-mobile-platform.md) |
-| MVVM 채택 이유 | [ADR-0002](../docs/decisions/ADR-0002-architecture-mvvm.md) |
+| Layered Architecture 채택 이유 | [ADR-0002](../docs/decisions/ADR-0002-architecture-mvvm.md) |
 | Riverpod 선택 이유 | [ADR-0003](../docs/decisions/ADR-0003-state-management-riverpod.md) |
 | SharedPreferences 선택 이유 | [ADR-0004](../docs/decisions/ADR-0004-persistence-local.md) |
