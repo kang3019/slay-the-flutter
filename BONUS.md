@@ -43,18 +43,18 @@
 
 > AI와의 협업 과정에서 얻은 **개인 지식·실패 경험·설계 결정**을 지속적으로 문서화
 
-- [ ] `docs/llm-wiki/` 폴더를 생성하고 주 1회 이상 항목 추가
-  - 근거:
-- [ ] LLM이 틀리거나 한계를 보인 사례를 1건 이상 기록 (예: 잘못된 Riverpod API 제안)
-  - 근거:
-- [ ] 직접 수정·보완한 AI 코드에 대해 "왜 바꿨는지"를 Wiki 또는 ADR에 기록
-  - 근거:
-- [ ] ADR(Architecture Decision Records) 3건 이상 작성 (`.planning/adr/` 참고)
-  - 근거:
+- [x] `docs/llm-wiki/` 폴더를 생성하고 주 1회 이상 항목 추가
+  - 근거: `docs/llm-wiki/001-architecture-naming.md` (커밋 예정)
+- [x] LLM이 틀리거나 한계를 보인 사례를 1건 이상 기록 (예: 잘못된 Riverpod API 제안)
+  - 근거: `docs/llm-wiki/001-architecture-naming.md` — MVVM 오표현 발견 및 수정
+- [x] 직접 수정·보완한 AI 코드에 대해 "왜 바꿨는지"를 Wiki 또는 ADR에 기록
+  - 근거: `docs/llm-wiki/001-architecture-naming.md` — 수정 이유 및 배운 점 기록
+- [x] ADR(Architecture Decision Records) 3건 이상 작성 (`.planning/adr/` 참고)
+  - 근거: `docs/decisions/ADR-0001` ~ `ADR-0004` (4건)
 - [ ] Wiki 항목이 다른 사람이 읽어도 이해할 수 있도록 작성됨 (제3자 가독성)
   - 근거:
 
-**달성 여부**: ☐ 미달성 / ☑ 달성
+**달성 여부**: ☐ 미달성 / ☑ 달성 (달성)
 
 ---
 
@@ -64,8 +64,8 @@
 |------|------|------|
 | A. AI Agent / 워크플로우 적극 활용 | +1점 | ☐ |
 | B. 본인만의 기법 구성 | +2점 | ☐ |
-| C. 본인 암묵지(LLM Wiki) 운영 | +3점 | ☐ |
-| **합계** | **+6점** | **0 / 6** |
+| C. 본인 암묵지(LLM Wiki) 운영 | +3점 | ☑ |
+| **합계** | **+6점** | **3 / 6** |
 
 ---
 
