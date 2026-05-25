@@ -18,20 +18,6 @@ html,body{width:100%;height:100%;overflow:hidden;
   font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Noto Sans KR',system-ui,sans-serif;
   -webkit-font-smoothing:antialiased}
 
-/* ── TIMER ─────────────────────────────────────────────── */
-#timer{
-  position:fixed;top:18px;right:22px;z-index:9999;
-  font-size:26px;font-weight:800;font-family:'Courier New',monospace;
-  letter-spacing:3px;
-  color:var(--v);background:rgba(7,7,26,.88);
-  border:1px solid rgba(167,139,250,.4);border-radius:12px;
-  padding:7px 18px;backdrop-filter:blur(10px);
-  transition:color .3s,border-color .3s;
-}
-#timer.warn{color:var(--y);border-color:rgba(251,191,36,.5)}
-#timer.done{color:#f87171;border-color:rgba(248,113,113,.5);animation:blink .9s infinite}
-@keyframes blink{0%,100%{opacity:1}50%{opacity:.35}}
-
 /* ── SLIDES ─────────────────────────────────────────────── */
 #deck{position:fixed;inset:0}
 .sl{
@@ -236,9 +222,6 @@ html,body{width:100%;height:100%;overflow:hidden;
 
 <div class="orb o1"></div>
 <div class="orb o2"></div>
-
-<!-- Timer -->
-<div id="timer">2:00</div>
 
 <!-- Nav arrows -->
 <div class="nav-arr" id="na-p" onclick="go(cur-1)">&#8249;</div>
@@ -448,17 +431,6 @@ const WBS = [
   {id:'M6',name:'테스트',          tasks:['pending','pending','pending','pending','pending']},
   {id:'M7',name:'QA & 발표',       tasks:['pending','pending','pending','pending','pending','ms']},
 ];
-
-/* ── TIMER ── */
-let sec = 120;
-const tel = document.getElementById('timer');
-const tid = setInterval(() => {
-  sec--;
-  const m = Math.floor(sec/60), s = sec%60;
-  tel.textContent = m+':'+(s<10?'0':'')+s;
-  if(sec<=0){tel.className='done';clearInterval(tid)}
-  else if(sec<=30){tel.className='warn'}
-}, 1000);
 
 /* ── SLIDES ── */
 const sls  = Array.from(document.querySelectorAll('.sl'));
