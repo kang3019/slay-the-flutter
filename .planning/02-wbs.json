@@ -97,7 +97,7 @@
         { "id": "T039", "name": "발표 슬라이드",           "assignee": "B",   "start": "2026-06-17", "end": "2026-06-19", "status": "pending", "priority": "high",   "hours": 6,  "description": "게임 소개·아키텍처·TDD·데모 순서 슬라이드 제작", "dependsOn": ["T038"] },
         { "id": "T040", "name": "데모 시나리오",           "assignee": "A",   "start": "2026-06-17", "end": "2026-06-18", "status": "pending", "priority": "high",   "hours": 3,  "description": "런 시작→전투→보상→스테이지 클리어 시연 스크립트", "dependsOn": ["T037"] },
         { "id": "T041", "name": "전체 리허설",             "assignee": "A+B", "start": "2026-06-19", "end": "2026-06-19", "status": "pending", "priority": "high",   "hours": 2,  "description": "발표 시간 내 데모 완주 확인, QA 대비 예상 질문 정리", "dependsOn": ["T039", "T040"] },
-        { "id": "T042", "name": "최종 발표",               "assignee": "A+B", "start": "2026-06-20", "end": "2026-06-20", "status": "milestone", "priority": "high", "hours": 0,  "description": "🎯 프로젝트 최종 발표", "dependsOn": ["T041"] }
+        { "id": "T042", "name": "최종 발표",               "assignee": "A+B", "start": "2026-06-20", "end": "2026-06-20", "status": "milestone", "priority": "high", "hours": 0,  "description": "프로젝트 최종 발표", "dependsOn": ["T041"] }
       ]
     }
   ]
