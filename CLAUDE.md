@@ -24,8 +24,8 @@ dart format lib/ test/
 
 # Tests
 flutter test                                      # all tests
-flutter test test/models/card_test.dart           # single file
-flutter test test/models/                         # directory
+flutter test test/domain/card_test.dart           # single file
+flutter test test/domain/                         # directory
 flutter test --reporter=expanded                  # verbose output
 flutter test --coverage                           # generate coverage/lcov.info
 
@@ -56,7 +56,7 @@ lib/
 
 ## Test Structure
 
-`test/` mirrors `lib/`:
+`test/` mirrors the Domain and Application layers of `lib/`:
 
 ```
 test/

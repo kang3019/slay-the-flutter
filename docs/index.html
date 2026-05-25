@@ -844,7 +844,7 @@ function showStats(data, nameMap) {
 /* ── MAIN ── */
 async function main() {
   try {
-    const res = await fetch('./02-wbs.json');
+    const res = await fetch('../.planning/02-wbs.json');
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const data = await res.json();
 
