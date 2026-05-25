@@ -117,6 +117,15 @@
       padding: 14px 20px;
     }
     .header-date strong { color: var(--accent); font-weight: 600; font-size: 13px; }
+    .pres-btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: linear-gradient(135deg, var(--accent2), var(--accent));
+      color: #fff; font-size: 13px; font-weight: 700; border-radius: 10px;
+      padding: 9px 20px; text-decoration: none; margin-top: 10px;
+      box-shadow: 0 0 20px rgba(167,139,250,.35);
+      transition: box-shadow .2s;
+    }
+    .pres-btn:hover { box-shadow: 0 0 28px rgba(167,139,250,.55); }
 
     /* ── MAIN ─────────────────────────────────────────────── */
     .main { max-width: 1400px; margin: 0 auto; padding: 28px 48px 48px; }
@@ -491,6 +500,7 @@
       <div class="header-badge">6주 개발 계획</div>
       <h1 class="header-title">Slay the Flutter<br>WBS — Gantt Chart</h1>
       <p class="header-sub">덱을 구성하고 몬스터를 처치하며 보스를 향해 나아가는 &nbsp;<strong>Flutter 덱빌딩 로그라이크 카드 게임</strong></p>
+      <a class="pres-btn" href="./presentation.html">▶ 발표자료 열기 (2분 타이머)</a>
     </div>
     <div class="header-date" id="header-date">
       로딩 중…
@@ -844,7 +854,7 @@ function showStats(data, nameMap) {
 /* ── MAIN ── */
 async function main() {
   try {
-    const res = await fetch('./wbs.json');
+    const res = await fetch('./02-wbs.json');
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const data = await res.json();
 
