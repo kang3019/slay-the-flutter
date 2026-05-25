@@ -1,4 +1,4 @@
-# ADR-0002: 아키텍처 패턴으로 MVVM 선택
+# ADR-0002: 아키텍처 패턴 — 4-Layer Layered Architecture + Riverpod
 
 | 항목 | 내용 |
 |------|------|
@@ -20,25 +20,27 @@ Slay the Flutter는 데미지 계산, 상태 이상(취약·약화) 적용, 턴 
 
 ## 검토된 선택지
 
-| 옵션 | 설명 | 탈락 이유 |
-|------|------|-----------|
-| **MVC** | Controller가 View와 Model을 중재 | Flutter의 선언형 위젯 구조와 Controller 개념의 경계가 모호해 실제로는 로직이 위젯 안에 섞이는 경향이 강함 |
-| **MVP** | Presenter가 View를 직접 업데이트 | View 인터페이스 정의가 필요해 보일러플레이트가 많고, Riverpod과 자연스럽게 연계되지 않음 |
-| **MVVM** | ViewModel이 상태를 소유, View는 구독만 | Riverpod `Notifier`가 ViewModel 역할을 직접 수행 → 별도 글루 코드 없이 패턴 완성 |
+| 옵션 | 설명 | 평가 |
+|------|------|------|
+| **MVC** | Controller가 View와 Model을 중재 | ❌ 탈락 — Flutter 선언형 위젯 구조에서 Controller 경계가 모호해 로직이 위젯 안에 섞이는 경향이 강함 |
+| **MVP** | Presenter가 View를 직접 업데이트 | ❌ 탈락 — View 인터페이스 정의가 필요해 보일러플레이트가 많고 Riverpod과 자연스럽게 연계되지 않음 |
+| **MVVM** | ViewModel이 상태를 소유, View는 구독만 | ❌ 탈락 — Presentation 계층 내부 패턴으로 전체 앱 계층 구조를 설명하기에 범위가 좁음 |
+| **Clean Architecture** | Presentation / Use Cases / Domain / Data 완전한 4계층, Use Case 객체가 비즈니스 명령을 캡슐화 | ❌ 탈락 — 1인 단기 개발에서 Use Case 레이어가 오버엔지니어링. 카드 한 장 효과에도 UseCase 클래스가 필요해 파일 수가 과도하게 증가 |
+| ✅ **4-Layer Layered Architecture** | Presentation / Application / Domain / Data 4계층 분리, Application 계층이 ViewModel + Use Case를 겸임 | ✅ 채택 — 테스트 가능성·단방향 의존성·1인 개발 규모 세 조건을 모두 충족 |
 
 ---
 
 ## 결정
 
-**MVVM** 원칙을 바탕으로, 실제 구현은 **4-Layer 아키텍처**를 채택한다.  
-Riverpod `Notifier`가 ViewModel 역할을 수행하며, Domain과 Data를 분리해 테스트 가능성을 극대화한다.
+**4-Layer Layered Architecture + Riverpod** 를 채택한다.  
+Use Case 레이어는 프로젝트 규모(1인 단기 개발)에 맞게 Application 계층에 통합한다.
 
 ```
 lib/
 ├── presentation/ ← 화면에 그리고 버튼 이벤트만 전달 (Flutter 위젯)
-├── application/  ← 상태 소유 + 명령 처리 (Riverpod Notifier — ViewModel)
-├── domain/       ← 게임 규칙만 담당 (순수 Dart, Flutter·Riverpod 임포트 없음)
-└── data/         ← SharedPreferences 읽기/쓰기 캡슐화
+├── application/  ← 상태 소유 + 명령 처리 (Riverpod Notifier, Use Case 겸임)
+├── domain/       ← 게임 규칙만 담당 (순수 Dart, Flutter 임포트 없음)
+└── data/         ← 로컬 저장소 읽기/쓰기 캡슐화 (SharedPreferences)
 ```
 
 계층 간 의존 방향은 단방향으로 고정한다: `Presentation → Application → Domain ← Data`  
@@ -51,12 +53,12 @@ lib/
 ### 긍정적
 
 - `domain/` 단위 테스트 커버리지 80% 목표를 현실적으로 달성할 수 있다.
-- `presentation/`은 표시만 담당하므로 디자인 변경이 게임 규칙에 영향을 주지 않는다.
-- `application/` Provider를 `ProviderContainer`로 격리해 Flutter 없이 테스트 가능하다.
+- Presentation은 표시만 담당하므로 디자인 변경이 게임 규칙에 영향을 주지 않는다.
+- Application 계층(Notifier)을 `ProviderContainer`로 격리해 Flutter 없이 테스트 가능하다.
 
 ### 부정적 / 감수하는 트레이드오프
 
-- 소규모 기능에도 domain / application / presentation 세 레이어 파일을 작성해야 해 파일 수가 늘어난다.
+- 소규모 기능에도 Presentation / Application / Domain 세 레이어를 거쳐야 해 파일 수가 늘어난다.
 - `BuildContext`를 Application 계층으로 넘기는 실수를 코드 리뷰에서 반드시 차단해야 한다.
 
 ---
@@ -65,4 +67,4 @@ lib/
 
 - [ADR-0001: 플랫폼 — Flutter](ADR-0001-mobile-platform.md)
 - [ADR-0003: 상태관리 — Riverpod](ADR-0003-state-management-riverpod.md)
-- `AGENTS.md` — MVVM 임포트 규칙 강제 원칙
+- `AGENTS.md` — Layered Architecture 임포트 규칙 강제 원칙

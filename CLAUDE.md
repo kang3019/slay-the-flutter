@@ -35,7 +35,7 @@ flutter clean && flutter pub get
 
 ## Architecture
 
-4-Layer architecture with Riverpod. Import direction is strictly one-way: `Presentation → Application → Domain ← Data`. Reverse imports are forbidden.
+4-Layer Layered Architecture + Riverpod. Four layers with strict import rules enforced by `AGENTS.md`:
 
 ```
 lib/
@@ -44,10 +44,13 @@ lib/
 ├── application/   # Riverpod Notifier/AsyncNotifier providers
 │                  # Files named with _provider.dart suffix
 │                  # Never imports presentation/
-├── domain/        # Pure Dart — game rules, damage calculation, deck logic
+├── domain/        # Pure Dart — game rules only (damage calc, deck logic, entities)
 │                  # No Flutter, no Riverpod imports allowed here
-└── data/          # SharedPreferences read/write — XP, level, unlocks
+└── data/          # SharedPreferences wrapper — read/write only
+                   # No business logic; called only by application/
 ```
+
+**Dependency direction**: `Presentation → Application → Domain ← Data`. Reverse imports are forbidden.
 
 **Provider pattern**: Use `Notifier` / `AsyncNotifier` (not deprecated `StateNotifier`). `ref.watch` is only valid inside `build()` or Widget tree. `BuildContext` must never be passed into Application layer.
 
@@ -61,7 +64,6 @@ test/
 │   ├── card_test.dart
 │   ├── player_test.dart
 │   ├── monster_test.dart
-│   ├── deck_test.dart
 │   └── battle_engine_test.dart
 └── application/
     ├── battle_provider_test.dart

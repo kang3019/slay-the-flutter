@@ -24,6 +24,10 @@
 
     // ── UI / 가독성 ──────────────────────────────────────
     // 파일·폴더 아이콘 테마 (Dart, Flutter 아이콘 포함)
-    "PKief.material-icon-theme"
+    "PKief.material-icon-theme",
+
+    // ── 발표 슬라이드 ────────────────────────────────────
+    // Marp Markdown → 슬라이드 변환 (Mermaid 다이어그램 내장 지원)
+    "marp-team.marp-vscode"
   ]
 }

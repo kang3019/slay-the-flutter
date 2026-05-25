@@ -7,7 +7,7 @@
 ![Platform](https://img.shields.io/badge/Platform-Android%20%7C%20iOS-lightgrey)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
-Android / iOS 크로스플랫폼. 4-Layer + Riverpod 아키텍처.
+Android / iOS 크로스플랫폼. 4-Layer Layered Architecture + Riverpod 아키텍처.
 
 ---
 
@@ -55,7 +55,7 @@ flutter clean && flutter pub get  # 빌드 캐시 초기화
 
 ## 아키텍처
 
-4-Layer + Riverpod. 상위 계층은 하위 계층만 알 수 있으며 역방향 임포트는 금지한다.
+4-Layer Layered Architecture + Riverpod. 상위 계층은 하위 계층만 알 수 있으며 역방향 임포트는 금지한다.
 
 ```
 Presentation → Application → Domain ← Data
@@ -86,7 +86,7 @@ lib/
 | 역할 | 선택 | 이유 |
 |------|------|------|
 | 프레임워크 | Flutter (Dart) | 단일 코드로 Android·iOS 동시 지원, 자체 렌더링 엔진으로 카드 UI 자유도 높음 |
-| 상태 관리 | flutter_riverpod | `ProviderContainer`로 위젯 없이 ViewModel 테스트 가능, MVVM과 자연스럽게 매핑 |
+| 상태 관리 | flutter_riverpod | `ProviderContainer`로 위젯 없이 Application 계층 테스트 가능, Layered Architecture와 자연스럽게 매핑 |
 | 로컬 저장소 | shared_preferences | 서버 불필요, 저장 데이터가 레벨/XP/해금 목록 수준으로 단순함 |
 | 테스트 | flutter_test, mockito | — |
 

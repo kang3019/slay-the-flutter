@@ -10,6 +10,12 @@
 
 ## 컨텍스트
 
+### 이 ADR이 결정하는 것
+
+게임을 종료했다가 다시 켜도 플레이어의 레벨·XP·해금 카드 목록이 유지되어야 한다.  
+즉, **"이 데이터를 어떤 저장 수단에 담을 것인가"** 를 결정한다.  
+(런 중 메모리 상태 관리는 ADR-0003의 Riverpod이 담당하고, 이 ADR은 앱을 꺼도 남는 영구 저장소 선택에 관한 것이다.)
+
 Slay the Flutter는 런 종료 후 XP·레벨·카드 해금 상태를 영속 저장해야 한다. 저장 방식을 선택할 때 아래 제약이 있었다.
 
 - 대학 과제 프로젝트로 서버 운영 비용을 쓸 수 없다.
@@ -73,6 +79,6 @@ abstract class LocalStorage {
 
 ## 관련 문서
 
-- [ADR-0002: 아키텍처 — MVVM](ADR-0002-architecture-mvvm.md)
+- [ADR-0002: 아키텍처 — Layered Architecture](ADR-0002-architecture-mvvm.md)
 - [ADR-0003: 상태관리 — Riverpod](ADR-0003-state-management-riverpod.md)
 - `.planning/03-risks.md` — R-04 외부 의존 위험 대응 참고
