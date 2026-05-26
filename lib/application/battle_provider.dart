@@ -1,0 +1,106 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../domain/battle_engine.dart';
+import '../domain/entities/card.dart';
+import '../domain/entities/player.dart';
+
+/// BattleEngine 생성 팩토리 타입.
+/// 테스트에서 overrideWith()로 교체해 결정론적 덱을 주입한다.
+typedef BattleEngineFactory = BattleEngine Function(int stage);
+
+/// 프로덕션 기본 팩토리. BattleEngine.start()로 셔플된 정규 덱을 생성한다.
+final battleEngineFactoryProvider = Provider<BattleEngineFactory>((ref) {
+  return (stage) => BattleEngine.start(stage: stage);
+});
+
+/// UI에 노출되는 전투 상태 스냅샷.
+/// BattleEngine의 가변 상태를 불변 값 타입으로 투영한다.
+class BattleState {
+  final int playerHp;
+  final int playerMaxHp;
+  final int playerBlock;
+  final bool playerIsVulnerable;
+  final bool playerIsWeak;
+  final int monsterHp;
+  final int monsterMaxHp;
+  final int monsterBlock;
+  final bool monsterIsVulnerable;
+  final List<GameCard> hand;
+  final int energy;
+  final int maxEnergy;
+  final bool isBattleOver;
+  final BattleResult? result;
+  final int stage;
+
+  const BattleState({
+    required this.playerHp,
+    required this.playerMaxHp,
+    required this.playerBlock,
+    required this.playerIsVulnerable,
+    required this.playerIsWeak,
+    required this.monsterHp,
+    required this.monsterMaxHp,
+    required this.monsterBlock,
+    required this.monsterIsVulnerable,
+    required this.hand,
+    required this.energy,
+    required this.maxEnergy,
+    required this.isBattleOver,
+    required this.stage,
+    this.result,
+  });
+}
+
+final battleProvider =
+    NotifierProvider<BattleNotifier, BattleState>(BattleNotifier.new);
+
+/// 전투 상태를 소유하고 UI 이벤트를 BattleEngine 호출로 위임한다.
+class BattleNotifier extends Notifier<BattleState> {
+  late BattleEngine _engine;
+
+  @override
+  BattleState build() {
+    _engine = ref.read(battleEngineFactoryProvider)(1);
+    return _fromEngine();
+  }
+
+  /// 패에서 카드를 사용한다. 에너지 부족·전투 종료 시 무시된다.
+  void playCard(GameCard card) {
+    _engine.playCard(card);
+    state = _fromEngine();
+  }
+
+  /// 플레이어 턴을 종료한다.
+  /// 내부 순서: 패 버림 → 몬스터 행동 → 블록 소멸 → 다음 플레이어 턴 시작.
+  void endTurn() {
+    _engine.endPlayerTurn();
+    if (!_engine.isBattleOver) {
+      _engine.startPlayerTurn();
+    }
+    state = _fromEngine();
+  }
+
+  /// 지정 스테이지로 새 전투를 시작한다.
+  void startBattle(int stage) {
+    _engine = ref.read(battleEngineFactoryProvider)(stage);
+    state = _fromEngine();
+  }
+
+  BattleState _fromEngine() => BattleState(
+        playerHp: _engine.player.hp,
+        playerMaxHp: Player.maxHp,
+        playerBlock: _engine.player.block,
+        playerIsVulnerable: _engine.player.isVulnerable,
+        playerIsWeak: _engine.player.isWeak,
+        monsterHp: _engine.monster.hp,
+        monsterMaxHp: _engine.monster.maxHp,
+        monsterBlock: _engine.monster.block,
+        monsterIsVulnerable: _engine.monster.isVulnerable,
+        hand: List.of(_engine.deck.hand),
+        energy: _engine.energy,
+        maxEnergy: BattleEngine.energyPerTurn,
+        isBattleOver: _engine.isBattleOver,
+        result: _engine.result,
+        stage: _engine.monster.stage,
+      );
+}
