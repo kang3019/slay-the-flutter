@@ -47,6 +47,10 @@ class Player {
     block += amount;
   }
 
+  void heal(int amount) {
+    hp = (hp + amount).clamp(0, maxHp);
+  }
+
   /// 동일 타입이 이미 있으면 duration을 누적한다.
   void applyStatusEffect(StatusEffect effect) {
     final idx = statusEffects.indexWhere((e) => e.type == effect.type);
