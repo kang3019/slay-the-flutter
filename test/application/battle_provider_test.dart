@@ -10,7 +10,6 @@ import 'package:slay_the_flutter/domain/entities/player.dart';
 /// 지정 카드 목록과 스테이지로 ProviderContainer를 생성한다.
 /// battleEngineFactoryProvider를 오버라이드해 결정론적 덱을 주입한다.
 ProviderContainer _makeContainer({
-  int stage = 1,
   List<GameCard>? cards,
 }) {
   return ProviderContainer(
