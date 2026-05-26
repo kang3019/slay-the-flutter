@@ -1,0 +1,133 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:slay_the_flutter/application/meta_progress_provider.dart';
+
+void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  late ProviderContainer container;
+
+  setUp(() async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    container = ProviderContainer(
+      overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
+    );
+  });
+
+  tearDown(() => container.dispose());
+
+  group('MetaProgressNotifier 초기 상태', () {
+    test('저장 데이터 없으면 레벨 1, XP 0', () {
+      final state = container.read(metaProgressProvider);
+      expect(state.level, equals(1));
+      expect(state.xp, equals(0));
+    });
+
+    test('저장 데이터 없으면 strike, defend 해금', () {
+      final state = container.read(metaProgressProvider);
+      expect(state.unlockedCardTypes, containsAll(['strike', 'defend']));
+    });
+
+    test('저장된 값이 있으면 해당 값을 불러온다', () async {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt('player_level', 3);
+      await prefs.setInt('player_xp', 300);
+      await prefs.setStringList(
+        'unlocked_cards',
+        ['strike', 'defend', 'bash', 'swiftCut', 'ironWall', 'focus'],
+      );
+
+      final freshContainer = ProviderContainer(
+        overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
+      );
+      addTearDown(freshContainer.dispose);
+
+      final state = freshContainer.read(metaProgressProvider);
+      expect(state.level, equals(3));
+      expect(state.xp, equals(300));
+      expect(state.unlockedCardTypes.length, equals(6));
+    });
+  });
+
+  group('MetaProgressNotifier.addXp — 레벨업 없음', () {
+    test('XP 50 추가 후 상태 반영', () async {
+      await container.read(metaProgressProvider.notifier).addXp(50);
+
+      final state = container.read(metaProgressProvider);
+      expect(state.xp, equals(50));
+      expect(state.level, equals(1));
+    });
+
+    test('레벨업 없으면 LevelUpResult.didLevelUp = false', () async {
+      final result =
+          await container.read(metaProgressProvider.notifier).addXp(50);
+      expect(result.didLevelUp, isFalse);
+      expect(result.newlyUnlockedCards, isEmpty);
+    });
+  });
+
+  group('MetaProgressNotifier.addXp — 레벨업', () {
+    test('레벨업 시 LevelUpResult.didLevelUp = true', () async {
+      final result =
+          await container.read(metaProgressProvider.notifier).addXp(100);
+
+      expect(result.didLevelUp, isTrue);
+      expect(result.newLevel, equals(2));
+      expect(result.newlyUnlockedCards, containsAll(['bash', 'swiftCut']));
+    });
+
+    test('레벨업 후 provider 상태가 갱신된다', () async {
+      await container.read(metaProgressProvider.notifier).addXp(100);
+
+      final state = container.read(metaProgressProvider);
+      expect(state.level, equals(2));
+      expect(state.unlockedCardTypes, containsAll(['bash', 'swiftCut']));
+    });
+  });
+
+  group('MetaProgressNotifier — 영속성', () {
+    test('addXp 후 player_xp가 SharedPreferences에 저장된다', () async {
+      await container.read(metaProgressProvider.notifier).addXp(100);
+
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getInt('player_xp'), equals(100));
+    });
+
+    test('addXp 레벨업 시 player_level이 SharedPreferences에 저장된다', () async {
+      await container.read(metaProgressProvider.notifier).addXp(100);
+
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getInt('player_level'), equals(2));
+    });
+
+    test('addXp 레벨업 시 unlocked_cards가 SharedPreferences에 저장된다', () async {
+      await container.read(metaProgressProvider.notifier).addXp(100);
+
+      final prefs = await SharedPreferences.getInstance();
+      final cards = prefs.getStringList('unlocked_cards');
+      expect(cards, containsAll(['bash', 'swiftCut']));
+    });
+  });
+
+  group('MetaProgressNotifier.reset', () {
+    test('reset 후 레벨 1, XP 0으로 돌아간다', () async {
+      await container.read(metaProgressProvider.notifier).addXp(200);
+      await container.read(metaProgressProvider.notifier).reset();
+
+      final state = container.read(metaProgressProvider);
+      expect(state.level, equals(1));
+      expect(state.xp, equals(0));
+    });
+
+    test('reset 후 해금 카드가 초기값으로 돌아간다', () async {
+      await container.read(metaProgressProvider.notifier).addXp(250);
+      await container.read(metaProgressProvider.notifier).reset();
+
+      final state = container.read(metaProgressProvider);
+      expect(state.unlockedCardTypes, containsAll(['strike', 'defend']));
+      expect(state.unlockedCardTypes.length, equals(2));
+    });
+  });
+}
