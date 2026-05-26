@@ -25,6 +25,7 @@ class BattleState {
   final int monsterMaxHp;
   final int monsterBlock;
   final bool monsterIsVulnerable;
+  final int monsterAttackPower;
   final List<GameCard> hand;
   final int energy;
   final int maxEnergy;
@@ -42,6 +43,7 @@ class BattleState {
     required this.monsterMaxHp,
     required this.monsterBlock,
     required this.monsterIsVulnerable,
+    required this.monsterAttackPower,
     required this.hand,
     required this.energy,
     required this.maxEnergy,
@@ -96,6 +98,7 @@ class BattleNotifier extends Notifier<BattleState> {
         monsterMaxHp: _engine.monster.maxHp,
         monsterBlock: _engine.monster.block,
         monsterIsVulnerable: _engine.monster.isVulnerable,
+        monsterAttackPower: _engine.monster.attackPower,
         hand: List.of(_engine.deck.hand),
         energy: _engine.energy,
         maxEnergy: BattleEngine.energyPerTurn,
