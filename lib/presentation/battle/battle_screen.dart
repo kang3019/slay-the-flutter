@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../application/battle_provider.dart';
+import '../../application/meta_progress_provider.dart';
 import '../../domain/battle_engine.dart';
 import '../shared/hp_bar_widget.dart';
 import 'battle_constants.dart';
@@ -19,6 +20,17 @@ class BattleScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(battleProvider);
     final notifier = ref.read(battleProvider.notifier);
+
+    // 전투가 승리로 끝나는 순간 한 번만 XP를 적립한다.
+    ref.listen<BattleState>(battleProvider, (prev, next) {
+      if (next.isBattleOver &&
+          next.result == BattleResult.playerWon &&
+          (prev == null || !prev.isBattleOver)) {
+        ref
+            .read(metaProgressProvider.notifier)
+            .addXp(BattleXpRewards.xpForStage(next.stage));
+      }
+    });
 
     return Scaffold(
       backgroundColor: BattleColors.background,
@@ -59,6 +71,7 @@ class BattleScreen extends ConsumerWidget {
           if (state.isBattleOver)
             _BattleResultOverlay(
               result: state.result!,
+              xpGained: BattleXpRewards.xpForStage(state.stage),
               onRestart: () => notifier.startBattle(1),
             ),
         ],
@@ -167,7 +180,13 @@ class _EndTurnButton extends StatelessWidget {
 class _BattleResultOverlay extends StatelessWidget {
   final BattleResult result;
   final VoidCallback onRestart;
-  const _BattleResultOverlay({required this.result, required this.onRestart});
+  final int xpGained;
+
+  const _BattleResultOverlay({
+    required this.result,
+    required this.onRestart,
+    required this.xpGained,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -192,6 +211,17 @@ class _BattleResultOverlay extends StatelessWidget {
                   color: isVictory ? Colors.amber : Colors.redAccent,
                 ),
               ),
+              if (isVictory) ...[
+                const SizedBox(height: 10),
+                Text(
+                  BattleXpRewards.xpGainedLabel(xpGained),
+                  style: const TextStyle(
+                    color: Colors.greenAccent,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
               const SizedBox(height: 28),
               ElevatedButton(
                 onPressed: onRestart,

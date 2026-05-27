@@ -27,6 +27,18 @@ abstract final class BattleStrings {
       };
 }
 
+/// SPECS.md: 전투 승리 시 지급되는 XP 보상.
+abstract final class BattleXpRewards {
+  static const int stageClear = 30;
+  static const int runClear = 100;
+
+  /// 스테이지 3(보스)는 런 클리어로 100 XP, 나머지는 30 XP.
+  static int xpForStage(int stage) =>
+      stage == 3 ? runClear : stageClear;
+
+  static String xpGainedLabel(int xp) => '+$xp XP';
+}
+
 /// 전투 화면 색상 상수.
 abstract final class BattleColors {
   static const background = Color(0xFF1A1A2E);
