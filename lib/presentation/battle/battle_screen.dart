@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../application/battle_provider.dart';
 import '../../application/meta_progress_provider.dart';
+import '../../application/run_provider.dart';
 import '../../domain/battle_engine.dart';
+import '../../domain/map/node_type.dart';
 import '../shared/hp_bar_widget.dart';
 import 'battle_constants.dart';
 import 'widgets/hand_widget.dart';
@@ -18,8 +20,9 @@ class BattleScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(battleProvider);
+    final state    = ref.watch(battleProvider);
     final notifier = ref.read(battleProvider.notifier);
+    final runState = ref.watch(runProvider);
 
     // 전투가 승리로 끝나는 순간 한 번만 XP를 적립한다.
     ref.listen<BattleState>(battleProvider, (prev, next) {
@@ -31,6 +34,9 @@ class BattleScreen extends ConsumerWidget {
             .addXp(BattleXpRewards.xpForStage(next.stage));
       }
     });
+
+    // 현재 전투가 보스 전투인지 판별한다.
+    final isBossBattle = runState.currentNode?.type == NodeType.boss;
 
     return Scaffold(
       backgroundColor: BattleColors.background,
@@ -72,7 +78,18 @@ class BattleScreen extends ConsumerWidget {
             _BattleResultOverlay(
               result: state.result!,
               xpGained: BattleXpRewards.xpForStage(state.stage),
-              onRestart: () => notifier.startBattle(1),
+              goldEarned: BattleGoldRewards.forStage(state.stage),
+              isBossBattle: isBossBattle,
+              // 승리: 맵으로 복귀 (보스 승리 포함 — exitBattleToMap이 클리어 처리)
+              onReturnToMap: () => ref
+                  .read(runProvider.notifier)
+                  .exitBattleToMap(
+                    remainingHp: state.playerHp,
+                    goldEarned: BattleGoldRewards.forStage(state.stage),
+                  ),
+              // 패배: 런을 초기화하고 맵으로 돌아간다
+              onNewRun: () =>
+                  ref.read(runProvider.notifier).startNewRun(),
             ),
         ],
       ),
@@ -177,20 +194,34 @@ class _EndTurnButton extends StatelessWidget {
   }
 }
 
+/// 전투 결과 오버레이.
+///
+/// 승리·패배·보스 클리어 세 가지 상황을 구분해 표시한다.
+///
+/// - 일반 승리: "승리!" + XP·골드 → "맵으로 이동" → [onReturnToMap]
+/// - 보스 승리: "런 클리어!" + XP → "새 런 시작" → [onNewRun]
+/// - 패배:      "패배..." → "새 런 시작" → [onNewRun]
 class _BattleResultOverlay extends StatelessWidget {
   final BattleResult result;
-  final VoidCallback onRestart;
   final int xpGained;
+  final int goldEarned;
+  final bool isBossBattle;
+  final VoidCallback onReturnToMap;
+  final VoidCallback onNewRun;
 
   const _BattleResultOverlay({
     required this.result,
-    required this.onRestart,
     required this.xpGained,
+    required this.goldEarned,
+    required this.isBossBattle,
+    required this.onReturnToMap,
+    required this.onNewRun,
   });
+
+  bool get _isVictory => result == BattleResult.playerWon;
 
   @override
   Widget build(BuildContext context) {
-    final isVictory = result == BattleResult.playerWon;
     return Container(
       color: Colors.black54,
       child: Center(
@@ -203,38 +234,61 @@ class _BattleResultOverlay extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              // ── 타이틀 ──────────────────────────────────────────────
               Text(
-                isVictory ? BattleStrings.victory : BattleStrings.defeat,
+                _titleText,
                 style: TextStyle(
-                  fontSize: 40,
+                  fontSize: 36,
                   fontWeight: FontWeight.bold,
-                  color: isVictory ? Colors.amber : Colors.redAccent,
+                  color: _isVictory ? Colors.amber : Colors.redAccent,
                 ),
               ),
-              if (isVictory) ...[
-                const SizedBox(height: 10),
+
+              // ── XP 표시 (승리 시) ───────────────────────────────────
+              if (_isVictory) ...[
+                const SizedBox(height: 8),
                 Text(
                   BattleXpRewards.xpGainedLabel(xpGained),
                   style: const TextStyle(
                     color: Colors.greenAccent,
-                    fontSize: 20,
+                    fontSize: 18,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
               ],
+
+              // ── 골드 표시 (일반 승리 시만) ───────────────────────────
+              if (_isVictory && !isBossBattle && goldEarned > 0) ...[
+                const SizedBox(height: 4),
+                Text(
+                  BattleGoldRewards.goldLabel(goldEarned),
+                  style: const TextStyle(
+                    color: Color(0xFFFFD700),
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+
               const SizedBox(height: 28),
+
+              // ── 액션 버튼 ────────────────────────────────────────────
               ElevatedButton(
-                onPressed: onRestart,
+                onPressed: _buttonAction,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.amber[800],
-                  padding: const EdgeInsets.symmetric(horizontal: 36, vertical: 12),
+                  backgroundColor:
+                      _isVictory && !isBossBattle ? Colors.amber[800] : Colors.blueGrey[700],
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 36,
+                    vertical: 12,
+                  ),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
                   ),
                 ),
-                child: const Text(
-                  BattleStrings.restart,
-                  style: TextStyle(color: Colors.white, fontSize: 15),
+                child: Text(
+                  _buttonLabel,
+                  style: const TextStyle(color: Colors.white, fontSize: 15),
                 ),
               ),
             ],
@@ -242,5 +296,21 @@ class _BattleResultOverlay extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  String get _titleText {
+    if (!_isVictory) return BattleStrings.defeat;
+    if (isBossBattle) return BattleStrings.runClear;
+    return BattleStrings.victory;
+  }
+
+  String get _buttonLabel {
+    if (_isVictory && !isBossBattle) return BattleStrings.returnToMap;
+    return BattleStrings.restart;
+  }
+
+  VoidCallback get _buttonAction {
+    if (_isVictory && !isBossBattle) return onReturnToMap;
+    return onNewRun;
   }
 }

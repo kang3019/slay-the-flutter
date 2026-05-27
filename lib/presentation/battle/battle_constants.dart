@@ -4,16 +4,18 @@ import '../../domain/entities/card.dart';
 
 /// 전투 화면 문자열 상수.
 abstract final class BattleStrings {
-  static const appTitle = 'Slay the Flutter';
-  static const stageLabel = '스테이지';
-  static const endTurn = '턴 종료';
-  static const nextAttack = '다음 공격';
-  static const victory = '승리!';
-  static const defeat = '패배...';
-  static const restart = '다시 시작';
-  static const vulnerable = '취약';
-  static const weak = '약화';
-  static const emptyHand = '패에 카드가 없습니다';
+  static const appTitle    = 'Slay the Flutter';
+  static const stageLabel  = '스테이지';
+  static const endTurn     = '턴 종료';
+  static const nextAttack  = '다음 공격';
+  static const victory     = '승리!';
+  static const runClear    = '런 클리어! 🎉';
+  static const defeat      = '패배...';
+  static const restart     = '새 런 시작';
+  static const returnToMap = '맵으로 이동 →';
+  static const vulnerable  = '취약';
+  static const weak        = '약화';
+  static const emptyHand   = '패에 카드가 없습니다';
 
   /// 카드 효과 설명 문자열.
   static String cardEffect(GameCard card) => switch (card.type) {
@@ -37,6 +39,28 @@ abstract final class BattleXpRewards {
       stage == 3 ? runClear : stageClear;
 
   static String xpGainedLabel(int xp) => '+$xp XP';
+}
+
+/// SPECS.md §6: 전투 승리 시 지급되는 골드 보상.
+///
+/// 일반 몬스터 처치 보상: 15~30 골드. 보스는 별도 보상 없음(런 클리어).
+abstract final class BattleGoldRewards {
+  /// 일반 몬스터 처치 최소 골드.
+  static const int minGold = 15;
+
+  /// 일반 몬스터 처치 최대 골드.
+  static const int maxGold = 30;
+
+  /// 스테이지별 고정 골드 보상.
+  ///
+  /// 추후 Random 보상으로 교체할 수 있도록 단일 진입점을 제공한다.
+  static int forStage(int stage) => switch (stage) {
+        1 => minGold,
+        2 => 25,
+        _ => 0, // 보스(스테이지 3)는 골드 대신 런 클리어
+      };
+
+  static String goldLabel(int gold) => '+$gold 골드';
 }
 
 /// 전투 화면 색상 상수.
