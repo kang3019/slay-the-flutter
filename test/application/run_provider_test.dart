@@ -287,8 +287,8 @@ void main() {
       });
 
       test('Elite 노드로 이동하면 phase가 RunPhase.battle이 된다', () {
-        // f0n2(event)로 먼저 이동 후 f1n1(elite)로 이동
-        container.read(runProvider.notifier).moveToNode('f0n2');
+        // f0n1(monster)로 먼저 이동 후 f1n1(elite)로 이동
+        container.read(runProvider.notifier).moveToNode('f0n1');
         container.read(runProvider.notifier).moveToNode('f1n1');
 
         expect(container.read(runProvider).phase, RunPhase.battle);
@@ -338,13 +338,14 @@ void main() {
       test('Boss 노드에서 exitBattleToMap 호출 시 isRunOver가 true가 된다', () {
         final notifier = container.read(runProvider.notifier);
 
-        // f0n0(monster) → f1n0(monster) → f2n0(rest) → f3n0(boss) 경로
+        // f0n0(monster) → f1n0(monster) → f2n0(rest) → f3n0(elite) → f4n0(boss) 경로
         notifier.moveToNode('f0n0');
         notifier.moveToNode('f1n0');
         notifier.moveToNode('f2n0');
         notifier.moveToNode('f3n0');
+        notifier.moveToNode('f4n0');
 
-        expect(container.read(runProvider).currentNodeId, 'f3n0');
+        expect(container.read(runProvider).currentNodeId, 'f4n0');
 
         notifier.exitBattleToMap(remainingHp: 40, goldEarned: 0);
 
@@ -357,6 +358,97 @@ void main() {
         notifier.exitBattleToMap(remainingHp: 60, goldEarned: 15);
 
         expect(container.read(runProvider).isRunOver, isFalse);
+      });
+    });
+
+    // ──────────────────────────────────────────────
+    // startReward / selectRewardCard / skipReward
+    // ──────────────────────────────────────────────
+
+    group('startReward', () {
+      test('startReward 호출 시 phase가 RunPhase.reward가 된다', () {
+        container.read(runProvider.notifier).startReward(
+          remainingHp: 60,
+          goldEarned: 10,
+        );
+        expect(container.read(runProvider).phase, RunPhase.reward);
+      });
+
+      test('startReward 호출 시 HP와 골드가 갱신된다', () {
+        container.read(runProvider.notifier).startReward(
+          remainingHp: 55,
+          goldEarned: 15,
+        );
+        final state = container.read(runProvider);
+        expect(state.playerHp, 55);
+        expect(state.gold, 15);
+      });
+
+      test('startReward 호출 시 rewardCards가 정확히 3장이다', () {
+        container.read(runProvider.notifier).startReward(
+          remainingHp: 70,
+          goldEarned: 0,
+        );
+        expect(container.read(runProvider).rewardCards.length, 3);
+      });
+
+      test('rewardCards는 기본 덱(강타·방어)이 아닌 카드로만 구성된다', () {
+        container.read(runProvider.notifier).startReward(
+          remainingHp: 70,
+          goldEarned: 0,
+        );
+        final cards = container.read(runProvider).rewardCards;
+        for (final card in cards) {
+          expect(card.type, isNot(CardType.strike));
+          expect(card.type, isNot(CardType.defend));
+        }
+      });
+    });
+
+    group('selectRewardCard', () {
+      test('카드를 선택하면 덱에 추가되고 phase가 RunPhase.map이 된다', () {
+        container.read(runProvider.notifier).startReward(
+          remainingHp: 70,
+          goldEarned: 0,
+        );
+        final rewardCard = container.read(runProvider).rewardCards.first;
+        final deckBefore = container.read(runProvider).deck.length;
+
+        container.read(runProvider.notifier).selectRewardCard(rewardCard);
+
+        final state = container.read(runProvider);
+        expect(state.phase, RunPhase.map);
+        expect(state.deck.length, deckBefore + 1);
+        expect(state.rewardCards, isEmpty);
+      });
+
+      test('reward 페이즈가 아닐 때 selectRewardCard는 아무것도 하지 않는다', () {
+        final deckBefore = container.read(runProvider).deck.length;
+        container.read(runProvider.notifier).selectRewardCard(Cards.bash);
+        expect(container.read(runProvider).deck.length, deckBefore);
+      });
+    });
+
+    group('skipReward', () {
+      test('건너뛰기 시 덱이 변하지 않고 phase가 RunPhase.map이 된다', () {
+        container.read(runProvider.notifier).startReward(
+          remainingHp: 70,
+          goldEarned: 0,
+        );
+        final deckBefore = container.read(runProvider).deck.length;
+
+        container.read(runProvider.notifier).skipReward();
+
+        final state = container.read(runProvider);
+        expect(state.phase, RunPhase.map);
+        expect(state.deck.length, deckBefore);
+        expect(state.rewardCards, isEmpty);
+      });
+
+      test('reward 페이즈가 아닐 때 skipReward는 아무것도 하지 않는다', () {
+        expect(container.read(runProvider).phase, RunPhase.map);
+        container.read(runProvider.notifier).skipReward();
+        expect(container.read(runProvider).phase, RunPhase.map);
       });
     });
 
@@ -384,6 +476,7 @@ void main() {
         expect(state.visitedNodeIds, isEmpty);
         expect(state.isRunOver, isFalse);
         expect(state.phase, RunPhase.map);
+        expect(state.rewardCards, isEmpty);
       });
     });
   });

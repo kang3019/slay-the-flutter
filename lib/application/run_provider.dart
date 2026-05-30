@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../domain/entities/card.dart';
@@ -12,13 +14,16 @@ import '../domain/map/node_type.dart';
 
 /// 현재 런이 어느 화면에 있는지를 나타내는 단계 값.
 ///
-/// [AppRouter]가 이 값을 감시해 [MapScreen]과 [BattleScreen]을 교체한다.
+/// [AppRouter]가 이 값을 감시해 [MapScreen]·[BattleScreen]·[RewardScreen]을 교체한다.
 enum RunPhase {
   /// 지도 화면 — 다음 노드를 선택하는 단계.
   map,
 
   /// 전투 화면 — 몬스터·엘리트·보스와 전투 중인 단계.
   battle,
+
+  /// 보상 선택 화면 — 전투 승리 후 카드 3장 중 1장을 덱에 추가하는 단계.
+  reward,
 }
 
 // ──────────────────────────────────────────────────────────────────────────
@@ -58,6 +63,10 @@ class RunState {
   /// 런이 끝났으면 true. 보스 처치 또는 플레이어 사망 시 true가 된다.
   final bool isRunOver;
 
+  /// 보상 화면에서 제시할 카드 3장. [RunPhase.reward]일 때만 채워지며,
+  /// 다른 단계에서는 빈 리스트.
+  final List<GameCard> rewardCards;
+
   const RunState({
     required this.phase,
     required this.floor,
@@ -68,19 +77,20 @@ class RunState {
     required this.currentNodeId,
     required this.visitedNodeIds,
     required this.isRunOver,
+    required this.rewardCards,
   });
 
   // ── 파생 값 (getter) ───────────────────────────────────────────────────
 
   /// 현재 floor를 BattleEngine 스테이지로 변환한다.
   ///
-  /// SPECS.md 스테이지 공식 매핑:
+  /// SPECS.md 스테이지 공식 매핑 (5층 맵 기준):
   /// - Floor 0·1 → 스테이지 1 (일반 구역)
-  /// - Floor 2   → 스테이지 2 (심층 구역)
-  /// - Floor 3+  → 스테이지 3 (보스 구역)
+  /// - Floor 2·3 → 스테이지 2 (심층 구역)
+  /// - Floor 4+  → 스테이지 3 (보스 구역)
   int get currentStage => switch (floor) {
         0 || 1 => 1,
-        2      => 2,
+        2 || 3 => 2,
         _      => 3,
       };
 
@@ -110,6 +120,7 @@ class RunState {
     String? currentNodeId,
     List<String>? visitedNodeIds,
     bool? isRunOver,
+    List<GameCard>? rewardCards,
   }) =>
       RunState(
         phase: phase ?? this.phase,
@@ -121,6 +132,7 @@ class RunState {
         currentNodeId: currentNodeId ?? this.currentNodeId,
         visitedNodeIds: visitedNodeIds ?? this.visitedNodeIds,
         isRunOver: isRunOver ?? this.isRunOver,
+        rewardCards: rewardCards ?? this.rewardCards,
       );
 }
 
@@ -143,8 +155,13 @@ final runProvider = NotifierProvider<RunNotifier, RunState>(RunNotifier.new);
 /// moveToNode(combatNode) → phase = RunPhase.battle
 ///   AppRouter 감지 → BattleScreen 표시 + BattleNotifier 새 전투 시작
 ///
-/// exitBattleToMap(...)  → phase = RunPhase.map
-///   AppRouter 감지 → MapScreen 복귀
+/// startReward(...)      → phase = RunPhase.reward
+///   AppRouter 감지 → RewardScreen 표시 (카드 3장 선택)
+///
+/// selectRewardCard(...) → phase = RunPhase.map
+/// skipReward()          → phase = RunPhase.map
+///
+/// exitBattleToMap(...)  → phase = RunPhase.map (보스 승리 전용)
 /// ```
 ///
 /// [BuildContext]를 절대 받지 않는다. UI 이벤트는 순수한 값 인자로만 전달받는다.
@@ -152,6 +169,17 @@ class RunNotifier extends Notifier<RunState> {
   /// 기본 덱: 강타(Strike) 5장 + 방어(Defend) 5장. SPECS.md §2 참조.
   static const int _defaultStrikeCount = 5;
   static const int _defaultDefendCount = 5;
+
+  /// 전투 보상으로 제시할 수 있는 카드 풀 (기본 덱 카드 제외).
+  static const List<GameCard> _rewardPool = [
+    Cards.bash,
+    Cards.swiftCut,
+    Cards.ironWall,
+    Cards.focus,
+    Cards.recover,
+  ];
+
+  final _random = Random();
 
   @override
   RunState build() => _initialState();
@@ -169,6 +197,7 @@ class RunNotifier extends Notifier<RunState> {
         currentNodeId: null,
         visitedNodeIds: const [],
         isRunOver: false,
+        rewardCards: const [],
       );
 
   // ── 맵 이동 ────────────────────────────────────────────────────────────
@@ -210,14 +239,53 @@ class RunNotifier extends Notifier<RunState> {
     );
   }
 
+  // ── 보상 선택 ─────────────────────────────────────────────────────────
+
+  /// 일반 전투 승리 후 보상 화면으로 전환한다.
+  ///
+  /// [remainingHp]: 전투 후 남은 플레이어 HP.
+  /// [goldEarned]: 이번 전투에서 획득한 골드.
+  /// 전풀에서 무작위로 고른 카드 3장이 [RunState.rewardCards]에 담긴다.
+  void startReward({required int remainingHp, required int goldEarned}) {
+    final clampedHp = remainingHp.clamp(0, Player.maxHp);
+    state = state.copyWith(
+      phase: RunPhase.reward,
+      playerHp: clampedHp,
+      gold: state.gold + goldEarned,
+      rewardCards: _generateRewardCards(),
+    );
+  }
+
+  /// 보상 화면에서 카드를 선택한다.
+  ///
+  /// 선택한 [card]를 덱에 추가하고 맵 화면으로 돌아간다.
+  void selectRewardCard(GameCard card) {
+    if (state.phase != RunPhase.reward) return;
+    state = state.copyWith(
+      phase: RunPhase.map,
+      deck: List.unmodifiable([...state.deck, card]),
+      rewardCards: const [],
+    );
+  }
+
+  /// 보상을 건너뛰고 맵 화면으로 돌아간다.
+  void skipReward() {
+    if (state.phase != RunPhase.reward) return;
+    state = state.copyWith(
+      phase: RunPhase.map,
+      rewardCards: const [],
+    );
+  }
+
   // ── 전투 결과 반영 ─────────────────────────────────────────────────────
 
   /// 전투 승리 후 결과를 반영하고 **맵 화면으로 돌아간다**.
   ///
+  /// 보스 노드에서 승리 시 또는 패배 시 사용한다.
+  /// 일반 전투 승리에는 [startReward]를 사용한다.
+  ///
   /// [remainingHp]: 전투 후 남은 플레이어 HP.
   /// [goldEarned]: 이번 전투에서 획득한 골드.
-  ///
-  /// 보스 노드에서 승리 시 [isRunOver]가 true가 되어 런이 클리어된다.
   void exitBattleToMap({required int remainingHp, required int goldEarned}) {
     final clampedHp = remainingHp.clamp(0, Player.maxHp);
     final isBossCleared = state.currentNode?.type == NodeType.boss;
@@ -227,6 +295,7 @@ class RunNotifier extends Notifier<RunState> {
       playerHp: clampedHp,
       gold: state.gold + goldEarned,
       isRunOver: isBossCleared,
+      rewardCards: const [],
     );
   }
 
@@ -285,5 +354,11 @@ class RunNotifier extends Notifier<RunState> {
     } catch (_) {
       return null;
     }
+  }
+
+  /// 보상 풀에서 무작위로 3장을 뽑는다.
+  List<GameCard> _generateRewardCards() {
+    final shuffled = List.of(_rewardPool)..shuffle(_random);
+    return List.unmodifiable(shuffled.take(3).toList());
   }
 }

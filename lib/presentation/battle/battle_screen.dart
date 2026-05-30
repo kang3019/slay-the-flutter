@@ -80,10 +80,10 @@ class BattleScreen extends ConsumerWidget {
               xpGained: BattleXpRewards.xpForStage(state.stage),
               goldEarned: BattleGoldRewards.forStage(state.stage),
               isBossBattle: isBossBattle,
-              // 승리: 맵으로 복귀 (보스 승리 포함 — exitBattleToMap이 클리어 처리)
+              // 일반 승리: 보상 카드 선택 화면으로 전환
               onReturnToMap: () => ref
                   .read(runProvider.notifier)
-                  .exitBattleToMap(
+                  .startReward(
                     remainingHp: state.playerHp,
                     goldEarned: BattleGoldRewards.forStage(state.stage),
                   ),
@@ -305,7 +305,7 @@ class _BattleResultOverlay extends StatelessWidget {
   }
 
   String get _buttonLabel {
-    if (_isVictory && !isBossBattle) return BattleStrings.returnToMap;
+    if (_isVictory && !isBossBattle) return BattleStrings.selectReward;
     return BattleStrings.restart;
   }
 

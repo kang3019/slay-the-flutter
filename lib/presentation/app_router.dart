@@ -5,6 +5,7 @@ import '../application/battle_provider.dart';
 import '../application/run_provider.dart';
 import 'battle/battle_screen.dart';
 import 'map/map_screen.dart';
+import 'reward/reward_screen.dart';
 
 /// 런(Run) 단계([RunPhase])에 따라 [MapScreen]과 [BattleScreen]을 교체하는
 /// 최상위 라우터 위젯.
@@ -48,6 +49,7 @@ class AppRouter extends ConsumerWidget {
     return switch (phase) {
       RunPhase.map    => const MapScreen(),
       RunPhase.battle => const BattleScreen(),
+      RunPhase.reward => const RewardScreen(),
     };
   }
 }
