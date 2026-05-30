@@ -1,7 +1,7 @@
 {
   "project": "Slay the Flutter",
   "version": "3.0",
-  "updatedAt": "2026-05-22",
+  "updatedAt": "2026-05-31",
   "startDate": "2026-05-12",
   "presentationDate": "2026-06-20",
   "team": [
@@ -30,9 +30,9 @@
         { "id": "T007", "name": "아키텍처 문서",           "assignee": "A",   "start": "2026-05-15", "end": "2026-05-17", "status": "done",    "priority": "high",   "hours": 5, "description": "4계층(Presentation/Application/Domain/Data) 의존성 흐름 문서화" },
         { "id": "T008", "name": "ADR 3종 작성",            "assignee": "B",   "start": "2026-05-16", "end": "2026-05-17", "status": "done",    "priority": "high",   "hours": 3, "description": "Flutter 선택·MVVM·Riverpod·로컬저장소 결정 이유 기록" },
         { "id": "T009", "name": "폴더 구조 생성",          "assignee": "A",   "start": "2026-05-18", "end": "2026-05-18", "status": "done",    "priority": "high",   "hours": 2, "description": "lib/domain·application·presentation·data 폴더 및 빈 파일 scaffold" },
-        { "id": "T010", "name": "도메인 모델 설계",        "assignee": "B",   "start": "2026-05-19", "end": "2026-05-21", "status": "active",  "priority": "high",   "hours": 8, "description": "Card·Player·Monster·BattleState 클래스 시그니처 정의", "dependsOn": ["T009"] },
-        { "id": "T011", "name": "Riverpod 구조 설계",      "assignee": "A",   "start": "2026-05-19", "end": "2026-05-20", "status": "active",  "priority": "high",   "hours": 6, "description": "BattleProvider·RunProvider·MetaProvider 상태 타입 및 공개 API 정의", "dependsOn": ["T009"] },
-        { "id": "T012", "name": "저장소 기술 선정",        "assignee": "A+B", "start": "2026-05-20", "end": "2026-05-21", "status": "pending", "priority": "medium", "hours": 2, "description": "SharedPreferences 확정 및 ADR-0004 작성", "dependsOn": ["T010", "T011"] }
+        { "id": "T010", "name": "도메인 모델 설계",        "assignee": "B",   "start": "2026-05-19", "end": "2026-05-21", "status": "done",    "priority": "high",   "hours": 8, "description": "Card·Player·Monster·BattleState 클래스 시그니처 정의", "dependsOn": ["T009"] },
+        { "id": "T011", "name": "Riverpod 구조 설계",      "assignee": "A",   "start": "2026-05-19", "end": "2026-05-20", "status": "done",    "priority": "high",   "hours": 6, "description": "BattleProvider·RunProvider·MetaProvider 상태 타입 및 공개 API 정의", "dependsOn": ["T009"] },
+        { "id": "T012", "name": "저장소 기술 선정",        "assignee": "A+B", "start": "2026-05-20", "end": "2026-05-21", "status": "done",    "priority": "medium", "hours": 2, "description": "SharedPreferences 확정 및 ADR-0004 작성", "dependsOn": ["T010", "T011"] }
       ]
     },
     {
@@ -40,13 +40,13 @@
       "name": "핵심 로직 구현",
       "goal": "BattleEngine·덱 시스템 완성 (TDD)",
       "tasks": [
-        { "id": "T013", "name": "BattleEngine 데미지",     "assignee": "A",   "start": "2026-05-22", "end": "2026-05-24", "status": "pending", "priority": "high",   "hours": 8,  "description": "calculateDamage·applyDamage 구현, 취약/약화 배율 단위 테스트", "dependsOn": ["T010", "T011"] },
-        { "id": "T014", "name": "방어도 시스템",           "assignee": "A",   "start": "2026-05-24", "end": "2026-05-25", "status": "pending", "priority": "high",   "hours": 4,  "description": "Block 흡수 로직·턴 종료 소멸 구현 및 테스트", "dependsOn": ["T013"] },
-        { "id": "T015", "name": "상태이상 취약/약화",      "assignee": "A",   "start": "2026-05-25", "end": "2026-05-27", "status": "pending", "priority": "high",   "hours": 6,  "description": "StatusEffect 열거형·배율 적용·턴 카운트 감소 로직", "dependsOn": ["T013"] },
-        { "id": "T016", "name": "에너지/드로우",           "assignee": "A",   "start": "2026-05-26", "end": "2026-05-28", "status": "pending", "priority": "high",   "hours": 6,  "description": "턴당 에너지 3 충전·5장 드로우·덱 소진 시 버림덱 셔플", "dependsOn": ["T014"] },
-        { "id": "T017", "name": "덱 관리 시스템",          "assignee": "A",   "start": "2026-05-28", "end": "2026-05-30", "status": "pending", "priority": "high",   "hours": 8,  "description": "Deck.shuffle·draw·discard 구현, 카드 추가/제거 로직", "dependsOn": ["T016"] },
-        { "id": "T018", "name": "몬스터 AI 패턴",          "assignee": "A",   "start": "2026-05-29", "end": "2026-05-31", "status": "pending", "priority": "high",   "hours": 6,  "description": "의도(Intent) 시스템·공격/방어 행동 결정 로직, 보스 전용 패턴", "dependsOn": ["T015"] },
-        { "id": "T019", "name": "BattleProvider",          "assignee": "A",   "start": "2026-05-31", "end": "2026-06-02", "status": "pending", "priority": "high",   "hours": 10, "description": "BattleNotifier 완성, 전투 전체 상태 전이·승패 판정", "dependsOn": ["T017", "T018"] }
+        { "id": "T013", "name": "BattleEngine 데미지",     "assignee": "A",   "start": "2026-05-22", "end": "2026-05-24", "status": "done",    "priority": "high",   "hours": 8,  "description": "calculateDamage·applyDamage 구현, 취약/약화 배율 단위 테스트", "dependsOn": ["T010", "T011"] },
+        { "id": "T014", "name": "방어도 시스템",           "assignee": "A",   "start": "2026-05-24", "end": "2026-05-25", "status": "done",    "priority": "high",   "hours": 4,  "description": "Block 흡수 로직·턴 종료 소멸 구현 및 테스트", "dependsOn": ["T013"] },
+        { "id": "T015", "name": "상태이상 취약/약화",      "assignee": "A",   "start": "2026-05-25", "end": "2026-05-27", "status": "done",    "priority": "high",   "hours": 6,  "description": "StatusEffect 열거형·배율 적용·턴 카운트 감소 로직", "dependsOn": ["T013"] },
+        { "id": "T016", "name": "에너지/드로우",           "assignee": "A",   "start": "2026-05-26", "end": "2026-05-28", "status": "done",    "priority": "high",   "hours": 6,  "description": "턴당 에너지 3 충전·5장 드로우·덱 소진 시 버림덱 셔플", "dependsOn": ["T014"] },
+        { "id": "T017", "name": "덱 관리 시스템",          "assignee": "A",   "start": "2026-05-28", "end": "2026-05-30", "status": "done",    "priority": "high",   "hours": 8,  "description": "Deck.shuffle·draw·discard 구현, 카드 추가/제거 로직", "dependsOn": ["T016"] },
+        { "id": "T018", "name": "몬스터 AI 패턴",          "assignee": "A",   "start": "2026-05-29", "end": "2026-05-31", "status": "done",    "priority": "high",   "hours": 6,  "description": "의도(Intent) 시스템·공격/방어 행동 결정 로직, 보스 전용 패턴", "dependsOn": ["T015"] },
+        { "id": "T019", "name": "BattleProvider",          "assignee": "A",   "start": "2026-05-31", "end": "2026-06-02", "status": "done",    "priority": "high",   "hours": 10, "description": "BattleNotifier 완성, 전투 전체 상태 전이·승패 판정", "dependsOn": ["T017", "T018"] }
       ]
     },
     {
@@ -54,12 +54,12 @@
       "name": "UI 개발",
       "goal": "전투 화면·보상·맵·메타 화면 구현",
       "tasks": [
-        { "id": "T020", "name": "CardWidget 디자인",       "assignee": "B",   "start": "2026-05-26", "end": "2026-05-29", "status": "pending", "priority": "high",   "hours": 8,  "description": "카드 이름·비용·효과 표시, 드래그 인터랙션 초안", "dependsOn": ["T010"] },
-        { "id": "T021", "name": "BattleScreen 레이아웃",   "assignee": "B",   "start": "2026-05-29", "end": "2026-06-02", "status": "pending", "priority": "high",   "hours": 10, "description": "전투 전체 레이아웃: 몬스터·플레이어·손패·에너지 영역", "dependsOn": ["T020"] },
-        { "id": "T022", "name": "플레이어 상태 위젯",      "assignee": "B",   "start": "2026-06-02", "end": "2026-06-04", "status": "pending", "priority": "high",   "hours": 6,  "description": "HP 바·에너지 아이콘·방어도 수치·상태이상 아이콘 표시", "dependsOn": ["T021"] },
-        { "id": "T023", "name": "몬스터 위젯",             "assignee": "B",   "start": "2026-06-03", "end": "2026-06-05", "status": "pending", "priority": "high",   "hours": 6,  "description": "몬스터 HP·블록·의도(Intent) 아이콘 표시", "dependsOn": ["T021"] },
-        { "id": "T024", "name": "RewardScreen",            "assignee": "B",   "start": "2026-06-05", "end": "2026-06-07", "status": "pending", "priority": "high",   "hours": 8,  "description": "전투 승리 후 카드 3장 보상 선택 화면", "dependsOn": ["T022", "T023"] },
-        { "id": "T025", "name": "MapScreen 스테이지",      "assignee": "B",   "start": "2026-06-06", "end": "2026-06-08", "status": "pending", "priority": "medium", "hours": 8,  "description": "스테이지 1→2→3→보스 맵 노드 표시 및 이동 선택", "dependsOn": ["T024"] },
+        { "id": "T020", "name": "CardWidget 디자인",       "assignee": "B",   "start": "2026-05-26", "end": "2026-05-29", "status": "done",    "priority": "high",   "hours": 8,  "description": "카드 이름·비용·효과 표시, 드래그 인터랙션 초안", "dependsOn": ["T010"] },
+        { "id": "T021", "name": "BattleScreen 레이아웃",   "assignee": "B",   "start": "2026-05-29", "end": "2026-06-02", "status": "done",    "priority": "high",   "hours": 10, "description": "전투 전체 레이아웃: 몬스터·플레이어·손패·에너지 영역", "dependsOn": ["T020"] },
+        { "id": "T022", "name": "플레이어 상태 위젯",      "assignee": "B",   "start": "2026-06-02", "end": "2026-06-04", "status": "done",    "priority": "high",   "hours": 6,  "description": "HP 바·에너지 아이콘·방어도 수치·상태이상 아이콘 표시", "dependsOn": ["T021"] },
+        { "id": "T023", "name": "몬스터 위젯",             "assignee": "B",   "start": "2026-06-03", "end": "2026-06-05", "status": "done",    "priority": "high",   "hours": 6,  "description": "몬스터 HP·블록·의도(Intent) 아이콘 표시", "dependsOn": ["T021"] },
+        { "id": "T024", "name": "RewardScreen",            "assignee": "B",   "start": "2026-06-05", "end": "2026-06-07", "status": "done",    "priority": "high",   "hours": 8,  "description": "전투 승리 후 카드 3장 보상 선택 화면", "dependsOn": ["T022", "T023"] },
+        { "id": "T025", "name": "MapScreen 스테이지",      "assignee": "B",   "start": "2026-06-06", "end": "2026-06-08", "status": "done",    "priority": "medium", "hours": 8,  "description": "스테이지 1→2→3→보스 맵 노드 표시 및 이동 선택", "dependsOn": ["T024"] },
         { "id": "T026", "name": "MetaScreen 해금",         "assignee": "B",   "start": "2026-06-07", "end": "2026-06-08", "status": "pending", "priority": "medium", "hours": 6,  "description": "레벨·XP 바·해금 카드 목록 화면", "dependsOn": ["T025"] }
       ]
     },
@@ -68,11 +68,11 @@
       "name": "통합 & 영속성",
       "goal": "UI-ViewModel 연결 및 로컬 저장소 완성",
       "tasks": [
-        { "id": "T027", "name": "GameRepository",          "assignee": "B",   "start": "2026-06-02", "end": "2026-06-04", "status": "pending", "priority": "high",   "hours": 6,  "description": "SharedPreferences XP·레벨·해금카드 저장/로드 구현", "dependsOn": ["T012"] },
-        { "id": "T028", "name": "XP/레벨업 시스템",        "assignee": "A",   "start": "2026-06-05", "end": "2026-06-07", "status": "pending", "priority": "medium", "hours": 6,  "description": "XpSystem.calcLevel·레벨업 트리거·해금 카드 풀 갱신", "dependsOn": ["T027"] },
-        { "id": "T029", "name": "해금 시스템",             "assignee": "A",   "start": "2026-06-06", "end": "2026-06-08", "status": "pending", "priority": "medium", "hours": 6,  "description": "UnlockSystem·레벨별 해금 테이블·보상 풀 필터링", "dependsOn": ["T028"] },
-        { "id": "T030", "name": "맵/런 진행 Provider",     "assignee": "A",   "start": "2026-06-08", "end": "2026-06-10", "status": "pending", "priority": "high",   "hours": 8,  "description": "RunProvider 스테이지 전환·런 클리어/실패 처리", "dependsOn": ["T019", "T029"] },
-        { "id": "T031", "name": "UI-ViewModel 통합",       "assignee": "A+B", "start": "2026-06-10", "end": "2026-06-12", "status": "pending", "priority": "high",   "hours": 12, "description": "전체 게임 루프 end-to-end 연결 및 검증", "dependsOn": ["T026", "T030"] }
+        { "id": "T027", "name": "GameRepository",          "assignee": "B",   "start": "2026-06-02", "end": "2026-06-04", "status": "done",    "priority": "high",   "hours": 6,  "description": "SharedPreferences XP·레벨·해금카드 저장/로드 구현", "dependsOn": ["T012"] },
+        { "id": "T028", "name": "XP/레벨업 시스템",        "assignee": "A",   "start": "2026-06-05", "end": "2026-06-07", "status": "done",    "priority": "medium", "hours": 6,  "description": "XpSystem.calcLevel·레벨업 트리거·해금 카드 풀 갱신", "dependsOn": ["T027"] },
+        { "id": "T029", "name": "해금 시스템",             "assignee": "A",   "start": "2026-06-06", "end": "2026-06-08", "status": "done",    "priority": "medium", "hours": 6,  "description": "UnlockSystem·레벨별 해금 테이블·보상 풀 필터링", "dependsOn": ["T028"] },
+        { "id": "T030", "name": "맵/런 진행 Provider",     "assignee": "A",   "start": "2026-06-08", "end": "2026-06-10", "status": "done",    "priority": "high",   "hours": 8,  "description": "RunProvider 스테이지 전환·런 클리어/실패 처리", "dependsOn": ["T019", "T029"] },
+        { "id": "T031", "name": "UI-ViewModel 통합",       "assignee": "A+B", "start": "2026-06-10", "end": "2026-06-12", "status": "active",  "priority": "high",   "hours": 12, "description": "전체 게임 루프 end-to-end 연결 및 검증 (MetaScreen 미완)", "dependsOn": ["T026", "T030"] }
       ]
     },
     {
