@@ -3,8 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'application/meta_progress_provider.dart';
+import 'presentation/app_router.dart';
 import 'presentation/battle/battle_constants.dart';
-import 'presentation/battle/battle_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -29,7 +29,7 @@ class App extends StatelessWidget {
       theme: ThemeData.dark().copyWith(
         scaffoldBackgroundColor: const Color(0xFF1A1A2E),
       ),
-      home: const BattleScreen(),
+      home: const AppRouter(),
     );
   }
 }

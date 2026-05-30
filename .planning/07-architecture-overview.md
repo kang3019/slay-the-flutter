@@ -49,19 +49,26 @@
 
 ```
 lib/presentation/
+├── app_router.dart               # RunPhase에 따라 화면 교체
 ├── battle/
 │   ├── battle_screen.dart        # 전투 메인 화면
+│   ├── battle_constants.dart     # 전투 화면 상수
 │   └── widgets/
 │       ├── card_widget.dart      # 개별 카드 UI
 │       ├── hand_widget.dart      # 손패 전체 UI
-│       ├── monster_widget.dart   # 몬스터 + 의도 아이콘
-│       └── hp_bar_widget.dart    # HP/블록 바
+│       └── monster_widget.dart   # 몬스터 + 의도 아이콘
 ├── map/
-│   └── map_screen.dart           # 스테이지 맵 화면
+│   ├── map_screen.dart           # 던전 맵 화면
+│   ├── map_constants.dart        # 맵 화면 상수
+│   └── widgets/
+│       └── map_painter.dart      # CustomPainter DAG 렌더링
 ├── reward/
-│   └── reward_screen.dart        # 보상 선택 화면
-└── meta/
-    └── meta_screen.dart          # 레벨/해금 화면
+│   ├── reward_screen.dart        # 카드 보상 선택 화면
+│   └── reward_constants.dart     # 보상 화면 상수
+├── shared/
+│   └── hp_bar_widget.dart        # HP/블록 바 (공용)
+└── meta/                         # [미구현] 레벨·해금 화면 (예정)
+    └── meta_screen.dart
 ```
 
 **규칙**
@@ -77,24 +84,18 @@ lib/presentation/
 
 ```
 lib/application/
-├── battle_provider.dart     # BattleNotifier — 전투 상태 관리
-├── deck_provider.dart       # DeckNotifier — 덱/드로우 관리
-├── run_provider.dart        # RunNotifier — 런 진행/스테이지 전환
-└── meta_provider.dart       # MetaNotifier — XP/레벨/해금 영속
+├── battle_provider.dart          # BattleNotifier — 전투 상태 관리
+├── run_provider.dart             # RunNotifier — 맵 이동·보상·런 관리
+└── meta_progress_provider.dart   # MetaProgressNotifier — XP·레벨·해금
 ```
 
 **BattleNotifier 공개 API**
 
 ```dart
 class BattleNotifier extends Notifier<BattleState> {
-  /// 카드를 사용하고 전투 상태를 갱신한다.
-  void playCard(Card card);
-
-  /// 플레이어 턴을 종료하고 몬스터 턴을 실행한다.
-  void endTurn();
-
-  /// 새 전투를 초기화한다.
-  void startBattle(Monster monster);
+  void startBattle(int stage);   // 새 전투 시작 (RunProvider가 호출)
+  void playCard(GameCard card);  // 카드 사용
+  void endTurn();                // 턴 종료 → 몬스터 행동 → 다음 턴
 }
 ```
 
@@ -102,11 +103,14 @@ class BattleNotifier extends Notifier<BattleState> {
 
 ```dart
 class RunNotifier extends Notifier<RunState> {
-  /// 보상 카드를 선택하고 다음 스테이지로 전환한다.
-  void selectReward(Card card);
-
-  /// 현재 런을 종료하고 XP를 산정한다.
-  Future<void> endRun({required bool cleared});
+  void moveToNode(String nodeId);                          // 맵 이동
+  void startReward({required int remainingHp,              // 일반 승리 → 보상 화면
+                    required int goldEarned});
+  void selectRewardCard(GameCard card);                    // 카드 선택 → 맵 복귀
+  void skipReward();                                       // 보상 건너뛰기
+  void exitBattleToMap({required int remainingHp,          // 보스 승리·패배 → 맵
+                        required int goldEarned});
+  void startNewRun();                                      // 런 초기화
 }
 ```
 
@@ -119,13 +123,17 @@ class RunNotifier extends Notifier<RunState> {
 ```
 lib/domain/
 ├── entities/
-│   ├── card.dart            # Card 데이터 클래스
+│   ├── card.dart            # GameCard, CardType, CardEffectType
 │   ├── player.dart          # Player 상태
-│   └── monster.dart         # Monster 상태 + 스탯 공식
+│   ├── monster.dart         # Monster 상태 + 스탯 공식
+│   └── meta_progress.dart   # MetaProgress — XP·레벨·해금 목록
+├── map/
+│   ├── map_generator.dart   # Act 1 맵 생성 (5층 12노드)
+│   ├── map_node.dart        # MapNode 데이터 클래스
+│   └── node_type.dart       # NodeType 열거형
 ├── battle_engine.dart       # 데미지 계산, 카드 효과, 턴 로직
 ├── deck.dart                # 드로우, 셔플, 버림 덱
-├── status_effect.dart       # 취약/약화 열거형 + 배율 상수
-└── xp_system.dart           # XP 산정, 레벨 계산, 해금 판정
+└── status_effect.dart       # 취약/약화 열거형 + 배율 상수
 ```
 
 **절대 금지**

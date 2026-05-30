@@ -88,28 +88,45 @@ enum MonsterIntent { attack, defend }
 
 ```dart
 class BattleState {
-  final Player player;
-  final Monster monster;
-  final List<Card> hand;
-  final List<Card> deck;
-  final List<Card> discardPile;
-  final BattlePhase phase;
-  final bool isOver;
-  final bool playerWon;
+  final int stage;           // 1~3
+  final int playerHp;
+  final int playerMaxHp;
+  final int playerBlock;
+  final int energy;
+  final int maxEnergy;       // 고정 3
+  final int monsterHp;
+  final int monsterMaxHp;
+  final int monsterAttackPower;
+  final bool monsterIsVulnerable;
+  final List<GameCard> hand;
+  final bool isBattleOver;
+  final BattleResult? result;
 }
 
-enum BattlePhase { playerTurn, monsterTurn, reward }
+enum BattleResult { playerWon, monsterWon }
 ```
 
-### 2-6. RunState
+### 2-6. RunState / RunPhase
 
 ```dart
+/// 현재 런의 화면 단계.
+enum RunPhase { map, battle, reward }
+
 class RunState {
-  final int currentStage;   // 1~4
-  final List<Card> runDeck; // 이번 런에서 보유한 카드 목록
-  final List<Relic> relics;
+  final RunPhase phase;          // 현재 화면 단계
+  final int floor;               // 현재 층 (-1 = 미시작)
+  final int playerHp;
   final int gold;
-  final bool isCleared;
+  final List<GameCard> deck;     // 이번 런에서 보유한 카드
+  final List<MapNode> mapNodes;  // Act 1 전체 노드
+  final String? currentNodeId;   // 현재 위치 노드 ID
+  final List<String> visitedNodeIds;
+  final bool isRunOver;
+  final List<GameCard> rewardCards; // reward 단계에서만 채워짐
+
+  // 파생값: floor → stage (0·1→1, 2·3→2, 4+→3)
+  int get currentStage;
+  MapNode? get currentNode;
 }
 ```
 
@@ -246,12 +263,13 @@ int calcLevel(int totalXp) {
 
 ## 6. Provider 목록
 
-| Provider | 타입 | 상태 | 책임 |
+| Provider | 타입 | 파일 | 책임 |
 |----------|------|------|------|
-| `battleProvider` | `Notifier<BattleState>` | 전투 상태 | 카드 사용, 턴 종료, 승패 판정 |
-| `runProvider` | `Notifier<RunState>` | 런 상태 | 스테이지 전환, 보상 선택, XP 산정 |
-| `metaProvider` | `AsyncNotifier<MetaState>` | 메타 상태 | XP 로드/저장, 레벨업, 해금 |
-| `deckProvider` | `Notifier<DeckState>` | 덱 상태 | 드로우, 셔플, 카드 추가/제거 |
+| `battleProvider` | `Notifier<BattleState>` | `battle_provider.dart` | 카드 사용, 턴 종료, 승패 판정 |
+| `runProvider` | `Notifier<RunState>` | `run_provider.dart` | 맵 이동, 보상 단계 전환, 런 리셋 |
+| `metaProgressProvider` | `Notifier<MetaProgress>` | `meta_progress_provider.dart` | XP 적립, 레벨업, 해금 목록 관리 |
+
+> **참고**: 덱 관리(`draw`, `shuffle`, `discard`)는 `BattleState` 안에서 처리되며 별도 Provider가 없다.
 
 ---
 
