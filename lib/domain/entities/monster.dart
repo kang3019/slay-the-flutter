@@ -27,6 +27,10 @@ class Monster {
         (e) => e.type == StatusEffectType.vulnerable && e.duration > 0,
       );
 
+  bool get isWeak => statusEffects.any(
+        (e) => e.type == StatusEffectType.weak && e.duration > 0,
+      );
+
   /// 방어도를 먼저 차감한 뒤 나머지를 체력에서 감소시킨다.
   /// Vulnerable 상태이면 rawDamage × 1.5(floor)를 적용한다.
   void takeDamage(int rawDamage) {

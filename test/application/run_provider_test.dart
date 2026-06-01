@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:slay_the_flutter/application/run_provider.dart';
 import 'package:slay_the_flutter/domain/entities/card.dart';
 import 'package:slay_the_flutter/domain/entities/player.dart';
+import 'package:slay_the_flutter/domain/events/game_event.dart';
 import 'package:slay_the_flutter/domain/map/node_type.dart';
 
 void main() {
@@ -294,11 +295,11 @@ void main() {
         expect(container.read(runProvider).phase, RunPhase.battle);
       });
 
-      test('비전투 노드(Event)로 첫 이동하면 phase가 map을 유지한다', () {
-        // f0n2는 NodeType.event — 비전투 노드
+      test('Event 노드로 이동하면 phase가 RunPhase.event가 된다', () {
+        // f0n2는 NodeType.event
         container.read(runProvider.notifier).moveToNode('f0n2');
 
-        expect(container.read(runProvider).phase, RunPhase.map);
+        expect(container.read(runProvider).phase, RunPhase.event);
       });
 
       test('exitBattleToMap 호출 시 phase가 RunPhase.map으로 전환된다', () {
@@ -449,6 +450,122 @@ void main() {
         expect(container.read(runProvider).phase, RunPhase.map);
         container.read(runProvider.notifier).skipReward();
         expect(container.read(runProvider).phase, RunPhase.map);
+      });
+    });
+
+    // ──────────────────────────────────────────────
+    // resolveEvent
+    // ──────────────────────────────────────────────
+
+    group('resolveEvent', () {
+      void enterEventNode() {
+        // f0n2는 NodeType.event
+        container.read(runProvider.notifier).moveToNode('f0n2');
+      }
+
+      test('Event 노드 진입 시 currentEvent가 설정된다', () {
+        enterEventNode();
+        expect(container.read(runProvider).currentEvent, isNotNull);
+      });
+
+      test('resolveEvent 후 phase가 RunPhase.map으로 돌아간다', () {
+        enterEventNode();
+        final choice = container.read(runProvider).currentEvent!.choices[0];
+        container.read(runProvider.notifier).resolveEvent(choice);
+        expect(container.read(runProvider).phase, RunPhase.map);
+      });
+
+      test('resolveEvent 후 currentEvent가 null이 된다', () {
+        enterEventNode();
+        final choice = container.read(runProvider).currentEvent!.choices[0];
+        container.read(runProvider.notifier).resolveEvent(choice);
+        expect(container.read(runProvider).currentEvent, isNull);
+      });
+
+      test('HP 회복 효과가 적용된다', () {
+        // HP를 50으로 낮춘 뒤 이벤트로 회복
+        container.read(runProvider.notifier).applyBattleResult(
+          remainingHp: 50,
+          goldEarned: 0,
+        );
+        enterEventNode();
+
+        const healChoice = EventChoice(
+          label: '테스트',
+          effectDescription: 'HP +15',
+          effect: EventEffect(hpDelta: 15),
+        );
+        container.read(runProvider.notifier).resolveEvent(healChoice);
+
+        expect(container.read(runProvider).playerHp, 65);
+      });
+
+      test('HP는 최대치를 초과하지 않는다', () {
+        // 만피에서 회복 시도
+        enterEventNode();
+        const healChoice = EventChoice(
+          label: '테스트',
+          effectDescription: 'HP +999',
+          effect: EventEffect(hpDelta: 999),
+        );
+        container.read(runProvider.notifier).resolveEvent(healChoice);
+        expect(container.read(runProvider).playerHp, Player.maxHp);
+      });
+
+      test('HP 피해 효과가 적용된다', () {
+        enterEventNode();
+        const damageChoice = EventChoice(
+          label: '테스트',
+          effectDescription: 'HP -8',
+          effect: EventEffect(hpDelta: -8),
+        );
+        container.read(runProvider.notifier).resolveEvent(damageChoice);
+        expect(container.read(runProvider).playerHp, Player.maxHp - 8);
+      });
+
+      test('HP는 1 미만으로 내려가지 않는다 (이벤트로 사망 없음)', () {
+        enterEventNode();
+        const damageChoice = EventChoice(
+          label: '테스트',
+          effectDescription: 'HP -9999',
+          effect: EventEffect(hpDelta: -9999),
+        );
+        container.read(runProvider.notifier).resolveEvent(damageChoice);
+        expect(container.read(runProvider).playerHp, 1);
+      });
+
+      test('골드 획득 효과가 적용된다', () {
+        enterEventNode();
+        const goldChoice = EventChoice(
+          label: '테스트',
+          effectDescription: '골드 +25',
+          effect: EventEffect(goldDelta: 25),
+        );
+        container.read(runProvider.notifier).resolveEvent(goldChoice);
+        expect(container.read(runProvider).gold, 25);
+      });
+
+      test('addRandomCard가 true면 덱에 카드가 1장 추가된다', () {
+        enterEventNode();
+        final deckBefore = container.read(runProvider).deck.length;
+        const cardChoice = EventChoice(
+          label: '테스트',
+          effectDescription: '카드 획득',
+          effect: EventEffect(addRandomCard: true),
+        );
+        container.read(runProvider.notifier).resolveEvent(cardChoice);
+        expect(container.read(runProvider).deck.length, deckBefore + 1);
+      });
+
+      test('event 페이즈가 아닐 때 resolveEvent는 아무것도 하지 않는다', () {
+        final hpBefore = container.read(runProvider).playerHp;
+        const choice = EventChoice(
+          label: '테스트',
+          effectDescription: 'HP +15',
+          effect: EventEffect(hpDelta: 15),
+        );
+        container.read(runProvider.notifier).resolveEvent(choice);
+        expect(container.read(runProvider).playerHp, hpBefore);
       });
     });
 

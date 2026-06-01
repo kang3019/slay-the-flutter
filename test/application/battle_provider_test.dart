@@ -15,13 +15,14 @@ ProviderContainer _makeContainer({
   return ProviderContainer(
     overrides: [
       battleEngineFactoryProvider.overrideWith(
-        (ref) => (s) {
+        (ref) => (s, relics) {
           final engine = BattleEngine(
             player: Player(),
             monster: Monster(stage: s),
             deck: Deck(
               initialCards: cards ?? List.filled(10, Cards.strike),
             ),
+            relics: relics,
           );
           engine.startPlayerTurn();
           return engine;
@@ -152,12 +153,13 @@ void main() {
       final container = ProviderContainer(
         overrides: [
           battleEngineFactoryProvider.overrideWith(
-            (ref) => (_) {
+            (ref) => (_, relics) {
               final monster = Monster(stage: 1)..takeDamage(24); // HP 30→6
               final engine = BattleEngine(
                 player: Player(),
                 monster: monster,
                 deck: Deck(initialCards: [Cards.strike]),
+                relics: relics,
               );
               engine.startPlayerTurn();
               return engine;
@@ -177,11 +179,12 @@ void main() {
       final container = ProviderContainer(
         overrides: [
           battleEngineFactoryProvider.overrideWith(
-            (ref) => (_) {
+            (ref) => (_, relics) {
               final engine = BattleEngine(
                 player: Player(hp: 5),
                 monster: Monster(stage: 1), // 공격력 10 > HP 5
                 deck: Deck(initialCards: []),
+                relics: relics,
               );
               engine.startPlayerTurn();
               return engine;
@@ -201,11 +204,12 @@ void main() {
       final container = ProviderContainer(
         overrides: [
           battleEngineFactoryProvider.overrideWith(
-            (ref) => (_) {
+            (ref) => (_, relics) {
               final engine = BattleEngine(
                 player: Player(hp: 5),
                 monster: Monster(stage: 1),
                 deck: Deck(initialCards: []),
+                relics: relics,
               );
               engine.startPlayerTurn();
               return engine;
