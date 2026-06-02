@@ -12,25 +12,13 @@ import 'widgets/map_painter.dart';
 
 /// 던전 맵 화면.
 ///
-/// [runProvider]를 구독해 현재 런 상태(맵 노드, 현재 위치, 방문 이력)를 가져오고
-/// [_MapCanvas]에 전달해 DAG 형태의 맵을 렌더링한다.
-///
-/// **데이터 흐름:**
-/// ```
-/// runProvider(RunState)
-///   └─ MapScreen.build()       ← ref.watch
-///       └─ _MapCanvas          ← nodes, currentNodeId, visitedNodeIds
-///           ├─ MapPainter      ← 시각 렌더링 (CustomPainter)
-///           └─ GestureDetector ← 탭 → moveToNode(id)
-/// ```
-///
-/// UI 로직(상호작용·표시)만 담당하며, 비즈니스 로직은 [RunNotifier]에 위임한다.
+/// [runProvider]를 구독해 런 상태를 가져오고 [_MapCanvas]에 전달한다.
+/// 맵은 세로 스크롤 가능하며 현재 위치로 자동 스크롤된다.
 class MapScreen extends ConsumerWidget {
   const MapScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // ref.watch: RunState가 바뀔 때마다 이 build가 자동으로 재실행된다.
     final run = ref.watch(runProvider);
 
     return Scaffold(
@@ -38,22 +26,15 @@ class MapScreen extends ConsumerWidget {
       appBar: _buildAppBar(run),
       body: Column(
         children: [
-          // ── 맵 캔버스 (화면 대부분을 차지) ───────────────────────────
           Expanded(
             child: _MapCanvas(
               nodes: run.mapNodes,
               currentNodeId: run.currentNodeId,
               visitedNodeIds: run.visitedNodeIds,
               isRunOver: run.isRunOver,
-              // 탭 시 Application 계층 Notifier에 이동 요청만 전달한다.
-              // GestureDetector → RunNotifier.moveToNode() — 비즈니스 로직은
-              // Application 계층에 있으며, 여기서는 ID만 전달한다.
-              onNodeTapped: (id) =>
-                  ref.read(runProvider.notifier).moveToNode(id),
+              onNodeTapped: (id) => ref.read(runProvider.notifier).moveToNode(id),
             ),
           ),
-
-          // ── 하단 힌트 바 ─────────────────────────────────────────────
           _BottomHintBar(
             nodes: run.mapNodes,
             currentNodeId: run.currentNodeId,
@@ -64,7 +45,6 @@ class MapScreen extends ConsumerWidget {
     );
   }
 
-  /// 앱 바: 타이틀 + 현재 층 표시.
   AppBar _buildAppBar(RunState run) {
     final floorLabel = run.currentNodeId == null
         ? '— — —'
@@ -103,17 +83,15 @@ class MapScreen extends ConsumerWidget {
 }
 
 // ──────────────────────────────────────────────────────────────────────────
-// _MapCanvas — 캔버스 + 탭 인식
+// _MapCanvas — 스크롤 가능 캔버스 + 탭 인식
 // ──────────────────────────────────────────────────────────────────────────
 
-/// [CustomPaint]와 [GestureDetector]를 결합한 맵 캔버스 위젯.
+/// 세로 스크롤 가능한 맵 캔버스 위젯.
 ///
-/// **탭 인식 원리:**
-/// [LayoutBuilder]로 실제 렌더링 크기를 얻고,
-/// 동일한 [computeNodePositions] 함수를 사용해 "어느 노드가 탭됐는지"를
-/// 픽셀 거리로 판별한다. Painter와 GestureDetector가 같은 좌표 함수를 공유하므로
-/// "그려지는 위치 = 탭 인식 위치"가 항상 일치한다.
-class _MapCanvas extends StatelessWidget {
+/// [SingleChildScrollView]를 사용해 7~10층 맵이 화면을 넘을 때 스크롤된다.
+/// [reverse: true]로 Floor 0(시작)이 아래에, 보스가 위에 표시된다.
+/// 현재 노드([currentNodeId])가 바뀌면 해당 노드가 화면 중앙에 오도록 자동 스크롤한다.
+class _MapCanvas extends StatefulWidget {
   const _MapCanvas({
     required this.nodes,
     required this.currentNodeId,
@@ -129,23 +107,74 @@ class _MapCanvas extends StatelessWidget {
   final void Function(String nodeId) onNodeTapped;
 
   @override
+  State<_MapCanvas> createState() => _MapCanvasState();
+}
+
+class _MapCanvasState extends State<_MapCanvas> {
+  final ScrollController _scrollCtrl = ScrollController();
+
+  @override
+  void didUpdateWidget(_MapCanvas old) {
+    super.didUpdateWidget(old);
+    if (old.currentNodeId != widget.currentNodeId) {
+      _scrollToCurrentNode();
+    }
+  }
+
+  /// 현재 노드가 화면 중앙에 오도록 부드럽게 스크롤한다.
+  ///
+  /// [SingleChildScrollView] reverse=true 환경에서 offset은
+  /// "캔버스 하단으로부터의 거리"를 의미한다.
+  void _scrollToCurrentNode() {
+    final nodeId = widget.currentNodeId;
+    if (nodeId == null) return;
+
+    final currentNode = widget.nodes
+        .where((n) => n.id == nodeId)
+        .firstOrNull;
+    if (currentNode == null) return;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_scrollCtrl.hasClients) return;
+
+      // 현재 노드의 캔버스 하단으로부터 거리
+      final distFromBottom =
+          MapSizes.paddingV + currentNode.floor * MapSizes.floorHeight;
+
+      final viewportHeight = _scrollCtrl.position.viewportDimension;
+      final target = (distFromBottom - viewportHeight / 2)
+          .clamp(0.0, _scrollCtrl.position.maxScrollExtent);
+
+      _scrollCtrl.animateTo(
+        target,
+        duration: const Duration(milliseconds: 450),
+        curve: Curves.easeOut,
+      );
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    // LayoutBuilder: 이 위젯이 실제로 할당받은 크기를 런타임에 얻는다.
-    // MediaQuery.of(context).size 대신 사용하는 이유:
-    //   - AppBar·BottomBar 등을 제외한 정확한 캔버스 영역 크기를 알 수 있다.
     return LayoutBuilder(
       builder: (context, constraints) {
-        final canvasSize = Size(constraints.maxWidth, constraints.maxHeight);
+        final canvasSize = computeCanvasSize(widget.nodes, constraints.maxWidth);
 
-        return GestureDetector(
-          // 런이 종료되면 탭을 비활성화한다.
-          onTapUp: isRunOver ? null : (d) => _onTap(d, canvasSize),
-          child: CustomPaint(
-            size: canvasSize,
-            painter: MapPainter(
-              nodes: nodes,
-              currentNodeId: currentNodeId,
-              visitedNodeIds: visitedNodeIds,
+        return SingleChildScrollView(
+          controller: _scrollCtrl,
+          // reverse: true → 콘텐츠가 아래서 위로 쌓임.
+          // Floor 0(시작)이 하단에 보이고 보스가 상단에 배치된다.
+          reverse: true,
+          child: GestureDetector(
+            onTapUp: widget.isRunOver
+                ? null
+                : (d) => _onTap(d, canvasSize),
+            child: CustomPaint(
+              size: canvasSize,
+              painter: MapPainter(
+                nodes: widget.nodes,
+                currentNodeId: widget.currentNodeId,
+                visitedNodeIds: widget.visitedNodeIds,
+              ),
             ),
           ),
         );
@@ -154,28 +183,24 @@ class _MapCanvas extends StatelessWidget {
   }
 
   /// 탭 좌표를 분석해 어느 노드를 탭했는지 판별하고 [onNodeTapped]를 호출한다.
-  ///
-  /// **히트 테스트 알고리즘:**
-  /// 1. [computeNodePositions]으로 각 노드의 캔버스 좌표를 계산한다.
-  /// 2. 탭 좌표와 각 노드 중심 사이의 거리를 비교한다.
-  /// 3. 거리가 `nodeRadius + hitSlop` 이하인 노드가 있으면 그 노드를 선택한다.
   void _onTap(TapUpDetails details, Size canvasSize) {
-    final tapPos = details.localPosition;
+    final tapPos    = details.localPosition;
+    final positions = computeNodePositions(widget.nodes, canvasSize);
 
-    // Painter와 동일한 좌표 함수를 사용 → "그려지는 위치 = 탭 위치" 보장.
-    final positions = computeNodePositions(nodes, canvasSize);
-
-    // 탭 인식 반경 = 노드 반지름 + 여유 간격(hitSlop).
     const hitRadius = MapSizes.nodeRadius + MapSizes.hitSlop;
 
     for (final entry in positions.entries) {
       if ((entry.value - tapPos).distance <= hitRadius) {
-        // RunNotifier.moveToNode()가 이동 가능 여부를 내부에서 검증한다.
-        // Presentation 계층은 ID만 전달하면 된다.
-        onNodeTapped(entry.key);
+        widget.onNodeTapped(entry.key);
         return;
       }
     }
+  }
+
+  @override
+  void dispose() {
+    _scrollCtrl.dispose();
+    super.dispose();
   }
 }
 
@@ -184,11 +209,6 @@ class _MapCanvas extends StatelessWidget {
 // ──────────────────────────────────────────────────────────────────────────
 
 /// 현재 런 상태에 따라 플레이어에게 다음 행동을 안내하는 하단 바.
-///
-/// 표시 규칙:
-/// - 런 종료 → 종료 메시지 (빨간색)
-/// - 미시작  → "출발 방을 선택하세요" (금색)
-/// - 진행 중 → 현재 노드 이름 + "→ 다음 방 선택" (흰색)
 class _BottomHintBar extends StatelessWidget {
   const _BottomHintBar({
     required this.nodes,
@@ -229,7 +249,6 @@ class _BottomHintBar extends StatelessWidget {
     final current = _findNode(currentNodeId!);
     if (current == null) return MapStrings.hintMove;
 
-    // "⚔️ 일반 전투  →  다음 방을 선택하세요" 형식
     final icon  = MapStrings.iconFor(current.type);
     final label = MapStrings.labelFor(current.type);
     return '$icon $label  →  ${MapStrings.hintMove}';
@@ -241,8 +260,6 @@ class _BottomHintBar extends StatelessWidget {
     return Colors.white70;
   }
 
-  /// nodes 리스트에서 [id]에 해당하는 노드를 찾는다.
-  /// 없으면 null을 반환한다 (try/catch 패턴으로 firstWhere 예외를 처리).
   MapNode? _findNode(String id) {
     try {
       return nodes.firstWhere((n) => n.id == id);

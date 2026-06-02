@@ -50,28 +50,31 @@ abstract final class MapColors {
 /// 맵 화면 레이아웃·그리기에 쓰이는 크기 상수.
 abstract final class MapSizes {
   /// 노드 원의 반지름(dp).
-  static const double nodeRadius = 24.0;
+  static const double nodeRadius = 26.0;
 
   /// 현재 위치 링이 노드 원 바깥에 띄워지는 간격(dp).
-  static const double ringGap = 6.0;
+  static const double ringGap = 7.0;
 
   /// 이동 가능 노드 글로우가 노드 원 바깥에 추가되는 반지름(dp).
-  static const double glowExtra = 10.0;
+  static const double glowExtra = 14.0;
 
   /// 활성 경로(이동 가능) 선 두께(dp).
-  static const double pathActiveWidth = 3.5;
+  static const double pathActiveWidth = 3.0;
 
   /// 비활성/방문 경로 선 두께(dp).
   static const double pathInactiveWidth = 1.5;
 
-  /// 캔버스 상·하 여백(dp). 노드가 화면 끝에 딱 붙지 않도록 한다.
-  static const double paddingV = 64.0;
+  /// 캔버스 상·하 여백(dp).
+  static const double paddingV = 72.0;
 
   /// 캔버스 좌·우 여백(dp).
-  static const double paddingH = 44.0;
+  static const double paddingH = 48.0;
 
-  /// 탭 인식 추가 반경(dp). 노드 반지름보다 약간 크게 잡아 터치 편의성을 높인다.
-  static const double hitSlop = 10.0;
+  /// 층(floor) 사이 고정 간격(dp). 이 값으로 전체 캔버스 높이가 결정된다.
+  static const double floorHeight = 120.0;
+
+  /// 탭 인식 추가 반경(dp).
+  static const double hitSlop = 12.0;
 }
 
 // ──────────────────────────────────────────────────────────────────────────
