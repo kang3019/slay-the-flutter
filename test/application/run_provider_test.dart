@@ -4,13 +4,47 @@ import 'package:slay_the_flutter/application/run_provider.dart';
 import 'package:slay_the_flutter/domain/entities/card.dart';
 import 'package:slay_the_flutter/domain/entities/player.dart';
 import 'package:slay_the_flutter/domain/events/game_event.dart';
+import 'package:slay_the_flutter/domain/map/map_node.dart';
 import 'package:slay_the_flutter/domain/map/node_type.dart';
+
+/// 테스트용 고정 맵 — 구 Act 1 레이아웃 (5층 12노드).
+///
+/// 절차적 생성에 의존하지 않고 하드코딩된 노드 ID로 테스트할 수 있도록
+/// [mapNodesProvider]에 주입하는 결정론적 맵이다.
+///
+/// 레이아웃:
+///   Floor 0: f0n0(monster), f0n1(monster), f0n2(event)
+///   Floor 1: f1n0(monster), f1n1(elite),   f1n2(treasure)
+///   Floor 2: f2n0(rest),    f2n1(shop),    f2n2(monster)
+///   Floor 3: f3n0(elite),   f3n1(rest)
+///   Floor 4: f4n0(boss)
+const _testMapNodes = <MapNode>[
+  MapNode(id: 'f0n0', type: NodeType.monster,  floor: 0, connectedNodeIds: ['f1n0', 'f1n1']),
+  MapNode(id: 'f0n1', type: NodeType.monster,  floor: 0, connectedNodeIds: ['f1n1', 'f1n2']),
+  MapNode(id: 'f0n2', type: NodeType.event,    floor: 0, connectedNodeIds: ['f1n2']),
+  MapNode(id: 'f1n0', type: NodeType.monster,  floor: 1, connectedNodeIds: ['f2n0', 'f2n1']),
+  MapNode(id: 'f1n1', type: NodeType.elite,    floor: 1, connectedNodeIds: ['f2n1', 'f2n2']),
+  MapNode(id: 'f1n2', type: NodeType.treasure, floor: 1, connectedNodeIds: ['f2n2']),
+  MapNode(id: 'f2n0', type: NodeType.rest,     floor: 2, connectedNodeIds: ['f3n0']),
+  MapNode(id: 'f2n1', type: NodeType.shop,     floor: 2, connectedNodeIds: ['f3n0', 'f3n1']),
+  MapNode(id: 'f2n2', type: NodeType.monster,  floor: 2, connectedNodeIds: ['f3n1']),
+  MapNode(id: 'f3n0', type: NodeType.elite,    floor: 3, connectedNodeIds: ['f4n0']),
+  MapNode(id: 'f3n1', type: NodeType.rest,     floor: 3, connectedNodeIds: ['f4n0']),
+  MapNode(id: 'f4n0', type: NodeType.boss,     floor: 4, connectedNodeIds: []),
+];
+
+/// 고정 테스트 맵을 주입한 [ProviderContainer]를 반환한다.
+ProviderContainer _makeContainer() => ProviderContainer(
+  overrides: [
+    mapNodesProvider.overrideWith((_) => _testMapNodes),
+  ],
+);
 
 void main() {
   group('RunNotifier', () {
     late ProviderContainer container;
 
-    setUp(() => container = ProviderContainer());
+    setUp(() => container = _makeContainer());
     tearDown(() => container.dispose());
 
     // ──────────────────────────────────────────────

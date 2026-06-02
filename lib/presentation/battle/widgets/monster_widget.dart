@@ -1,20 +1,21 @@
 import 'package:flutter/material.dart';
 
+import '../../../domain/entities/monster_intent.dart';
 import '../../../presentation/shared/hp_bar_widget.dart';
 import '../battle_constants.dart';
 
-/// 몬스터의 체력·다음 공격·상태 이상을 표시한다.
+/// 몬스터의 체력·인텐트(다음 행동 예고)·상태 이상을 표시한다.
 class MonsterWidget extends StatelessWidget {
   final int hp;
   final int maxHp;
-  final int attackPower;
+  final MonsterIntent intent;
   final bool isVulnerable;
 
   const MonsterWidget({
     super.key,
     required this.hp,
     required this.maxHp,
-    required this.attackPower,
+    required this.intent,
     required this.isVulnerable,
   });
 
@@ -62,18 +63,38 @@ class MonsterWidget extends StatelessWidget {
             barColor: Colors.red,
           ),
           const SizedBox(height: 10),
-          Row(
-            children: [
-              const Icon(Icons.bolt, color: Colors.redAccent, size: 16),
-              const SizedBox(width: 4),
-              Text(
-                '${BattleStrings.nextAttack}: $attackPower',
-                style: const TextStyle(color: Colors.redAccent, fontSize: 13),
-              ),
-            ],
-          ),
+          _IntentDisplay(intent: intent),
         ],
       ),
     );
+  }
+}
+
+/// 몬스터의 다음 행동(인텐트)을 아이콘과 수치로 표시한다.
+class _IntentDisplay extends StatelessWidget {
+  final MonsterIntent intent;
+  const _IntentDisplay({required this.intent});
+
+  @override
+  Widget build(BuildContext context) {
+    final (icon, label, color) = _intentVisuals(intent);
+    return Row(
+      children: [
+        Text(icon, style: const TextStyle(fontSize: 16)),
+        const SizedBox(width: 6),
+        Text(
+          '$label: ${intent.value}',
+          style: TextStyle(color: color, fontSize: 13, fontWeight: FontWeight.w600),
+        ),
+      ],
+    );
+  }
+
+  (String icon, String label, Color color) _intentVisuals(MonsterIntent intent) {
+    return switch (intent.type) {
+      MonsterIntentType.attack     => ('⚔️', BattleStrings.intentAttack, Colors.redAccent),
+      MonsterIntentType.heavyAttack => ('💥', BattleStrings.intentHeavyAttack, Colors.red[300]!),
+      MonsterIntentType.gainBlock  => ('🛡️', BattleStrings.intentBlock, Colors.blueAccent),
+    };
   }
 }

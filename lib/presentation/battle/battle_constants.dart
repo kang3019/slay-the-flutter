@@ -7,7 +7,10 @@ abstract final class BattleStrings {
   static const appTitle    = 'Slay the Flutter';
   static const stageLabel  = '스테이지';
   static const endTurn     = '턴 종료';
-  static const nextAttack  = '다음 공격';
+  static const nextAttack       = '다음 공격';
+  static const intentAttack     = '공격';
+  static const intentHeavyAttack = '강공격';
+  static const intentBlock      = '방어';
   static const victory     = '승리!';
   static const runClear    = '런 클리어! 🎉';
   static const defeat      = '패배...';

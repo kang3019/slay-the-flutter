@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:slay_the_flutter/domain/entities/monster.dart';
+import 'package:slay_the_flutter/domain/entities/monster_intent.dart';
 import 'package:slay_the_flutter/domain/status_effect.dart';
 
 void main() {
@@ -87,6 +88,54 @@ void main() {
       monster.endTurn();
 
       expect(monster.block, equals(0));
+    });
+  });
+
+  group('Monster 인텐트 시스템', () {
+    test('스테이지 1 초기 인텐트는 attack이다', () {
+      expect(Monster(stage: 1).currentIntent.type, MonsterIntentType.attack);
+    });
+
+    test('스테이지 1 attack 인텐트 value는 공격력(10)과 같다', () {
+      final m = Monster(stage: 1);
+      expect(m.currentIntent.value, equals(10));
+    });
+
+    test('advanceIntent로 스테이지 1 패턴 [attack, attack, gainBlock]을 순환한다', () {
+      final m = Monster(stage: 1);
+      expect(m.currentIntent.type, MonsterIntentType.attack);   // index 0
+      m.advanceIntent();
+      expect(m.currentIntent.type, MonsterIntentType.attack);   // index 1
+      m.advanceIntent();
+      expect(m.currentIntent.type, MonsterIntentType.gainBlock); // index 2
+      m.advanceIntent();
+      expect(m.currentIntent.type, MonsterIntentType.attack);   // index 0 (wrap)
+    });
+
+    test('스테이지 2 패턴은 heavyAttack 인텐트를 포함한다', () {
+      final m = Monster(stage: 2);
+      m.advanceIntent(); // index 1 = heavyAttack
+      expect(m.currentIntent.type, MonsterIntentType.heavyAttack);
+    });
+
+    test('스테이지 2 heavyAttack value는 일반 attack보다 크다', () {
+      final m = Monster(stage: 2);
+      final attackValue = m.currentIntent.value; // index 0 = attack
+      m.advanceIntent(); // index 1 = heavyAttack
+      expect(m.currentIntent.value, greaterThan(attackValue));
+    });
+
+    test('스테이지 3(보스) 초기 인텐트는 heavyAttack이다', () {
+      expect(Monster(stage: 3).currentIntent.type, MonsterIntentType.heavyAttack);
+    });
+
+    test('gainBlock 인텐트 value는 양수이다', () {
+      final m = Monster(stage: 1);
+      // pattern: [attack, attack, gainBlock]
+      m.advanceIntent();
+      m.advanceIntent();
+      expect(m.currentIntent.type, MonsterIntentType.gainBlock);
+      expect(m.currentIntent.value, greaterThan(0));
     });
   });
 

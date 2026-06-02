@@ -53,7 +53,7 @@ class BattleScreen extends ConsumerWidget {
                   MonsterWidget(
                     hp: state.monsterHp,
                     maxHp: state.monsterMaxHp,
-                    attackPower: state.monsterAttackPower,
+                    intent: state.monsterIntent,
                     isVulnerable: state.monsterIsVulnerable,
                   ),
                   const Spacer(),

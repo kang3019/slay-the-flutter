@@ -1,5 +1,6 @@
 import 'entities/card.dart';
 import 'entities/monster.dart';
+import 'entities/monster_intent.dart';
 import 'entities/player.dart';
 import 'entities/relic.dart';
 import 'deck.dart';
@@ -226,7 +227,15 @@ class BattleEngine {
       player.isWeak ? (value * Player.weakMultiplier).floor() : value;
 
   void _runMonsterTurn() {
-    player.takeDamage(monster.attackPower);
+    final intent = monster.currentIntent;
+    switch (intent.type) {
+      case MonsterIntentType.attack:
+      case MonsterIntentType.heavyAttack:
+        player.takeDamage(intent.value);
+      case MonsterIntentType.gainBlock:
+        monster.gainBlock(intent.value);
+    }
+    monster.advanceIntent();
   }
 
   void _checkBattleOver() {

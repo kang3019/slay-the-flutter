@@ -180,6 +180,14 @@ class RunState {
 // Provider
 // ──────────────────────────────────────────────────────────────────────────
 
+/// Act 1 맵 노드 목록 Provider.
+///
+/// 테스트에서 overrideWith()로 고정 맵을 주입할 수 있다.
+/// 프로덕션에서는 [MapGenerator.generateAct1]로 절차적 생성된 맵을 반환한다.
+final mapNodesProvider = Provider<List<MapNode>>((ref) {
+  return MapGenerator.generateAct1();
+});
+
 /// 런 상태 Provider.
 final runProvider = NotifierProvider<RunNotifier, RunState>(RunNotifier.new);
 
@@ -233,7 +241,7 @@ class RunNotifier extends Notifier<RunState> {
           ...List.generate(_defaultStrikeCount, (_) => Cards.strike),
           ...List.generate(_defaultDefendCount, (_) => Cards.defend),
         ],
-        mapNodes: MapGenerator.generateAct1(),
+        mapNodes: ref.read(mapNodesProvider),
         currentNodeId: null,
         visitedNodeIds: const [],
         isRunOver: false,
