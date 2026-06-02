@@ -1,6 +1,7 @@
 import 'entities/card.dart';
 import 'entities/monster.dart';
 import 'entities/player.dart';
+import 'entities/relic.dart';
 import 'deck.dart';
 import 'status_effect.dart';
 
@@ -12,7 +13,7 @@ enum BattleResult { playerWon, playerLost }
 /// 순수 Dart 클래스 — Flutter·Riverpod 임포트 금지.
 ///
 /// 턴 순서: startPlayerTurn → playCard(s) → endPlayerTurn → (반복)
-/// endPlayerTurn 내부 순서: 패 버림 → 몬스터 행동 → monster.endTurn →
+/// endPlayerTurn 내부 순서: 패 버림 → 황금 방패 체크 → 몬스터 행동 → monster.endTurn →
 ///   player.endTurn(블록 소멸) — 블록이 몬스터 공격을 막을 수 있도록 보장.
 class BattleEngine {
   /// SPECS.md: 턴당 에너지.
@@ -25,36 +26,81 @@ class BattleEngine {
   final Monster monster;
   final Deck deck;
 
+  /// 현재 전투에 적용 중인 유물 목록.
+  final List<Relic> relics;
+
   int energy;
   bool isBattleOver;
   BattleResult? result;
   bool _focusActive;
 
+  // ── 유물 상태 추적 플래그 ─────────────────────────────────────────────────
+
+  /// 아직 첫 번째 턴이 시작되지 않았으면 true. [extraEnergyOnFirstTurn] 적용에 사용.
+  bool _isFirstTurn;
+
+  /// 이번 전투에서 아직 공격 카드를 사용하지 않았으면 true. [firstAttackBonus] 적용에 사용.
+  bool _hasAttackedThisCombat;
+
+  /// 도마뱀 꼬리([nearDeathSave])가 아직 발동 가능하면 true.
+  bool _lizardTailAvailable;
+
+  /// 전투 시작 시 추가 드로우할 카드 수. [extraDrawOnCombatStart] 유물들의 합산.
+  final int _combatStartExtraDraw;
+
   BattleEngine({
     required this.player,
     required this.monster,
     required this.deck,
+    this.relics = const [],
   })  : energy = 0,
         isBattleOver = false,
         result = null,
-        _focusActive = false;
+        _focusActive = false,
+        _isFirstTurn = true,
+        _hasAttackedThisCombat = false,
+        _lizardTailAvailable = false,
+        _combatStartExtraDraw = relics
+            .where((r) => r.effect == RelicEffect.extraDrawOnCombatStart)
+            .fold(0, (sum, r) => sum + r.value) {
+    _lizardTailAvailable =
+        relics.any((r) => r.effect == RelicEffect.nearDeathSave);
+    _applyCombatStartRelics();
+  }
 
   /// 기본 덱(강타 5 + 방어 5)으로 새 전투를 시작한다.
-  factory BattleEngine.start({required int stage}) {
+  factory BattleEngine.start({
+    required int stage,
+    List<Relic> relics = const [],
+  }) {
     final engine = BattleEngine(
       player: Player(),
       monster: Monster(stage: stage),
       deck: Deck(initialCards: _starterCards()),
+      relics: relics,
     );
     engine.deck.shuffle();
     engine.startPlayerTurn();
     return engine;
   }
 
-  /// 플레이어 턴 시작: 에너지 충전 및 [drawPerTurn]장 드로우.
+  /// 플레이어 턴 시작: 에너지 충전, [drawPerTurn]장 드로우.
+  ///
+  /// 첫 번째 턴에는 [extraEnergyOnFirstTurn] 유물과 [extraDrawOnCombatStart] 추가 드로우가 적용된다.
   void startPlayerTurn() {
     energy = energyPerTurn;
-    deck.draw(drawPerTurn);
+
+    if (_isFirstTurn) {
+      for (final relic in relics) {
+        if (relic.effect == RelicEffect.extraEnergyOnFirstTurn) {
+          energy += relic.value;
+        }
+      }
+      deck.draw(drawPerTurn + _combatStartExtraDraw);
+      _isFirstTurn = false;
+    } else {
+      deck.draw(drawPerTurn);
+    }
   }
 
   /// 패에서 [card]를 사용한다.
@@ -72,9 +118,11 @@ class BattleEngine {
   }
 
   /// 플레이어 턴 종료.
-  /// 패 버림 → 몬스터 행동(블록 활성) → monster.endTurn → player.endTurn(블록 소멸).
+  /// 패 버림 → 황금 방패 체크 → 몬스터 행동(블록 활성) → monster.endTurn →
+  ///   player.endTurn(블록 소멸).
   void endPlayerTurn() {
     deck.discardHand();
+    _applyTurnEndRelics();
 
     if (!isBattleOver) {
       _runMonsterTurn();
@@ -85,8 +133,65 @@ class BattleEngine {
     player.endTurn();
   }
 
+  // ── 유물 적용 ─────────────────────────────────────────────────────────────
+
+  /// 전투 시작 시 발동하는 유물 효과를 적용한다.
+  ///
+  /// [extraDrawOnCombatStart]는 [startPlayerTurn]에서 처리하므로 여기서 제외.
+  void _applyCombatStartRelics() {
+    for (final relic in relics) {
+      switch (relic.effect) {
+        case RelicEffect.blockOnCombatStart:
+          player.gainBlock(relic.value);
+        case RelicEffect.healOnCombatStart:
+          player.heal(relic.value);
+        case RelicEffect.vulnerableEnemyOnCombatStart:
+          monster.applyStatusEffect(
+            StatusEffect(
+              type: StatusEffectType.vulnerable,
+              duration: relic.value,
+            ),
+          );
+        case RelicEffect.weakEnemyOnCombatStart:
+          monster.applyStatusEffect(
+            StatusEffect(
+              type: StatusEffectType.weak,
+              duration: relic.value,
+            ),
+          );
+        case RelicEffect.healOnBossCombatStart:
+          if (monster.stage >= 3) player.heal(relic.value);
+        default:
+          break;
+      }
+    }
+  }
+
+  /// 턴 종료 시 발동하는 유물 효과를 적용한다.
+  void _applyTurnEndRelics() {
+    if (player.block == 0) {
+      for (final relic in relics) {
+        if (relic.effect == RelicEffect.blockIfNoneOnTurnEnd) {
+          player.gainBlock(relic.value);
+        }
+      }
+    }
+  }
+
   void _applyCardEffect(GameCard card) {
     var value = card.value;
+
+    // firstAttackBonus: 이번 전투 첫 번째 공격 카드에 추가 데미지.
+    if (!_hasAttackedThisCombat && card.effectType == CardEffectType.damage) {
+      for (final relic in relics) {
+        if (relic.effect == RelicEffect.firstAttackBonus) {
+          value += relic.value;
+        }
+      }
+    }
+    if (card.effectType == CardEffectType.damage) {
+      _hasAttackedThisCombat = true;
+    }
 
     // Focus는 다음 비-버프 카드의 효과값을 +50% 증가시킨다.
     if (_focusActive && card.effectType != CardEffectType.buff) {
@@ -129,8 +234,14 @@ class BattleEngine {
       isBattleOver = true;
       result = BattleResult.playerWon;
     } else if (player.isDead) {
-      isBattleOver = true;
-      result = BattleResult.playerLost;
+      // nearDeathSave(도마뱀 꼬리): 최초 사망 시 HP 1로 되살린다.
+      if (_lizardTailAvailable) {
+        _lizardTailAvailable = false;
+        player.hp = 1;
+      } else {
+        isBattleOver = true;
+        result = BattleResult.playerLost;
+      }
     }
   }
 

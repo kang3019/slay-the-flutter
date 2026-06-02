@@ -3,14 +3,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../domain/battle_engine.dart';
 import '../domain/entities/card.dart';
 import '../domain/entities/player.dart';
+import '../domain/entities/relic.dart';
 
 /// BattleEngine 생성 팩토리 타입.
 /// 테스트에서 overrideWith()로 교체해 결정론적 덱을 주입한다.
-typedef BattleEngineFactory = BattleEngine Function(int stage);
+typedef BattleEngineFactory = BattleEngine Function(int stage, List<Relic> relics);
 
 /// 프로덕션 기본 팩토리. BattleEngine.start()로 셔플된 정규 덱을 생성한다.
 final battleEngineFactoryProvider = Provider<BattleEngineFactory>((ref) {
-  return (stage) => BattleEngine.start(stage: stage);
+  return (stage, relics) => BattleEngine.start(stage: stage, relics: relics);
 });
 
 /// UI에 노출되는 전투 상태 스냅샷.
@@ -62,7 +63,7 @@ class BattleNotifier extends Notifier<BattleState> {
 
   @override
   BattleState build() {
-    _engine = ref.read(battleEngineFactoryProvider)(1);
+    _engine = ref.read(battleEngineFactoryProvider)(1, const []);
     return _fromEngine();
   }
 
@@ -83,8 +84,10 @@ class BattleNotifier extends Notifier<BattleState> {
   }
 
   /// 지정 스테이지로 새 전투를 시작한다.
-  void startBattle(int stage) {
-    _engine = ref.read(battleEngineFactoryProvider)(stage);
+  ///
+  /// [relics]: 현재 런에서 보유한 유물 목록. 전투 시작 시 유물 효과가 자동 적용된다.
+  void startBattle(int stage, {List<Relic> relics = const []}) {
+    _engine = ref.read(battleEngineFactoryProvider)(stage, relics);
     state = _fromEngine();
   }
 
