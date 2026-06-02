@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../domain/entities/card.dart';
 import '../domain/entities/player.dart';
+import '../domain/entities/relic.dart';
+import '../domain/events/game_event.dart';
 import '../domain/map/map_generator.dart';
 import '../domain/map/map_node.dart';
 import '../domain/map/node_type.dart';
@@ -24,6 +26,15 @@ enum RunPhase {
 
   /// 보상 선택 화면 — 전투 승리 후 카드 3장 중 1장을 덱에 추가하는 단계.
   reward,
+
+  /// 이벤트 화면 — 텍스트 이벤트 선택지를 고르는 단계.
+  event,
+
+  /// 유물 보관소 화면 — 유물 1개를 획득하거나 건너뛰는 단계.
+  treasure,
+
+  /// 휴식처 화면 — HP 회복 또는 카드 강화를 선택하는 단계.
+  rest,
 }
 
 // ──────────────────────────────────────────────────────────────────────────
@@ -67,6 +78,17 @@ class RunState {
   /// 다른 단계에서는 빈 리스트.
   final List<GameCard> rewardCards;
 
+  /// 현재 런에서 보유 중인 유물 목록.
+  final List<Relic> relics;
+
+  /// 현재 진행 중인 이벤트. [RunPhase.event]일 때만 non-null이며,
+  /// 선택지를 고르면 null로 초기화된다.
+  final GameEvent? currentEvent;
+
+  /// 유물 보관소에서 제시할 유물. [RunPhase.treasure]일 때만 non-null이며,
+  /// 획득하거나 건너뛰면 null로 초기화된다.
+  final Relic? currentTreasureRelic;
+
   const RunState({
     required this.phase,
     required this.floor,
@@ -78,6 +100,9 @@ class RunState {
     required this.visitedNodeIds,
     required this.isRunOver,
     required this.rewardCards,
+    this.relics = const [],
+    this.currentEvent,
+    this.currentTreasureRelic,
   });
 
   // ── 파생 값 (getter) ───────────────────────────────────────────────────
@@ -110,6 +135,9 @@ class RunState {
   ///
   /// [currentNodeId]를 null로 되돌려야 할 경우에는
   /// [RunNotifier.startNewRun]처럼 [RunState]를 통째로 교체한다.
+  static const _kClearEvent = Object();
+  static const _kClearTreasure = Object();
+
   RunState copyWith({
     RunPhase? phase,
     int? floor,
@@ -121,6 +149,11 @@ class RunState {
     List<String>? visitedNodeIds,
     bool? isRunOver,
     List<GameCard>? rewardCards,
+    List<Relic>? relics,
+    // GameEvent?를 null로 되돌리려면 currentEvent: null을 전달한다.
+    Object? currentEvent = _kClearEvent,
+    // Relic?을 null로 되돌리려면 currentTreasureRelic: null을 전달한다.
+    Object? currentTreasureRelic = _kClearTreasure,
   }) =>
       RunState(
         phase: phase ?? this.phase,
@@ -133,6 +166,13 @@ class RunState {
         visitedNodeIds: visitedNodeIds ?? this.visitedNodeIds,
         isRunOver: isRunOver ?? this.isRunOver,
         rewardCards: rewardCards ?? this.rewardCards,
+        relics: relics ?? this.relics,
+        currentEvent: identical(currentEvent, _kClearEvent)
+            ? this.currentEvent
+            : currentEvent as GameEvent?,
+        currentTreasureRelic: identical(currentTreasureRelic, _kClearTreasure)
+            ? this.currentTreasureRelic
+            : currentTreasureRelic as Relic?,
       );
 }
 
@@ -230,12 +270,21 @@ class RunNotifier extends Notifier<RunState> {
       if (!current.connectedNodeIds.contains(nodeId)) return;
     }
 
+    final nextPhase = _phaseFor(target.type);
+    final nextEvent = target.type == NodeType.event
+        ? GameEvents.random(_random)
+        : null;
+    final nextTreasure = target.type == NodeType.treasure
+        ? _pickTreasureRelic()
+        : null;
+
     state = state.copyWith(
       floor: target.floor,
       currentNodeId: nodeId,
       visitedNodeIds: List.unmodifiable([...state.visitedNodeIds, nodeId]),
-      // 전투 노드 → battle, 비전투 노드 → map 유지
-      phase: _phaseFor(target.type),
+      phase: nextPhase,
+      currentEvent: nextEvent,
+      currentTreasureRelic: nextTreasure,
     );
   }
 
@@ -317,6 +366,36 @@ class RunNotifier extends Notifier<RunState> {
 
   // ── 덱 관리 ────────────────────────────────────────────────────────────
 
+  // ── 유물 관리 ────────────────────────────────────────────────────────────
+
+  // ── 휴식처 ────────────────────────────────────────────────────────────
+
+  /// 최대 HP의 30%를 회복하고 맵으로 돌아간다.
+  void rest() {
+    if (state.phase != RunPhase.rest) return;
+    final heal = (Player.maxHp * 0.3).floor();
+    final newHp = (state.playerHp + heal).clamp(0, Player.maxHp);
+    state = state.copyWith(phase: RunPhase.map, playerHp: newHp);
+  }
+
+  /// 휴식처를 건너뛰고 맵으로 돌아간다.
+  void skipRest() {
+    if (state.phase != RunPhase.rest) return;
+    state = state.copyWith(phase: RunPhase.map);
+  }
+
+  // ── 유물 관리 ────────────────────────────────────────────────────────────
+
+  /// 유물을 런 보유 목록에 추가한다.
+  ///
+  /// 같은 [Relic.id]가 이미 있으면 중복 추가하지 않는다.
+  void addRelic(Relic relic) {
+    if (state.relics.any((r) => r.id == relic.id)) return;
+    state = state.copyWith(
+      relics: List.unmodifiable([...state.relics, relic]),
+    );
+  }
+
   /// 보상 카드를 덱에 추가한다.
   void addCardToDeck(GameCard card) {
     state = state.copyWith(deck: List.unmodifiable([...state.deck, card]));
@@ -342,10 +421,73 @@ class RunNotifier extends Notifier<RunState> {
 
   // ── 내부 헬퍼 ──────────────────────────────────────────────────────────
 
+  // ── 이벤트 처리 ────────────────────────────────────────────────────────
+
+  /// 이벤트 선택지를 확정하고 효과를 적용한 뒤 맵 화면으로 돌아간다.
+  ///
+  /// [choice]의 [EventEffect]를 순서대로 적용한다:
+  /// 1. HP 변화 (clamp: 1 ~ [Player.maxHp])
+  /// 2. 골드 변화 (clamp: 0 이상)
+  /// 3. 카드 추가 ([EventEffect.addRandomCard]가 true면 보상 풀에서 1장)
+  void resolveEvent(EventChoice choice) {
+    if (state.phase != RunPhase.event) return;
+
+    final effect = choice.effect;
+    final newHp = (state.playerHp + effect.hpDelta).clamp(1, Player.maxHp);
+    final newGold = (state.gold + effect.goldDelta).clamp(0, 99999);
+
+    var newDeck = state.deck;
+    if (effect.addRandomCard) {
+      final shuffled = List.of(_rewardPool)..shuffle(_random);
+      newDeck = List.unmodifiable([...state.deck, shuffled.first]);
+    }
+
+    state = state.copyWith(
+      phase: RunPhase.map,
+      playerHp: newHp,
+      gold: newGold,
+      deck: newDeck,
+      currentEvent: null,
+    );
+  }
+
+  /// 유물 보관소에서 제시할 유물을 결정한다.
+  /// 아직 보유하지 않은 유물 중 무작위로 1개를 고른다.
+  Relic _pickTreasureRelic() {
+    final owned = state.relics.map((r) => r.id).toSet();
+    final available = GameRelics.all.where((r) => !owned.contains(r.id)).toList();
+    if (available.isEmpty) return GameRelics.all[_random.nextInt(GameRelics.all.length)];
+    return available[_random.nextInt(available.length)];
+  }
+
+  /// 유물 보관소에서 유물을 획득하고 맵으로 돌아간다.
+  void takeTreasure() {
+    if (state.phase != RunPhase.treasure) return;
+    final relic = state.currentTreasureRelic;
+    if (relic == null) return;
+    state = state.copyWith(
+      phase: RunPhase.map,
+      relics: List.unmodifiable([...state.relics, relic]),
+      currentTreasureRelic: null,
+    );
+  }
+
+  /// 유물 보관소를 건너뛰고 맵으로 돌아간다.
+  void skipTreasure() {
+    if (state.phase != RunPhase.treasure) return;
+    state = state.copyWith(
+      phase: RunPhase.map,
+      currentTreasureRelic: null,
+    );
+  }
+
   /// 노드 유형에 따라 전환할 [RunPhase]를 결정한다.
   RunPhase _phaseFor(NodeType type) => switch (type) {
         NodeType.monster || NodeType.elite || NodeType.boss => RunPhase.battle,
-        _ => RunPhase.map,
+        NodeType.event    => RunPhase.event,
+        NodeType.treasure => RunPhase.treasure,
+        NodeType.rest     => RunPhase.rest,
+        _                 => RunPhase.map,
       };
 
   MapNode? _findNode(String nodeId) {

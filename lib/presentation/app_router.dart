@@ -4,8 +4,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../application/battle_provider.dart';
 import '../application/run_provider.dart';
 import 'battle/battle_screen.dart';
+import 'event/event_screen.dart';
 import 'map/map_screen.dart';
 import 'reward/reward_screen.dart';
+import 'rest/rest_screen.dart';
+import 'treasure/treasure_screen.dart';
 
 /// 런(Run) 단계([RunPhase])에 따라 [MapScreen]과 [BattleScreen]을 교체하는
 /// 최상위 라우터 위젯.
@@ -40,16 +43,22 @@ class AppRouter extends ConsumerWidget {
     // 콜백은 상태가 바뀔 때마다 한 번만 실행되며, build를 다시 트리거하지 않는다.
     ref.listen<RunState>(runProvider, (prev, next) {
       if (prev?.phase != RunPhase.battle && next.phase == RunPhase.battle) {
-        // 새 전투 시작 — currentStage는 RunState.currentNode.floor 기반으로 계산.
-        ref.read(battleProvider.notifier).startBattle(next.currentStage);
+        // 새 전투 시작 — 유물 목록을 함께 전달해 전투 시작 시 유물 효과를 적용한다.
+        ref.read(battleProvider.notifier).startBattle(
+              next.currentStage,
+              relics: next.relics,
+            );
       }
     });
 
     // ── 단계에 따른 화면 결정 ─────────────────────────────────────────────
     return switch (phase) {
-      RunPhase.map    => const MapScreen(),
-      RunPhase.battle => const BattleScreen(),
-      RunPhase.reward => const RewardScreen(),
+      RunPhase.map      => const MapScreen(),
+      RunPhase.battle   => const BattleScreen(),
+      RunPhase.reward   => const RewardScreen(),
+      RunPhase.event    => const EventScreen(),
+      RunPhase.treasure => const TreasureScreen(),
+      RunPhase.rest     => const RestScreen(),
     };
   }
 }
