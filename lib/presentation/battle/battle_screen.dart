@@ -57,6 +57,9 @@ class BattleScreen extends ConsumerWidget {
                   MonsterWidget(
                     hp: state.monsterHp,
                     maxHp: state.monsterMaxHp,
+                    name: state.monsterName,
+                    intentType: state.monsterIntentType,
+                    intentLabel: state.monsterIntentLabel,
                     attackPower: state.monsterAttackPower,
                     isVulnerable: state.monsterIsVulnerable,
                   ),

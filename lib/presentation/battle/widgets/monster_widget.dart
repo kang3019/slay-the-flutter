@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 
-import '../../../presentation/shared/hp_bar_widget.dart';
+import '../../../domain/entities/monster.dart';
+import '../../shared/hp_bar_widget.dart';
 import '../battle_constants.dart';
 
-/// 몬스터의 체력·다음 공격·상태 이상을 표시한다.
+/// 몬스터의 이름·체력·다음 행동 의도·상태 이상을 표시한다.
 class MonsterWidget extends StatelessWidget {
   final int hp;
   final int maxHp;
+  final String name;
+  final MonsterIntentType intentType;
+  final String intentLabel;
   final int attackPower;
   final bool isVulnerable;
 
@@ -14,6 +18,9 @@ class MonsterWidget extends StatelessWidget {
     super.key,
     required this.hp,
     required this.maxHp,
+    required this.name,
+    required this.intentType,
+    required this.intentLabel,
     required this.attackPower,
     required this.isVulnerable,
   });
@@ -31,9 +38,9 @@ class MonsterWidget extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Text(
-                '👹 몬스터',
-                style: TextStyle(
+              Text(
+                '👹 $name',
+                style: const TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
                   fontSize: 16,
@@ -62,18 +69,47 @@ class MonsterWidget extends StatelessWidget {
             barColor: Colors.red,
           ),
           const SizedBox(height: 10),
-          Row(
-            children: [
-              const Icon(Icons.bolt, color: Colors.redAccent, size: 16),
-              const SizedBox(width: 4),
-              Text(
-                '${BattleStrings.nextAttack}: $attackPower',
-                style: const TextStyle(color: Colors.redAccent, fontSize: 13),
-              ),
-            ],
+          _IntentRow(
+            intentType: intentType,
+            intentLabel: intentLabel,
+            attackPower: attackPower,
           ),
         ],
       ),
+    );
+  }
+}
+
+class _IntentRow extends StatelessWidget {
+  final MonsterIntentType intentType;
+  final String intentLabel;
+  final int attackPower;
+
+  const _IntentRow({
+    required this.intentType,
+    required this.intentLabel,
+    required this.attackPower,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final (icon, color, suffix) = switch (intentType) {
+      MonsterIntentType.attack       => (Icons.sports_martial_arts, Colors.redAccent, '$attackPower'),
+      MonsterIntentType.attackDebuff => (Icons.sports_martial_arts, Colors.deepOrangeAccent, '$attackPower'),
+      MonsterIntentType.defend       => (Icons.shield_outlined, Colors.blueAccent, ''),
+      MonsterIntentType.buff         => (Icons.arrow_upward, Colors.amberAccent, ''),
+      MonsterIntentType.sleep        => (Icons.bedtime_outlined, Colors.blueGrey, ''),
+    };
+
+    return Row(
+      children: [
+        Icon(icon, color: color, size: 16),
+        const SizedBox(width: 4),
+        Text(
+          suffix.isEmpty ? intentLabel : '$intentLabel $suffix',
+          style: TextStyle(color: color, fontSize: 13),
+        ),
+      ],
     );
   }
 }

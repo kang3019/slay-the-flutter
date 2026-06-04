@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:slay_the_flutter/domain/entities/monster.dart';
+import 'package:slay_the_flutter/domain/entities/player.dart';
 import 'package:slay_the_flutter/domain/status_effect.dart';
 
 void main() {
@@ -109,6 +110,223 @@ void main() {
       monster.endTurn();
 
       expect(monster.isVulnerable, isFalse);
+    });
+  });
+
+  // ── 새 몬스터 타입 행동 패턴 ──────────────────────────────────────────────
+
+  group('끈적 슬라임 (stickySlime) — 힘 충전 후 공격 순환', () {
+    late Monster m;
+    late Player p;
+
+    setUp(() {
+      m = Monster(stage: 1, type: MonsterType.stickySlime);
+      p = Player();
+    });
+
+    test('초기 HP = 44', () => expect(m.maxHp, equals(44)));
+
+    test('1턴: 분비 — 힘 +3, 플레이어 피해 없음', () {
+      m.executeAction(p);
+      expect(m.strength, equals(3));
+      expect(p.hp, equals(Player.maxHp));
+    });
+
+    test('2턴: 점착 공격 — 힘(3) 포함 10 데미지', () {
+      m.executeAction(p); // 1턴: 분비
+      m.executeAction(p); // 2턴: 공격
+      expect(p.hp, equals(Player.maxHp - 10)); // 7 + 3(strength)
+    });
+
+    test('4턴: 두 번째 분비로 힘 6 누적', () {
+      for (var i = 0; i < 4; i++) m.executeAction(p);
+      expect(m.strength, equals(6));
+    });
+
+    test('1턴 의도 타입: buff', () {
+      expect(m.currentIntent.intentType, equals(MonsterIntentType.buff));
+    });
+  });
+
+  group('고철수집가 (ironScavenger) — 물기→단련→할퀴기 순환', () {
+    late Monster m;
+    late Player p;
+
+    setUp(() {
+      m = Monster(stage: 1, type: MonsterType.ironScavenger);
+      p = Player();
+    });
+
+    test('초기 HP = 40', () => expect(m.maxHp, equals(40)));
+
+    test('1턴: 물기 — 11 데미지', () {
+      m.executeAction(p);
+      expect(p.hp, equals(Player.maxHp - 11));
+    });
+
+    test('2턴: 단련 — 힘+2, 방어도+5, 공격 없음', () {
+      m.executeAction(p); // 물기
+      final hpBefore = p.hp;
+      m.executeAction(p); // 단련
+      expect(m.strength, equals(2));
+      expect(m.block, equals(5));
+      expect(p.hp, equals(hpBefore));
+    });
+
+    test('3턴: 할퀴기 — 7+strength 데미지 + 방어도 3 획득', () {
+      m.executeAction(p); // 물기
+      m.executeAction(p); // 단련 (strength=2, block=5)
+      m.endTurn();        // 방어도 소멸 (새 턴)
+      m.executeAction(p); // 할퀴기
+      expect(p.hp, equals(Player.maxHp - 11 - 9)); // 7+2(strength)
+      expect(m.block, equals(3));
+    });
+
+    test('4턴: 다시 물기 (순환)', () {
+      for (var i = 0; i < 3; i++) {
+        m.executeAction(p);
+        m.endTurn();
+      }
+      expect(m.currentIntent.label, equals('물기'));
+    });
+  });
+
+  group('독파수꾼 (venomSentinel) — 취약 부여 후 독침+강습 반복', () {
+    late Monster m;
+    late Player p;
+
+    setUp(() {
+      m = Monster(stage: 2, type: MonsterType.venomSentinel);
+      p = Player();
+    });
+
+    test('초기 HP = 80', () => expect(m.maxHp, equals(80)));
+
+    test('1턴: 독기 분출 — 5 데미지 + 플레이어 취약 2턴', () {
+      m.executeAction(p);
+      expect(p.hp, equals(Player.maxHp - 5));
+      expect(p.isVulnerable, isTrue);
+    });
+
+    test('2턴: 독침 — 취약 상태 플레이어에게 floor(8×1.5)=12 데미지', () {
+      m.executeAction(p); // 독기 분출 → 플레이어 취약(2)
+      m.executeAction(p); // 독침 → 플레이어 취약 상태라 12 데미지
+      expect(p.hp, equals(Player.maxHp - 5 - 12)); // 70-5-12=53
+      expect(p.isVulnerable, isTrue);
+    });
+
+    test('3턴: 강습 — 취약 상태 플레이어에게 floor(16×1.5)=24 데미지', () {
+      m.executeAction(p); // 독기 분출
+      m.executeAction(p); // 독침
+      m.executeAction(p); // 강습
+      expect(p.hp, equals(Player.maxHp - 5 - 12 - 24)); // 70-5-12-24=29
+    });
+
+    test('4턴: 독침으로 돌아옴 (독기 분출 반복 없음)', () {
+      for (var i = 0; i < 3; i++) m.executeAction(p);
+      expect(m.currentIntent.label, equals('독침'));
+    });
+  });
+
+  group('석굴 수호자 (caveGuardian) — 수면 후 강력 공격', () {
+    late Monster m;
+    late Player p;
+
+    setUp(() {
+      m = Monster(stage: 2, type: MonsterType.caveGuardian);
+      p = Player();
+    });
+
+    test('초기 HP = 110', () => expect(m.maxHp, equals(110)));
+
+    test('1턴: 수면 — 방어도 +8, 공격 없음', () {
+      m.executeAction(p);
+      expect(m.block, equals(8));
+      expect(p.hp, equals(Player.maxHp));
+    });
+
+    test('2턴: 수면 — 방어도 추가 +8', () {
+      m.executeAction(p); // 1턴
+      m.endTurn();        // 방어도 소멸
+      m.executeAction(p); // 2턴
+      expect(m.block, equals(8));
+      expect(p.hp, equals(Player.maxHp));
+    });
+
+    test('3턴: 깨어남 — 강타 18 데미지', () {
+      for (var i = 0; i < 2; i++) {
+        m.executeAction(p);
+        m.endTurn();
+      }
+      m.executeAction(p); // 3턴: 강타
+      expect(p.hp, equals(Player.maxHp - 18));
+    });
+
+    test('5턴: 기력 흡수 — 10 데미지 + 플레이어 약화 2턴', () {
+      for (var i = 0; i < 4; i++) {
+        m.executeAction(p);
+        m.endTurn();
+      }
+      m.executeAction(p); // 5턴: 기력 흡수
+      expect(p.isWeak, isTrue);
+    });
+
+    test('6턴: 수면 없이 강타로 순환', () {
+      for (var i = 0; i < 5; i++) {
+        m.executeAction(p);
+        m.endTurn();
+      }
+      expect(m.currentIntent.label, equals('강타'));
+    });
+
+    test('1턴 의도 타입: sleep', () {
+      expect(m.currentIntent.intentType, equals(MonsterIntentType.sleep));
+    });
+  });
+
+  group('철갑 골렘 (ironGolem) — 방어→분쇄→연속타격 순환 (보스)', () {
+    late Monster m;
+    late Player p;
+
+    setUp(() {
+      m = Monster(stage: 3, type: MonsterType.ironGolem);
+      p = Player();
+    });
+
+    test('초기 HP = 220', () => expect(m.maxHp, equals(220)));
+
+    test('1턴: 장갑 강화 — 방어도 18 획득, 공격 없음', () {
+      m.executeAction(p);
+      expect(m.block, equals(18));
+      expect(p.hp, equals(Player.maxHp));
+    });
+
+    test('2턴: 분쇄 강타 — 30 데미지', () {
+      m.executeAction(p); // 장갑 강화
+      m.executeAction(p); // 분쇄 강타
+      expect(p.hp, equals(Player.maxHp - 30));
+    });
+
+    test('3턴: 연속 타격 — 6 × 4 = 24 데미지', () {
+      m.executeAction(p); // 장갑 강화
+      m.executeAction(p); // 분쇄 강타
+      m.executeAction(p); // 연속 타격
+      expect(p.hp, equals(Player.maxHp - 30 - 24));
+    });
+
+    test('연속 타격은 방어도를 히트마다 따로 통과한다', () {
+      p.gainBlock(10);
+      m.executeAction(p); // 장갑 강화 (공격 없음)
+      m.executeAction(p); // 분쇄 강타 (30 > block 10) → hp=50, block=0
+      p.gainBlock(10);    // 다시 방어도 부여
+      // 연속 타격 6×4: hit1→block(6), hit2→block(4)+hp(-2), hit3→hp(-6), hit4→hp(-6) → 총 HP -14
+      m.executeAction(p);
+      expect(p.hp, equals(36)); // 50 - 14
+    });
+
+    test('4턴: 다시 장갑 강화로 순환', () {
+      for (var i = 0; i < 3; i++) m.executeAction(p);
+      expect(m.currentIntent.intentType, equals(MonsterIntentType.defend));
     });
   });
 }

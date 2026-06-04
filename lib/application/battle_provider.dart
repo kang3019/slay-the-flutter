@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../domain/battle_engine.dart';
 import '../domain/entities/card.dart';
+import '../domain/entities/monster.dart';
 import '../domain/entities/player.dart';
 import '../domain/entities/relic.dart';
 
@@ -27,6 +28,9 @@ class BattleState {
   final int monsterBlock;
   final bool monsterIsVulnerable;
   final int monsterAttackPower;
+  final String monsterName;
+  final MonsterIntentType monsterIntentType;
+  final String monsterIntentLabel;
   final List<GameCard> hand;
   final int energy;
   final int maxEnergy;
@@ -45,6 +49,9 @@ class BattleState {
     required this.monsterBlock,
     required this.monsterIsVulnerable,
     required this.monsterAttackPower,
+    required this.monsterName,
+    required this.monsterIntentType,
+    required this.monsterIntentLabel,
     required this.hand,
     required this.energy,
     required this.maxEnergy,
@@ -104,6 +111,9 @@ class BattleNotifier extends Notifier<BattleState> {
         monsterBlock: _engine.monster.block,
         monsterIsVulnerable: _engine.monster.isVulnerable,
         monsterAttackPower: _engine.monster.attackPower,
+        monsterName: _engine.monster.name,
+        monsterIntentType: _engine.monster.currentIntent.intentType,
+        monsterIntentLabel: _engine.monster.currentIntent.label,
         hand: List.of(_engine.deck.hand),
         energy: _engine.energy,
         maxEnergy: BattleEngine.energyPerTurn,

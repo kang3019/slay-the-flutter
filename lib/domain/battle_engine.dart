@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'entities/card.dart';
 import 'entities/monster.dart';
 import 'entities/player.dart';
@@ -79,21 +81,35 @@ class BattleEngine {
   }
 
   /// 지정 덱으로 새 전투를 시작한다. [cards]가 비어있으면 기본 덱을 사용한다.
+  ///
+  /// [monsterType]을 지정하지 않으면 [stage]에 맞는 타입을 무작위로 선택한다.
   factory BattleEngine.start({
     required int stage,
     List<Relic> relics = const [],
     List<GameCard> cards = const [],
     int? playerHp,
+    MonsterType? monsterType,
   }) {
+    final type = monsterType ?? _randomMonsterType(stage);
     final engine = BattleEngine(
       player: Player(hp: playerHp ?? Player.maxHp),
-      monster: Monster(stage: stage),
+      monster: Monster(stage: stage, type: type),
       deck: Deck(initialCards: cards.isEmpty ? _starterCards() : List.of(cards)),
       relics: relics,
     );
     engine.deck.shuffle();
     engine.startPlayerTurn();
     return engine;
+  }
+
+  /// 스테이지에 맞는 몬스터 타입을 무작위로 반환한다.
+  static MonsterType _randomMonsterType(int stage) {
+    final random = Random();
+    return switch (stage) {
+      1 => random.nextBool() ? MonsterType.stickySlime : MonsterType.ironScavenger,
+      2 => random.nextBool() ? MonsterType.venomSentinel : MonsterType.caveGuardian,
+      _ => MonsterType.ironGolem,
+    };
   }
 
   /// 플레이어 턴 시작: 에너지 충전, [drawPerTurn]장 드로우.
@@ -163,8 +179,8 @@ class BattleEngine {
     _applyTurnEndRelics();
 
     if (!isBattleOver) {
-      _runMonsterTurn();
-      monster.endTurn();
+      monster.endTurn();   // 이전 턴 방어도·상태이상 정리
+      _runMonsterTurn();   // 몬스터 행동 (새 방어도·공격 적용)
       _checkBattleOver();
     }
 
@@ -349,7 +365,7 @@ class BattleEngine {
       player.isWeak ? (value * Player.weakMultiplier).floor() : value;
 
   void _runMonsterTurn() {
-    player.takeDamage(monster.attackPower);
+    monster.executeAction(player);
   }
 
   void _checkBattleOver() {
