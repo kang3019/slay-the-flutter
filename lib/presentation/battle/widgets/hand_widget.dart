@@ -41,7 +41,7 @@ class HandWidget extends StatelessWidget {
           final card = hand[index];
           return CardWidget(
             card: card,
-            canPlay: energy >= card.cost,
+            canPlay: card.cost == -1 ? energy > 0 : energy >= card.cost,
             onTap: () => onCardTap(card),
           );
         },

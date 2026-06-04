@@ -77,7 +77,7 @@ class _CostBadge extends StatelessWidget {
       decoration: BoxDecoration(color: color, shape: BoxShape.circle),
       child: Center(
         child: Text(
-          '$cost',
+          cost == -1 ? 'X' : '$cost',
           style: const TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.bold,

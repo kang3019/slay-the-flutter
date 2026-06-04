@@ -2,25 +2,32 @@ import 'dart:math';
 
 import 'entities/card.dart';
 
-/// 뽑는 더미·패·버리는 더미의 상태와 이동 로직을 관리한다.
+/// 뽑는 더미·패·버리는 더미·소멸 더미의 상태와 이동 로직을 관리한다.
 ///
 /// 순수 Dart 클래스 — Flutter·Riverpod 임포트 금지.
 class Deck {
   final List<GameCard> _drawPile;
   final List<GameCard> _hand;
   final List<GameCard> _discardPile;
+
+  /// 소멸(Exhaust)된 카드. 버리는 더미로 재활용되지 않는다.
+  final List<GameCard> _exhaustPile;
+
   final Random _random;
 
   Deck({required List<GameCard> initialCards, Random? random})
       : _drawPile = List.of(initialCards),
         _hand = [],
         _discardPile = [],
+        _exhaustPile = [],
         _random = random ?? Random();
 
   List<GameCard> get drawPile => List.unmodifiable(_drawPile);
   List<GameCard> get hand => List.unmodifiable(_hand);
   List<GameCard> get discardPile => List.unmodifiable(_discardPile);
+  List<GameCard> get exhaustPile => List.unmodifiable(_exhaustPile);
 
+  /// 소멸 더미를 제외한 총 카드 수.
   int get totalCards => _drawPile.length + _hand.length + _discardPile.length;
 
   void shuffle() => _drawPile.shuffle(_random);
@@ -56,5 +63,19 @@ class Deck {
   void discardHand() {
     _discardPile.addAll(_hand);
     _hand.clear();
+  }
+
+  /// [card]를 버리는 더미에 직접 추가한다. 광분([CardType.rageBurst]) 복사본 생성에 사용된다.
+  void addToDiscard(GameCard card) => _discardPile.add(card);
+
+  /// [card]를 패에 직접 추가한다. 유물의 전투 시작 시 손패 지급에 사용된다.
+  void addToHand(GameCard card) => _hand.add(card);
+
+  /// 버리는 더미의 마지막 카드를 소멸 더미로 이동한다.
+  /// Exhaust 카드([CardType.crushingBlow], [CardType.quickMend])의 효과 적용 직후 호출된다.
+  void exhaustLastPlayed() {
+    if (_discardPile.isNotEmpty) {
+      _exhaustPile.add(_discardPile.removeLast());
+    }
   }
 }
