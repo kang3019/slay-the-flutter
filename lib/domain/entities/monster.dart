@@ -219,9 +219,9 @@ class Monster {
         MonsterType.basic         => 20 + (stage * 10),
         MonsterType.stickySlime   => 44,
         MonsterType.ironScavenger => 40,
-        MonsterType.venomSentinel => 80,
-        MonsterType.caveGuardian  => 110,
-        MonsterType.ironGolem     => 220,
+        MonsterType.venomSentinel => 60,
+        MonsterType.caveGuardian  => 80,
+        MonsterType.ironGolem     => 120,
       };
 
   /// 패턴 종료 후 루프를 시작할 인덱스.
@@ -282,46 +282,46 @@ class Monster {
           MonsterTurnAction(
             intentType: MonsterIntentType.attackDebuff,
             label: '독기 분출',
-            attackDamage: 5,
+            attackDamage: 4,
             playerDebuff: StatusEffect(type: StatusEffectType.vulnerable, duration: 2),
           ),
           MonsterTurnAction(
             intentType: MonsterIntentType.attackDebuff,
             label: '독침',
-            attackDamage: 8,
+            attackDamage: 7,
             playerDebuff: StatusEffect(type: StatusEffectType.vulnerable, duration: 1),
           ),
           MonsterTurnAction(
             intentType: MonsterIntentType.attack,
             label: '강습',
-            attackDamage: 16,
+            attackDamage: 12,
           ),
         ],
         MonsterType.caveGuardian => const [
           MonsterTurnAction(
             intentType: MonsterIntentType.sleep,
             label: '수면',
-            blockGain: 8,
+            blockGain: 5,
           ),
           MonsterTurnAction(
             intentType: MonsterIntentType.sleep,
             label: '수면',
-            blockGain: 8,
+            blockGain: 5,
           ),
           MonsterTurnAction(
             intentType: MonsterIntentType.attack,
             label: '강타',
-            attackDamage: 18,
+            attackDamage: 15,
           ),
           MonsterTurnAction(
             intentType: MonsterIntentType.attack,
             label: '강타',
-            attackDamage: 18,
+            attackDamage: 15,
           ),
           MonsterTurnAction(
             intentType: MonsterIntentType.attackDebuff,
             label: '기력 흡수',
-            attackDamage: 10,
+            attackDamage: 8,
             playerDebuff: StatusEffect(type: StatusEffectType.weak, duration: 2),
           ),
         ],
@@ -329,18 +329,18 @@ class Monster {
           MonsterTurnAction(
             intentType: MonsterIntentType.defend,
             label: '장갑 강화',
-            blockGain: 18,
+            blockGain: 10,
           ),
           MonsterTurnAction(
             intentType: MonsterIntentType.attack,
             label: '분쇄 강타',
-            attackDamage: 30,
+            attackDamage: 18,
           ),
           MonsterTurnAction(
             intentType: MonsterIntentType.attack,
             label: '연속 타격',
-            attackDamage: 6,
-            hitCount: 4,
+            attackDamage: 5,
+            hitCount: 3,
           ),
         ],
       };

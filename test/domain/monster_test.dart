@@ -217,26 +217,26 @@ void main() {
       p = Player();
     });
 
-    test('초기 HP = 80', () => expect(m.maxHp, equals(80)));
+    test('초기 HP = 60', () => expect(m.maxHp, equals(60)));
 
-    test('1턴: 독기 분출 — 5 데미지 + 플레이어 취약 2턴', () {
+    test('1턴: 독기 분출 — 4 데미지 + 플레이어 취약 2턴', () {
       m.executeAction(p);
-      expect(p.hp, equals(Player.maxHp - 5));
+      expect(p.hp, equals(Player.maxHp - 4));
       expect(p.isVulnerable, isTrue);
     });
 
-    test('2턴: 독침 — 취약 상태 플레이어에게 floor(8×1.5)=12 데미지', () {
+    test('2턴: 독침 — 취약 상태 플레이어에게 floor(7×1.5)=10 데미지', () {
       m.executeAction(p); // 독기 분출 → 플레이어 취약(2)
-      m.executeAction(p); // 독침 → 플레이어 취약 상태라 12 데미지
-      expect(p.hp, equals(Player.maxHp - 5 - 12)); // 70-5-12=53
+      m.executeAction(p); // 독침 → 플레이어 취약 상태라 10 데미지
+      expect(p.hp, equals(Player.maxHp - 4 - 10)); // 70-4-10=56
       expect(p.isVulnerable, isTrue);
     });
 
-    test('3턴: 강습 — 취약 상태 플레이어에게 floor(16×1.5)=24 데미지', () {
+    test('3턴: 강습 — 취약 상태 플레이어에게 floor(12×1.5)=18 데미지', () {
       m.executeAction(p); // 독기 분출
       m.executeAction(p); // 독침
       m.executeAction(p); // 강습
-      expect(p.hp, equals(Player.maxHp - 5 - 12 - 24)); // 70-5-12-24=29
+      expect(p.hp, equals(Player.maxHp - 4 - 10 - 18)); // 70-4-10-18=38
     });
 
     test('4턴: 독침으로 돌아옴 (독기 분출 반복 없음)', () {
@@ -254,29 +254,29 @@ void main() {
       p = Player();
     });
 
-    test('초기 HP = 110', () => expect(m.maxHp, equals(110)));
+    test('초기 HP = 80', () => expect(m.maxHp, equals(80)));
 
-    test('1턴: 수면 — 방어도 +8, 공격 없음', () {
+    test('1턴: 수면 — 방어도 +5, 공격 없음', () {
       m.executeAction(p);
-      expect(m.block, equals(8));
+      expect(m.block, equals(5));
       expect(p.hp, equals(Player.maxHp));
     });
 
-    test('2턴: 수면 — 방어도 추가 +8', () {
+    test('2턴: 수면 — 방어도 추가 +5', () {
       m.executeAction(p); // 1턴
       m.endTurn();        // 방어도 소멸
       m.executeAction(p); // 2턴
-      expect(m.block, equals(8));
+      expect(m.block, equals(5));
       expect(p.hp, equals(Player.maxHp));
     });
 
-    test('3턴: 깨어남 — 강타 18 데미지', () {
+    test('3턴: 깨어남 — 강타 15 데미지', () {
       for (var i = 0; i < 2; i++) {
         m.executeAction(p);
         m.endTurn();
       }
       m.executeAction(p); // 3턴: 강타
-      expect(p.hp, equals(Player.maxHp - 18));
+      expect(p.hp, equals(Player.maxHp - 15));
     });
 
     test('5턴: 기력 흡수 — 10 데미지 + 플레이어 약화 2턴', () {
@@ -310,35 +310,35 @@ void main() {
       p = Player();
     });
 
-    test('초기 HP = 220', () => expect(m.maxHp, equals(220)));
+    test('초기 HP = 120', () => expect(m.maxHp, equals(120)));
 
-    test('1턴: 장갑 강화 — 방어도 18 획득, 공격 없음', () {
+    test('1턴: 장갑 강화 — 방어도 10 획득, 공격 없음', () {
       m.executeAction(p);
-      expect(m.block, equals(18));
+      expect(m.block, equals(10));
       expect(p.hp, equals(Player.maxHp));
     });
 
-    test('2턴: 분쇄 강타 — 30 데미지', () {
+    test('2턴: 분쇄 강타 — 18 데미지', () {
       m.executeAction(p); // 장갑 강화
       m.executeAction(p); // 분쇄 강타
-      expect(p.hp, equals(Player.maxHp - 30));
+      expect(p.hp, equals(Player.maxHp - 18));
     });
 
-    test('3턴: 연속 타격 — 6 × 4 = 24 데미지', () {
+    test('3턴: 연속 타격 — 5 × 3 = 15 데미지', () {
       m.executeAction(p); // 장갑 강화
       m.executeAction(p); // 분쇄 강타
       m.executeAction(p); // 연속 타격
-      expect(p.hp, equals(Player.maxHp - 30 - 24));
+      expect(p.hp, equals(Player.maxHp - 18 - 15));
     });
 
     test('연속 타격은 방어도를 히트마다 따로 통과한다', () {
       p.gainBlock(10);
       m.executeAction(p); // 장갑 강화 (공격 없음)
-      m.executeAction(p); // 분쇄 강타 (30 > block 10) → hp=50, block=0
+      m.executeAction(p); // 분쇄 강타 (18 > block 10) → hp=62, block=0
       p.gainBlock(10);    // 다시 방어도 부여
-      // 연속 타격 6×4: hit1→block(6), hit2→block(4)+hp(-2), hit3→hp(-6), hit4→hp(-6) → 총 HP -14
+      // 연속 타격 5×3: hit1→block(5), hit2→block(0), hit3→hp(-5) → 총 HP -5
       m.executeAction(p);
-      expect(p.hp, equals(36)); // 50 - 14
+      expect(p.hp, equals(57)); // 62 - 5
     });
 
     test('4턴: 다시 장갑 강화로 순환', () {
