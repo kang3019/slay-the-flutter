@@ -45,6 +45,24 @@ class MonsterTurnAction {
 
   /// 총 공격 데미지 (strength 미적용, hitCount 반영).
   int get totalDamage => attackDamage * hitCount;
+
+  /// 이 행동에 대한 설명 문자열 (UI 팝업에 사용).
+  String get description {
+    final parts = <String>[];
+    if (intentType == MonsterIntentType.sleep) parts.add('이번 턴 행동하지 않는다');
+    if (attackDamage > 0) {
+      parts.add(hitCount > 1
+          ? '$attackDamage × $hitCount = ${totalDamage} 데미지'
+          : '$attackDamage 데미지');
+    }
+    if (blockGain > 0) parts.add('방어도 $blockGain 획득');
+    if (strengthGain > 0) parts.add('힘 +$strengthGain (공격력 증가)');
+    if (playerDebuff != null) {
+      final name = playerDebuff!.type == StatusEffectType.vulnerable ? '취약' : '약화';
+      parts.add('플레이어에게 $name ${playerDebuff!.duration}턴 부여');
+    }
+    return parts.join('\n');
+  }
 }
 
 /// 몬스터 종류. 각 타입마다 고유 이름·HP·행동 패턴을 가진다.

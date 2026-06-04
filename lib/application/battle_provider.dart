@@ -31,6 +31,7 @@ class BattleState {
   final String monsterName;
   final MonsterIntentType monsterIntentType;
   final String monsterIntentLabel;
+  final String monsterIntentDescription;
   final List<GameCard> hand;
   final int energy;
   final int maxEnergy;
@@ -52,6 +53,7 @@ class BattleState {
     required this.monsterName,
     required this.monsterIntentType,
     required this.monsterIntentLabel,
+    required this.monsterIntentDescription,
     required this.hand,
     required this.energy,
     required this.maxEnergy,
@@ -114,6 +116,7 @@ class BattleNotifier extends Notifier<BattleState> {
         monsterName: _engine.monster.name,
         monsterIntentType: _engine.monster.currentIntent.intentType,
         monsterIntentLabel: _engine.monster.currentIntent.label,
+        monsterIntentDescription: _engine.monster.currentIntent.description,
         hand: List.of(_engine.deck.hand),
         energy: _engine.energy,
         maxEnergy: BattleEngine.energyPerTurn,

@@ -60,6 +60,7 @@ class BattleScreen extends ConsumerWidget {
                     name: state.monsterName,
                     intentType: state.monsterIntentType,
                     intentLabel: state.monsterIntentLabel,
+                    intentDescription: state.monsterIntentDescription,
                     attackPower: state.monsterAttackPower,
                     isVulnerable: state.monsterIsVulnerable,
                   ),

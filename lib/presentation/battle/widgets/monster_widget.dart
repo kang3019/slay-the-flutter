@@ -11,6 +11,7 @@ class MonsterWidget extends StatelessWidget {
   final String name;
   final MonsterIntentType intentType;
   final String intentLabel;
+  final String intentDescription;
   final int attackPower;
   final bool isVulnerable;
 
@@ -21,6 +22,7 @@ class MonsterWidget extends StatelessWidget {
     required this.name,
     required this.intentType,
     required this.intentLabel,
+    required this.intentDescription,
     required this.attackPower,
     required this.isVulnerable,
   });
@@ -72,6 +74,7 @@ class MonsterWidget extends StatelessWidget {
           _IntentRow(
             intentType: intentType,
             intentLabel: intentLabel,
+            intentDescription: intentDescription,
             attackPower: attackPower,
           ),
         ],
@@ -83,11 +86,13 @@ class MonsterWidget extends StatelessWidget {
 class _IntentRow extends StatelessWidget {
   final MonsterIntentType intentType;
   final String intentLabel;
+  final String intentDescription;
   final int attackPower;
 
   const _IntentRow({
     required this.intentType,
     required this.intentLabel,
+    required this.intentDescription,
     required this.attackPower,
   });
 
@@ -101,15 +106,39 @@ class _IntentRow extends StatelessWidget {
       MonsterIntentType.sleep        => (Icons.bedtime_outlined, Colors.blueGrey, ''),
     };
 
-    return Row(
-      children: [
-        Icon(icon, color: color, size: 16),
-        const SizedBox(width: 4),
-        Text(
-          suffix.isEmpty ? intentLabel : '$intentLabel $suffix',
-          style: TextStyle(color: color, fontSize: 13),
+    return GestureDetector(
+      onTap: () => showDialog<void>(
+        context: context,
+        builder: (_) => AlertDialog(
+          backgroundColor: const Color(0xFF16213E),
+          title: Text(
+            intentLabel,
+            style: TextStyle(color: color, fontWeight: FontWeight.bold),
+          ),
+          content: Text(
+            intentDescription,
+            style: const TextStyle(color: Colors.white70, height: 1.6),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('닫기', style: TextStyle(color: Colors.amber)),
+            ),
+          ],
         ),
-      ],
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: color, size: 16),
+          const SizedBox(width: 4),
+          Text(
+            suffix.isEmpty ? intentLabel : '$intentLabel $suffix',
+            style: TextStyle(color: color, fontSize: 13),
+          ),
+          const SizedBox(width: 4),
+          Icon(Icons.info_outline, color: color.withValues(alpha: 0.5), size: 13),
+        ],
+      ),
     );
   }
 }
