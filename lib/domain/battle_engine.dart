@@ -78,15 +78,17 @@ class BattleEngine {
     _applyCombatStartRelics();
   }
 
-  /// 기본 덱(강타 5 + 방어 5)으로 새 전투를 시작한다.
+  /// 지정 덱으로 새 전투를 시작한다. [cards]가 비어있으면 기본 덱을 사용한다.
   factory BattleEngine.start({
     required int stage,
     List<Relic> relics = const [],
+    List<GameCard> cards = const [],
+    int? playerHp,
   }) {
     final engine = BattleEngine(
-      player: Player(),
+      player: Player(hp: playerHp ?? Player.maxHp),
       monster: Monster(stage: stage),
-      deck: Deck(initialCards: _starterCards()),
+      deck: Deck(initialCards: cards.isEmpty ? _starterCards() : List.of(cards)),
       relics: relics,
     );
     engine.deck.shuffle();

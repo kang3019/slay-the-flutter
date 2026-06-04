@@ -7,11 +7,11 @@ import '../domain/entities/relic.dart';
 
 /// BattleEngine 생성 팩토리 타입.
 /// 테스트에서 overrideWith()로 교체해 결정론적 덱을 주입한다.
-typedef BattleEngineFactory = BattleEngine Function(int stage, List<Relic> relics);
+typedef BattleEngineFactory = BattleEngine Function(int stage, List<Relic> relics, List<GameCard> cards, int playerHp);
 
 /// 프로덕션 기본 팩토리. BattleEngine.start()로 셔플된 정규 덱을 생성한다.
 final battleEngineFactoryProvider = Provider<BattleEngineFactory>((ref) {
-  return (stage, relics) => BattleEngine.start(stage: stage, relics: relics);
+  return (stage, relics, cards, playerHp) => BattleEngine.start(stage: stage, relics: relics, cards: cards, playerHp: playerHp);
 });
 
 /// UI에 노출되는 전투 상태 스냅샷.
@@ -63,7 +63,7 @@ class BattleNotifier extends Notifier<BattleState> {
 
   @override
   BattleState build() {
-    _engine = ref.read(battleEngineFactoryProvider)(1, const []);
+    _engine = ref.read(battleEngineFactoryProvider)(1, const [], const [], Player.maxHp);
     return _fromEngine();
   }
 
@@ -86,8 +86,10 @@ class BattleNotifier extends Notifier<BattleState> {
   /// 지정 스테이지로 새 전투를 시작한다.
   ///
   /// [relics]: 현재 런에서 보유한 유물 목록. 전투 시작 시 유물 효과가 자동 적용된다.
-  void startBattle(int stage, {List<Relic> relics = const []}) {
-    _engine = ref.read(battleEngineFactoryProvider)(stage, relics);
+  /// [cards]: 현재 런의 덱. 비어있으면 기본 덱(강타5+방어5)을 사용한다.
+  /// [playerHp]: 전투 시작 시 플레이어 HP.
+  void startBattle(int stage, {List<Relic> relics = const [], List<GameCard> cards = const [], int playerHp = Player.maxHp}) {
+    _engine = ref.read(battleEngineFactoryProvider)(stage, relics, cards, playerHp);
     state = _fromEngine();
   }
 

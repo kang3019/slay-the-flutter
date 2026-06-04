@@ -47,6 +47,8 @@ class AppRouter extends ConsumerWidget {
         ref.read(battleProvider.notifier).startBattle(
               next.currentStage,
               relics: next.relics,
+              cards: next.deck,
+              playerHp: next.playerHp,
             );
       }
     });

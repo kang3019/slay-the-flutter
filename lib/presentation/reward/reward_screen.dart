@@ -136,7 +136,7 @@ class _RewardCardTile extends StatelessWidget {
               ),
               child: Center(
                 child: Text(
-                  '${card.cost}',
+                  card.cost == -1 ? 'X' : '${card.cost}',
                   style: TextStyle(
                     color: accentColor,
                     fontSize: 16,

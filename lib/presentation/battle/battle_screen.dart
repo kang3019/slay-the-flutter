@@ -5,6 +5,7 @@ import '../../application/battle_provider.dart';
 import '../../application/meta_progress_provider.dart';
 import '../../application/run_provider.dart';
 import '../../domain/battle_engine.dart';
+import '../../domain/entities/relic.dart';
 import '../../domain/map/node_type.dart';
 import '../shared/hp_bar_widget.dart';
 import 'battle_constants.dart';
@@ -49,7 +50,10 @@ class BattleScreen extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   _StageHeader(stage: state.stage),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 8),
+                  if (runState.relics.isNotEmpty)
+                    _RelicRow(relics: runState.relics),
+                  const SizedBox(height: 8),
                   MonsterWidget(
                     hp: state.monsterHp,
                     maxHp: state.monsterMaxHp,
@@ -98,6 +102,71 @@ class BattleScreen extends ConsumerWidget {
 }
 
 // ─── 비공개 위젯 ──────────────────────────────────────────────────────────────
+
+class _RelicRow extends StatelessWidget {
+  final List<Relic> relics;
+  const _RelicRow({required this.relics});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 36,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: relics.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 6),
+        itemBuilder: (context, i) => _RelicChip(relic: relics[i]),
+      ),
+    );
+  }
+}
+
+class _RelicChip extends StatelessWidget {
+  final Relic relic;
+  const _RelicChip({required this.relic});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => showDialog<void>(
+        context: context,
+        builder: (_) => AlertDialog(
+          backgroundColor: BattleColors.surface,
+          title: Text(
+            relic.name,
+            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          ),
+          content: Text(
+            relic.description,
+            style: const TextStyle(color: Colors.white70),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('닫기', style: TextStyle(color: Colors.amber)),
+            ),
+          ],
+        ),
+      ),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: const Color(0xFF2A2A4A),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: const Color(0xFFFFD700), width: 1),
+        ),
+        child: Text(
+          relic.name,
+          style: const TextStyle(
+            color: Color(0xFFFFD700),
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
+    );
+  }
+}
 
 class _StageHeader extends StatelessWidget {
   final int stage;
