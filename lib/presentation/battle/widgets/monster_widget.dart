@@ -8,23 +8,27 @@ import '../battle_constants.dart';
 class MonsterWidget extends StatelessWidget {
   final int hp;
   final int maxHp;
+  final int block;
   final String name;
   final MonsterIntentType intentType;
   final String intentLabel;
   final String intentDescription;
   final int attackPower;
   final bool isVulnerable;
+  final bool isWeak;
 
   const MonsterWidget({
     super.key,
     required this.hp,
     required this.maxHp,
+    required this.block,
     required this.name,
     required this.intentType,
     required this.intentLabel,
     required this.intentDescription,
     required this.attackPower,
     required this.isVulnerable,
+    required this.isWeak,
   });
 
   @override
@@ -49,18 +53,11 @@ class MonsterWidget extends StatelessWidget {
                 ),
               ),
               const Spacer(),
+              if (isWeak)
+                _StatusBadge(label: BattleStrings.weak, color: Colors.purple[700]!),
+              if (isWeak && isVulnerable) const SizedBox(width: 4),
               if (isVulnerable)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: Colors.orange[800],
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Text(
-                    BattleStrings.vulnerable,
-                    style: TextStyle(color: Colors.white, fontSize: 11),
-                  ),
-                ),
+                _StatusBadge(label: BattleStrings.vulnerable, color: Colors.orange[800]!),
             ],
           ),
           const SizedBox(height: 10),
@@ -69,6 +66,7 @@ class MonsterWidget extends StatelessWidget {
             current: hp,
             max: maxHp,
             barColor: Colors.red,
+            block: block,
           ),
           const SizedBox(height: 10),
           _IntentRow(
@@ -79,6 +77,24 @@ class MonsterWidget extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _StatusBadge extends StatelessWidget {
+  final String label;
+  final Color color;
+  const _StatusBadge({required this.label, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(label, style: const TextStyle(color: Colors.white, fontSize: 11)),
     );
   }
 }

@@ -57,12 +57,14 @@ class BattleScreen extends ConsumerWidget {
                   MonsterWidget(
                     hp: state.monsterHp,
                     maxHp: state.monsterMaxHp,
+                    block: state.monsterBlock,
                     name: state.monsterName,
                     intentType: state.monsterIntentType,
                     intentLabel: state.monsterIntentLabel,
                     intentDescription: state.monsterIntentDescription,
                     attackPower: state.monsterAttackPower,
                     isVulnerable: state.monsterIsVulnerable,
+                    isWeak: state.monsterIsWeak,
                   ),
                   const Spacer(),
                   _PlayerStatusSection(state: state),
@@ -201,21 +203,72 @@ class _PlayerStatusSection extends StatelessWidget {
         color: BattleColors.surface,
         borderRadius: BorderRadius.circular(12),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Expanded(
-            child: HpBarWidget(
-              label: 'HP',
-              current: state.playerHp,
-              max: state.playerMaxHp,
-              barColor: Colors.green,
-              block: state.playerBlock,
-            ),
+          Row(
+            children: [
+              Expanded(
+                child: HpBarWidget(
+                  label: 'HP',
+                  current: state.playerHp,
+                  max: state.playerMaxHp,
+                  barColor: Colors.green,
+                  block: state.playerBlock,
+                ),
+              ),
+              const SizedBox(width: 16),
+              _EnergyDisplay(current: state.energy, max: state.maxEnergy),
+            ],
           ),
-          const SizedBox(width: 16),
-          _EnergyDisplay(current: state.energy, max: state.maxEnergy),
+          if (state.playerIsVulnerable || state.playerIsWeak) ...[
+            const SizedBox(height: 8),
+            _PlayerStatusBadges(
+              isVulnerable: state.playerIsVulnerable,
+              isWeak: state.playerIsWeak,
+            ),
+          ],
         ],
       ),
+    );
+  }
+}
+
+class _PlayerStatusBadges extends StatelessWidget {
+  final bool isVulnerable;
+  final bool isWeak;
+  const _PlayerStatusBadges({required this.isVulnerable, required this.isWeak});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        const Text('나: ', style: TextStyle(color: Colors.white54, fontSize: 11)),
+        if (isVulnerable) ...[
+          _StatusChip(label: BattleStrings.vulnerable, color: Colors.orange[800]!),
+          const SizedBox(width: 4),
+        ],
+        if (isWeak)
+          _StatusChip(label: BattleStrings.weak, color: Colors.purple[700]!),
+      ],
+    );
+  }
+}
+
+class _StatusChip extends StatelessWidget {
+  final String label;
+  final Color color;
+  const _StatusChip({required this.label, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(label, style: const TextStyle(color: Colors.white, fontSize: 11)),
     );
   }
 }
