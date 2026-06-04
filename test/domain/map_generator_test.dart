@@ -1,192 +1,314 @@
+import 'dart:math';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:slay_the_flutter/domain/map/map_generator.dart';
 import 'package:slay_the_flutter/domain/map/map_node.dart';
 import 'package:slay_the_flutter/domain/map/node_type.dart';
 
+// 여러 시드로 돌려서 확률적 불변식을 검증한다.
+const _seeds = [0, 7, 42, 100, 777, 1234, 9999, 31415, 65536, 99991];
+
 void main() {
-  group('MapGenerator.generateAct1', () {
-    late List<MapNode> nodes;
-    late Map<String, MapNode> nodeMap;
+  List<MapNode> nodesFor(int seed) =>
+      MapGenerator.generateAct1(random: Random(seed));
 
-    setUp(() {
-      nodes = MapGenerator.generateAct1();
-      nodeMap = {for (final n in nodes) n.id: n};
+  Map<String, MapNode> nodeMapOf(List<MapNode> nodes) =>
+      {for (final n in nodes) n.id: n};
+
+  void forAllSeeds(
+    String description,
+    void Function(List<MapNode> nodes, Map<String, MapNode> nodeMap) body,
+  ) {
+    test(description, () {
+      for (final seed in _seeds) {
+        final nodes   = nodesFor(seed);
+        final nodeMap = nodeMapOf(nodes);
+        body(nodes, nodeMap);
+      }
+    });
+  }
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // 1. 구조적 무결성
+  // ──────────────────────────────────────────────────────────────────────────
+
+  group('[구조] 맵 기본 형태', () {
+    forAllSeeds('총 12층(Floor 0-11)이 모두 존재한다', (nodes, _) {
+      final floors = nodes.map((n) => n.floor).toSet();
+      for (int f = 0; f <= 11; f++) {
+        expect(floors, contains(f), reason: 'Floor $f 가 존재하지 않음');
+      }
+      expect(floors.length, 12);
     });
 
-    // ──────────────────────────────────────────────
-    // 구조적 무결성
-    // ──────────────────────────────────────────────
-
-    test('보스 노드는 정확히 하나이다', () {
-      final bossNodes = nodes.where((n) => n.type == NodeType.boss).toList();
-      expect(bossNodes.length, 1);
-    });
-
-    test('보스 노드는 가장 높은 floor에 위치한다', () {
-      final maxFloor =
-          nodes.map((n) => n.floor).reduce((a, b) => a > b ? a : b);
-      final bossNode = nodes.firstWhere((n) => n.type == NodeType.boss);
-      expect(bossNode.floor, equals(maxFloor));
-    });
-
-    test('보스 노드는 나가는 연결(connectedNodeIds)이 없다', () {
-      final bossNode = nodes.firstWhere((n) => n.type == NodeType.boss);
-      expect(bossNode.connectedNodeIds, isEmpty);
-    });
-
-    test('시작 노드(floor 0)가 2개 이상 존재한다', () {
-      final startNodes = nodes.where((n) => n.floor == 0).toList();
-      expect(startNodes.length, greaterThanOrEqualTo(2));
-    });
-
-    test('모든 노드 ID는 유일하다', () {
+    forAllSeeds('모든 노드 ID는 유일하다', (nodes, _) {
       final ids = nodes.map((n) => n.id).toList();
-      expect(ids.toSet().length, equals(ids.length));
+      expect(ids.toSet().length, ids.length);
     });
 
-    test('보스 이외의 모든 노드는 나가는 연결이 하나 이상이다', () {
-      for (final node in nodes) {
-        if (node.type == NodeType.boss) continue;
+    forAllSeeds('Floor 0 노드 수는 3~4개다', (nodes, _) {
+      final count = nodes.where((n) => n.floor == 0).length;
+      expect(count, inInclusiveRange(3, 4));
+    });
+
+    forAllSeeds('보스 이외의 모든 노드는 나가는 연결이 하나 이상이다', (nodes, _) {
+      for (final node in nodes.where((n) => n.type != NodeType.boss)) {
         expect(
           node.connectedNodeIds,
           isNotEmpty,
-          reason: '노드 ${node.id}(${node.type})는 나가는 연결이 없음',
+          reason: '${node.id}(${node.type}, floor ${node.floor}) 나가는 연결 없음',
         );
       }
     });
+  });
 
-    // ──────────────────────────────────────────────
-    // 방향성 무결성 — "역방향 이동 없음" 핵심 검증
-    // ──────────────────────────────────────────────
+  // ──────────────────────────────────────────────────────────────────────────
+  // 2. 방향성 무결성
+  // ──────────────────────────────────────────────────────────────────────────
 
-    test('모든 연결은 앞 방향(더 높은 floor)으로만 존재한다 — 역방향 없음', () {
+  group('[방향성] 연결 무결성', () {
+    forAllSeeds('모든 연결은 더 높은 floor로만 향한다 (역방향 없음)', (nodes, nodeMap) {
       for (final node in nodes) {
         for (final connId in node.connectedNodeIds) {
-          final target = nodeMap[connId]!;
           expect(
-            target.floor,
+            nodeMap[connId]!.floor,
             greaterThan(node.floor),
             reason:
                 '${node.id}(floor ${node.floor}) → '
-                '${target.id}(floor ${target.floor}): 역방향 또는 같은 floor 연결 금지',
+                '$connId(floor ${nodeMap[connId]!.floor}): 역방향 금지',
           );
         }
       }
     });
 
-    test('연결된 노드 ID는 모두 실제 존재하는 노드를 참조한다', () {
-      final allIds = nodes.map((n) => n.id).toSet();
+    forAllSeeds('연결된 노드 ID는 모두 실존 노드를 참조한다', (nodes, nodeMap) {
       for (final node in nodes) {
         for (final connId in node.connectedNodeIds) {
-          expect(
-            allIds,
-            contains(connId),
-            reason: '노드 ${node.id}의 connectedNodeId "$connId" 가 존재하지 않음',
-          );
+          expect(nodeMap, contains(connId),
+              reason: '${node.id}의 연결 "$connId" 가 존재하지 않음');
+        }
+      }
+    });
+  });
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // 3. 도달 가능성
+  // ──────────────────────────────────────────────────────────────────────────
+
+  group('[도달성] 모든 경로 연결', () {
+    forAllSeeds('모든 시작 노드(floor 0)에서 보스까지 경로가 존재한다', (nodes, nodeMap) {
+      final boss = nodes.firstWhere((n) => n.type == NodeType.boss);
+      for (final start in nodes.where((n) => n.floor == 0)) {
+        expect(_canReach(start.id, boss.id, nodeMap), isTrue,
+            reason: '${start.id}에서 보스(${boss.id})까지 경로 없음');
+      }
+    });
+
+    forAllSeeds('Floor 1 이상의 모든 노드는 시작 노드에서 도달 가능하다', (nodes, nodeMap) {
+      final reachable = <String>{};
+      for (final start in nodes.where((n) => n.floor == 0)) {
+        _collectReachable(start.id, nodeMap, reachable);
+      }
+      for (final node in nodes.where((n) => n.floor > 0)) {
+        expect(reachable, contains(node.id),
+            reason: '${node.id}(floor ${node.floor}) 도달 불가');
+      }
+    });
+  });
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // 4. 고정 노드 룰
+  // ──────────────────────────────────────────────────────────────────────────
+
+  group('[고정 노드] Floor별 강제 타입', () {
+    forAllSeeds('Floor 0 노드는 모두 Monster다', (nodes, _) {
+      for (final node in nodes.where((n) => n.floor == 0)) {
+        expect(node.type, NodeType.monster,
+            reason: '${node.id}(floor 0)이 Monster가 아님: ${node.type}');
+      }
+    });
+
+    forAllSeeds('Floor 5 노드는 모두 Treasure다', (nodes, _) {
+      final floor5 = nodes.where((n) => n.floor == 5).toList();
+      expect(floor5, isNotEmpty, reason: 'Floor 5 노드 없음');
+      for (final node in floor5) {
+        expect(node.type, NodeType.treasure,
+            reason: '${node.id}(floor 5)이 Treasure가 아님: ${node.type}');
+      }
+    });
+
+    forAllSeeds('Floor 10 노드는 모두 Rest다', (nodes, _) {
+      final floor10 = nodes.where((n) => n.floor == 10).toList();
+      expect(floor10, isNotEmpty, reason: 'Floor 10 노드 없음');
+      for (final node in floor10) {
+        expect(node.type, NodeType.rest,
+            reason: '${node.id}(floor 10)이 Rest가 아님: ${node.type}');
+      }
+    });
+
+    forAllSeeds('Floor 11은 노드가 정확히 1개이고 Boss다', (nodes, _) {
+      final floor11 = nodes.where((n) => n.floor == 11).toList();
+      expect(floor11.length, 1, reason: 'Floor 11 노드가 1개가 아님');
+      expect(floor11.first.type, NodeType.boss);
+    });
+
+    forAllSeeds('Boss 노드는 나가는 연결이 없다', (nodes, _) {
+      final boss = nodes.firstWhere((n) => n.type == NodeType.boss);
+      expect(boss.connectedNodeIds, isEmpty);
+    });
+
+    forAllSeeds('Boss 노드는 정확히 1개다', (nodes, _) {
+      expect(nodes.where((n) => n.type == NodeType.boss).length, 1);
+    });
+  });
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // 5. Treasure 전용 룰
+  // ──────────────────────────────────────────────────────────────────────────
+
+  group('[Treasure] Floor 5 전용', () {
+    forAllSeeds('Treasure는 Floor 5에서만 등장한다', (nodes, _) {
+      for (final node in nodes.where((n) => n.type == NodeType.treasure)) {
+        expect(node.floor, 5,
+            reason:
+                '${node.id}(floor ${node.floor})에 Treasure: Floor 5 전용 위반');
+      }
+    });
+
+    forAllSeeds('Floor 5 이외의 비고정 층에는 Treasure가 없다', (nodes, _) {
+      for (final node in nodes.where((n) => n.floor != 5)) {
+        expect(node.type, isNot(NodeType.treasure),
+            reason: '${node.id}(floor ${node.floor})에 Treasure 배치됨');
+      }
+    });
+  });
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // 6. Elite 룰
+  // ──────────────────────────────────────────────────────────────────────────
+
+  group('[Elite] 배치 제약', () {
+    forAllSeeds('Floor 0~3에는 Elite 노드가 없다', (nodes, _) {
+      for (final node in nodes.where((n) => n.floor <= 3)) {
+        expect(node.type, isNot(NodeType.elite),
+            reason: '${node.id}(floor ${node.floor})에 Elite가 배치됨');
+      }
+    });
+
+    forAllSeeds(
+        'Elite 노드의 직접 연결 대상이 Elite인 경우가 없다 (연속 Elite 불가)',
+        (nodes, nodeMap) {
+      for (final node in nodes.where((n) => n.type == NodeType.elite)) {
+        for (final connId in node.connectedNodeIds) {
+          expect(nodeMap[connId]!.type, isNot(NodeType.elite),
+              reason:
+                  '${node.id}(Elite) → $connId(Elite): 연속 Elite 금지 위반');
+        }
+      }
+    });
+  });
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // 7. Shop 룰
+  // ──────────────────────────────────────────────────────────────────────────
+
+  group('[Shop] 배치 제약', () {
+    forAllSeeds(
+        'Shop 노드의 직접 연결 대상이 Shop인 경우가 없다 (연속 Shop 불가)',
+        (nodes, nodeMap) {
+      for (final node in nodes.where((n) => n.type == NodeType.shop)) {
+        for (final connId in node.connectedNodeIds) {
+          expect(nodeMap[connId]!.type, isNot(NodeType.shop),
+              reason:
+                  '${node.id}(Shop) → $connId(Shop): 연속 Shop 금지 위반');
+        }
+      }
+    });
+  });
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // 8. Rest 룰
+  // ──────────────────────────────────────────────────────────────────────────
+
+  group('[Rest] 배치 제약', () {
+    forAllSeeds(
+        'Rest 노드의 직접 연결 대상이 Rest인 경우가 없다 (연속 Rest 불가)',
+        (nodes, nodeMap) {
+      for (final node in nodes.where((n) => n.type == NodeType.rest)) {
+        for (final connId in node.connectedNodeIds) {
+          expect(nodeMap[connId]!.type, isNot(NodeType.rest),
+              reason:
+                  '${node.id}(Rest) → $connId(Rest): 연속 Rest 금지 위반');
         }
       }
     });
 
-    // ──────────────────────────────────────────────
-    // 도달 가능성 — "모든 시작 → 보스" 핵심 검증
-    // ──────────────────────────────────────────────
-
-    test('모든 시작 노드에서 보스까지 경로가 존재한다', () {
-      final bossNode = nodes.firstWhere((n) => n.type == NodeType.boss);
-      final startNodes = nodes.where((n) => n.floor == 0).toList();
-
-      for (final start in startNodes) {
-        expect(
-          _canReach(start.id, bossNode.id, nodeMap),
-          isTrue,
-          reason: '시작 노드 ${start.id}에서 보스(${bossNode.id})까지 경로 없음',
-        );
+    forAllSeeds(
+        'Floor 9 노드는 Rest가 없다 (Floor 10이 Rest이므로 연속 방지)',
+        (nodes, _) {
+      for (final node in nodes.where((n) => n.floor == 9)) {
+        expect(node.type, isNot(NodeType.rest),
+            reason: '${node.id}(floor 9)이 Rest: Floor 10(Rest)와 연속됨');
       }
     });
+  });
 
-    test('floor 1 이상의 모든 노드는 최소 하나의 시작 노드에서 도달 가능하다', () {
-      final startNodes = nodes.where((n) => n.floor == 0).toList();
-      final reachableFromStart = <String>{};
+  // ──────────────────────────────────────────────────────────────────────────
+  // 9. 콘텐츠 보장
+  // ──────────────────────────────────────────────────────────────────────────
 
-      for (final start in startNodes) {
-        _collectReachable(start.id, nodeMap, reachableFromStart);
-      }
-
-      for (final node in nodes.where((n) => n.floor > 0)) {
-        expect(
-          reachableFromStart,
-          contains(node.id),
-          reason: '노드 ${node.id}(floor ${node.floor})는 어떤 시작 노드에서도 도달 불가',
-        );
-      }
+  group('[콘텐츠] 필수 노드 보장', () {
+    forAllSeeds('Elite 노드가 하나 이상 존재한다', (nodes, _) {
+      expect(nodes.any((n) => n.type == NodeType.elite), isTrue,
+          reason: 'Elite 노드 없음');
     });
 
-    // ──────────────────────────────────────────────
-    // 콘텐츠 보장 (SPECS.md §8)
-    // ──────────────────────────────────────────────
-
-    test('엘리트 노드가 하나 이상 존재한다', () {
-      expect(nodes.any((n) => n.type == NodeType.elite), isTrue);
+    forAllSeeds('Shop 노드가 하나 이상 존재한다', (nodes, _) {
+      expect(nodes.any((n) => n.type == NodeType.shop), isTrue,
+          reason: 'Shop 노드 없음');
     });
 
-    test('상점 노드가 하나 이상 존재한다', () {
-      expect(nodes.any((n) => n.type == NodeType.shop), isTrue);
+    forAllSeeds('Treasure 노드가 하나 이상 존재한다 (Floor 5 고정)', (nodes, _) {
+      expect(nodes.any((n) => n.type == NodeType.treasure), isTrue,
+          reason: 'Treasure 노드 없음');
     });
 
-    test('휴식처 또는 유물 보관소 노드가 하나 이상 존재한다', () {
-      final hasRestOrTreasure = nodes.any(
-        (n) => n.type == NodeType.rest || n.type == NodeType.treasure,
-      );
-      expect(hasRestOrTreasure, isTrue);
-    });
-
-    test('총 노드 수는 6개 이상이다', () {
-      expect(nodes.length, greaterThanOrEqualTo(6));
+    forAllSeeds('Rest 노드가 하나 이상 존재한다 (Floor 10 고정)', (nodes, _) {
+      expect(nodes.any((n) => n.type == NodeType.rest), isTrue,
+          reason: 'Rest 노드 없음');
     });
   });
 }
 
-/// BFS로 [startId]에서 [targetId]까지 도달 가능한지 확인한다.
+// ── 테스트 유틸리티 ──────────────────────────────────────────────────────────
+
 bool _canReach(
   String startId,
   String targetId,
   Map<String, MapNode> nodeMap,
 ) {
   final visited = <String>{};
-  final queue = [startId];
-
+  final queue   = [startId];
   while (queue.isNotEmpty) {
     final current = queue.removeAt(0);
     if (current == targetId) return true;
-    if (visited.contains(current)) continue;
-    visited.add(current);
-
-    final node = nodeMap[current];
-    if (node != null) {
-      queue.addAll(node.connectedNodeIds);
-    }
+    if (!visited.add(current)) continue;
+    queue.addAll(nodeMap[current]?.connectedNodeIds ?? const []);
   }
   return false;
 }
 
-/// BFS로 [startId]에서 도달 가능한 모든 노드 ID를 [result]에 수집한다.
 void _collectReachable(
   String startId,
   Map<String, MapNode> nodeMap,
   Set<String> result,
 ) {
   final visited = <String>{};
-  final queue = [startId];
-
+  final queue   = [startId];
   while (queue.isNotEmpty) {
     final current = queue.removeAt(0);
-    if (visited.contains(current)) continue;
-    visited.add(current);
+    if (!visited.add(current)) continue;
     result.add(current);
-
-    final node = nodeMap[current];
-    if (node != null) {
-      queue.addAll(node.connectedNodeIds);
-    }
+    queue.addAll(nodeMap[current]?.connectedNodeIds ?? const []);
   }
 }

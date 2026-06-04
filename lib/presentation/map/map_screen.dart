@@ -2,59 +2,46 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../application/run_provider.dart';
+import '../../domain/entities/player.dart';
 import '../../domain/map/map_node.dart';
+import '../../domain/map/node_type.dart';
 import 'map_constants.dart';
 import 'widgets/map_painter.dart';
+import 'widgets/node_icon_widget.dart';
 
 // ──────────────────────────────────────────────────────────────────────────
-// MapScreen — 공개 진입점
+// MapScreen
 // ──────────────────────────────────────────────────────────────────────────
 
-/// 던전 맵 화면.
-///
-/// [runProvider]를 구독해 현재 런 상태(맵 노드, 현재 위치, 방문 이력)를 가져오고
-/// [_MapCanvas]에 전달해 DAG 형태의 맵을 렌더링한다.
-///
-/// **데이터 흐름:**
-/// ```
-/// runProvider(RunState)
-///   └─ MapScreen.build()       ← ref.watch
-///       └─ _MapCanvas          ← nodes, currentNodeId, visitedNodeIds
-///           ├─ MapPainter      ← 시각 렌더링 (CustomPainter)
-///           └─ GestureDetector ← 탭 → moveToNode(id)
-/// ```
-///
-/// UI 로직(상호작용·표시)만 담당하며, 비즈니스 로직은 [RunNotifier]에 위임한다.
 class MapScreen extends ConsumerWidget {
   const MapScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // ref.watch: RunState가 바뀔 때마다 이 build가 자동으로 재실행된다.
     final run = ref.watch(runProvider);
 
     return Scaffold(
       backgroundColor: MapColors.background,
-      appBar: _buildAppBar(run),
       body: Column(
         children: [
-          // ── 맵 캔버스 (화면 대부분을 차지) ───────────────────────────
+          _GothicAppBar(
+            run: run,
+            onSettingsTap: () => _showSettings(context, ref),
+            onLegendTap: () => _showLegend(context),
+          ),
           Expanded(
             child: _MapCanvas(
               nodes: run.mapNodes,
               currentNodeId: run.currentNodeId,
               visitedNodeIds: run.visitedNodeIds,
               isRunOver: run.isRunOver,
-              // 탭 시 Application 계층 Notifier에 이동 요청만 전달한다.
-              // GestureDetector → RunNotifier.moveToNode() — 비즈니스 로직은
-              // Application 계층에 있으며, 여기서는 ID만 전달한다.
-              onNodeTapped: (id) =>
-                  ref.read(runProvider.notifier).moveToNode(id),
+              onNodeTapped: (id) => ref.read(runProvider.notifier).moveToNode(id),
             ),
           ),
-
-          // ── 하단 힌트 바 ─────────────────────────────────────────────
-          _BottomHintBar(
+          // 노드 범례 스트립 — 첫 이동 전에만 자동 표시
+          if (run.currentNodeId == null && !run.isRunOver)
+            const _LegendStrip(),
+          _ParchmentHintBar(
             nodes: run.mapNodes,
             currentNodeId: run.currentNodeId,
             isRunOver: run.isRunOver,
@@ -63,38 +50,352 @@ class MapScreen extends ConsumerWidget {
       ),
     );
   }
+}
 
-  /// 앱 바: 타이틀 + 현재 층 표시.
-  AppBar _buildAppBar(RunState run) {
-    final floorLabel = run.currentNodeId == null
-        ? '— — —'
-        : '${MapStrings.floorPrefix} ${run.floor + 1}';
+void _showLegend(BuildContext context) {
+  showModalBottomSheet<void>(
+    context: context,
+    backgroundColor: const Color(0xFF0D1220),
+    isScrollControlled: true,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+    ),
+    builder: (ctx) {
+      final maxH = MediaQuery.sizeOf(ctx).height * 0.65;
+      return ConstrainedBox(
+        constraints: BoxConstraints(maxHeight: maxH),
+        child: const _LegendSheet(),
+      );
+    },
+  );
+}
 
-    return AppBar(
-      backgroundColor: Colors.transparent,
-      elevation: 0,
-      title: const Text(
-        MapStrings.screenTitle,
-        style: TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.bold,
-          letterSpacing: 1.5,
-          fontSize: 18,
-        ),
-      ),
-      actions: [
-        Padding(
-          padding: const EdgeInsets.only(right: 20.0),
-          child: Center(
-            child: Text(
-              floorLabel,
-              style: const TextStyle(
-                color: MapColors.ringCurrent,
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 1.0,
+void _showSettings(BuildContext context, WidgetRef ref) {
+  showModalBottomSheet<void>(
+    context: context,
+    backgroundColor: const Color(0xFF0D1220),
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+    ),
+    builder: (_) => _SettingsSheet(onNewRun: () {
+      Navigator.pop(context);
+      ref.read(runProvider.notifier).startNewRun();
+    }),
+  );
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// _SettingsSheet — 설정 바텀시트
+// ──────────────────────────────────────────────────────────────────────────
+
+class _SettingsSheet extends StatelessWidget {
+  final VoidCallback onNewRun;
+  const _SettingsSheet({required this.onNewRun});
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // 손잡이 핸들
+            Container(
+              width: 40, height: 4,
+              decoration: BoxDecoration(
+                color: Colors.white24,
+                borderRadius: BorderRadius.circular(2),
               ),
             ),
+            const SizedBox(height: 20),
+            ShaderMask(
+              shaderCallback: (b) => const LinearGradient(
+                colors: [Color(0xFFB8860B), Color(0xFFFFD700), Color(0xFFB8860B)],
+              ).createShader(b),
+              child: const Text(
+                '설  정',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 6,
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+            _SettingsTile(
+              icon: Icons.refresh,
+              label: '새 런 시작',
+              color: const Color(0xFFEF5350),
+              onTap: onNewRun,
+            ),
+            const SizedBox(height: 12),
+            _SettingsTile(
+              icon: Icons.close,
+              label: '닫기',
+              color: Colors.white54,
+              onTap: () => Navigator.pop(context),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SettingsTile extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+  const _SettingsTile({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.05),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: color, size: 20),
+            const SizedBox(width: 12),
+            Text(label, style: TextStyle(color: color, fontSize: 14, fontWeight: FontWeight.w600)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// _GothicAppBar — 철제 프레임 판타지 상단바
+// ──────────────────────────────────────────────────────────────────────────
+
+class _GothicAppBar extends StatelessWidget {
+  final RunState run;
+  final VoidCallback onSettingsTap;
+  final VoidCallback onLegendTap;
+  const _GothicAppBar({
+    required this.run,
+    required this.onSettingsTap,
+    required this.onLegendTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final floorLabel = run.currentNodeId == null
+        ? '⬥ ⬥ ⬥'
+        : '${MapStrings.floorPrefix} ${run.floor + 1}';
+
+    return SafeArea(
+      bottom: false,
+      child: Container(
+        color: const Color(0xFF090D18),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  // 왼쪽 장식선
+                  _GoldDivider(flex: 1),
+                  const SizedBox(width: 12),
+
+                  // 타이틀 (황금 그라디언트)
+                  ShaderMask(
+                    shaderCallback: (bounds) => const LinearGradient(
+                      colors: [Color(0xFFB8860B), Color(0xFFFFD700), Color(0xFFFFF8DC), Color(0xFFFFD700), Color(0xFFB8860B)],
+                      stops: [0.0, 0.25, 0.50, 0.75, 1.0],
+                    ).createShader(bounds),
+                    child: const Text(
+                      MapStrings.screenTitle,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 4.5,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+
+                  // 오른쪽 장식선 + 층 표시
+                  _GoldDivider(flex: 1),
+                  const SizedBox(width: 10),
+                  Text(
+                    floorLabel,
+                    style: const TextStyle(
+                      color: MapColors.ringCurrent,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 1.5,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // 황금 구분선
+            Container(
+              height: 1,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    Colors.transparent,
+                    const Color(0xFFFFD700).withValues(alpha: 0.55),
+                    const Color(0xFFFFD700).withValues(alpha: 0.55),
+                    Colors.transparent,
+                  ],
+                  stops: const [0.0, 0.2, 0.8, 1.0],
+                ),
+              ),
+            ),
+
+            // 상태 바 (HP / 덱 / 골드 / 범례 / 설정)
+            _RunStatusBar(
+              run: run,
+              onSettingsTap: onSettingsTap,
+              onLegendTap: onLegendTap,
+            ),
+
+            // 하단 구분선
+            Container(
+              height: 1,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    Colors.transparent,
+                    const Color(0xFFFFD700).withValues(alpha: 0.22),
+                    const Color(0xFFFFD700).withValues(alpha: 0.22),
+                    Colors.transparent,
+                  ],
+                  stops: const [0.0, 0.2, 0.8, 1.0],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// _RunStatusBar — HP / 덱 / 골드 / 설정 한 줄 상태 바
+// ──────────────────────────────────────────────────────────────────────────
+
+class _RunStatusBar extends StatelessWidget {
+  final RunState run;
+  final VoidCallback onSettingsTap;
+  final VoidCallback onLegendTap;
+  const _RunStatusBar({
+    required this.run,
+    required this.onSettingsTap,
+    required this.onLegendTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final hpRatio  = run.playerHp / Player.maxHp;
+    final hpColor  = hpRatio > 0.5
+        ? const Color(0xFF66BB6A)
+        : hpRatio > 0.25
+            ? const Color(0xFFFFB300)
+            : const Color(0xFFEF5350);
+
+    return Container(
+      color: const Color(0xFF07090F),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
+      child: Row(
+        children: [
+          // HP
+          _StatChip(
+            icon: Icons.favorite,
+            color: hpColor,
+            label: '${run.playerHp} / ${Player.maxHp}',
+          ),
+          const SizedBox(width: 16),
+          // 덱
+          _StatChip(
+            icon: Icons.style,
+            color: const Color(0xFF64B5F6),
+            label: '${run.deck.length}장',
+          ),
+          const Spacer(),
+          // 골드
+          _StatChip(
+            icon: Icons.toll,
+            color: const Color(0xFFFFD700),
+            label: '${run.gold} G',
+          ),
+          const SizedBox(width: 4),
+          // 범례
+          _IconButton(icon: Icons.help_outline, onTap: onLegendTap),
+          const SizedBox(width: 6),
+          // 설정
+          _IconButton(icon: Icons.settings, onTap: onSettingsTap),
+        ],
+      ),
+    );
+  }
+}
+
+class _IconButton extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onTap;
+  const _IconButton({required this.icon, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.all(6),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.06),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.10)),
+          ),
+          child: Icon(icon, color: Colors.white54, size: 16),
+        ),
+      );
+}
+
+class _StatChip extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final String label;
+  const _StatChip({required this.icon, required this.color, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, color: color, size: 13),
+        const SizedBox(width: 4),
+        Text(
+          label,
+          style: TextStyle(
+            color: color,
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.5,
           ),
         ),
       ],
@@ -103,17 +404,265 @@ class MapScreen extends ConsumerWidget {
 }
 
 // ──────────────────────────────────────────────────────────────────────────
-// _MapCanvas — 캔버스 + 탭 인식
+// _LegendSheet — 노드 아이콘 범례 바텀시트
 // ──────────────────────────────────────────────────────────────────────────
 
-/// [CustomPaint]와 [GestureDetector]를 결합한 맵 캔버스 위젯.
-///
-/// **탭 인식 원리:**
-/// [LayoutBuilder]로 실제 렌더링 크기를 얻고,
-/// 동일한 [computeNodePositions] 함수를 사용해 "어느 노드가 탭됐는지"를
-/// 픽셀 거리로 판별한다. Painter와 GestureDetector가 같은 좌표 함수를 공유하므로
-/// "그려지는 위치 = 탭 인식 위치"가 항상 일치한다.
-class _MapCanvas extends StatelessWidget {
+// ──────────────────────────────────────────────────────────────────────────
+// _LegendStrip — 게임 시작 전 자동 표시되는 인라인 범례
+// ──────────────────────────────────────────────────────────────────────────
+
+class _LegendStrip extends StatelessWidget {
+  const _LegendStrip();
+
+  static const _types = NodeType.values;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFF080B14),
+        border: Border(
+          top: BorderSide(
+            color: const Color(0xFFFFD700).withValues(alpha: 0.20),
+          ),
+        ),
+      ),
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text(
+            '— 출발 방을 선택하세요 —',
+            style: TextStyle(
+              color: Color(0xFFFFD700),
+              fontSize: 10,
+              letterSpacing: 2,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 8),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Row(
+              children: [
+                for (final type in _types) _LegendStripItem(type: type),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Text(
+                '위에 있는 ',
+                style: TextStyle(color: Colors.white38, fontSize: 10),
+              ),
+              Container(
+                padding: const EdgeInsets.all(2),
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.white24),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: const Icon(Icons.help_outline, size: 11, color: Colors.white38),
+              ),
+              const Text(
+                ' 을 클릭하여 다시 볼 수 있습니다',
+                style: TextStyle(color: Colors.white38, fontSize: 10),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+        ],
+      ),
+    );
+  }
+}
+
+class _LegendStripItem extends StatelessWidget {
+  final NodeType type;
+  const _LegendStripItem({required this.type});
+
+  @override
+  Widget build(BuildContext context) {
+    final color = MapColors.forType(type);
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          NodeIconWidget(type, size: 40),
+          const SizedBox(height: 5),
+          Text(
+            MapStrings.labelFor(type),
+            style: TextStyle(
+              color: color,
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// _LegendSheet — ? 버튼으로 접근하는 상세 범례 바텀시트
+// ──────────────────────────────────────────────────────────────────────────
+
+class _LegendSheet extends StatelessWidget {
+  const _LegendSheet();
+
+  static const _entries = [
+    (NodeType.monster,  '카드 전투, 승리 시 카드·골드 보상'),
+    (NodeType.elite,    '강화된 몬스터, 추가 유물 보상'),
+    (NodeType.boss,     '챕터 최종 전투, 클리어 시 진행'),
+    (NodeType.rest,     'HP 회복 또는 카드 1장 강화'),
+    (NodeType.shop,     '골드로 카드·유물 구매, 카드 제거'),
+    (NodeType.treasure, '유물 1개 무료 획득'),
+    (NodeType.event,    '무작위 이벤트, 선택에 따라 이득·손해'),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(24, 20, 24, 16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40, height: 4,
+              decoration: BoxDecoration(
+                color: Colors.white24,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 18),
+            ShaderMask(
+              shaderCallback: (b) => const LinearGradient(
+                colors: [Color(0xFFB8860B), Color(0xFFFFD700), Color(0xFFB8860B)],
+              ).createShader(b),
+              child: const Text(
+                '노드 범례',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 5,
+                ),
+              ),
+            ),
+            const SizedBox(height: 4),
+            Container(
+              height: 1,
+              margin: const EdgeInsets.symmetric(vertical: 12),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    Colors.transparent,
+                    const Color(0xFFFFD700).withValues(alpha: 0.40),
+                    Colors.transparent,
+                  ],
+                ),
+              ),
+            ),
+            GridView.count(
+              crossAxisCount: 2,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              mainAxisSpacing: 8,
+              crossAxisSpacing: 8,
+              childAspectRatio: 2.6,
+              children: [
+                for (final (type, desc) in _entries)
+                  _LegendTile(type: type, desc: desc),
+              ],
+            ),
+            const SizedBox(height: 4),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _LegendTile extends StatelessWidget {
+  final NodeType type;
+  final String desc;
+  const _LegendTile({required this.type, required this.desc});
+
+  @override
+  Widget build(BuildContext context) {
+    final color = MapColors.forType(type);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: color.withValues(alpha: 0.30)),
+      ),
+      child: Row(
+        children: [
+          NodeIconWidget(type, size: 36),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  MapStrings.labelFor(type),
+                  style: TextStyle(
+                    color: color,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                Text(
+                  desc,
+                  style: const TextStyle(
+                    color: Colors.white38,
+                    fontSize: 9,
+                    height: 1.3,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 황금 그라디언트 수평 구분선 위젯.
+class _GoldDivider extends StatelessWidget {
+  final int flex;
+  const _GoldDivider({required this.flex});
+
+  @override
+  Widget build(BuildContext context) => Expanded(
+        flex: flex,
+        child: Container(
+          height: 1,
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Colors.transparent, Color(0x88FFD700)],
+            ),
+          ),
+        ),
+      );
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// _MapCanvas — 세로 스크롤 + 자동 스크롤
+// ──────────────────────────────────────────────────────────────────────────
+
+class _MapCanvas extends StatefulWidget {
   const _MapCanvas({
     required this.nodes,
     required this.currentNodeId,
@@ -129,23 +678,53 @@ class _MapCanvas extends StatelessWidget {
   final void Function(String nodeId) onNodeTapped;
 
   @override
+  State<_MapCanvas> createState() => _MapCanvasState();
+}
+
+class _MapCanvasState extends State<_MapCanvas> {
+  final ScrollController _scrollCtrl = ScrollController();
+
+  @override
+  void didUpdateWidget(_MapCanvas old) {
+    super.didUpdateWidget(old);
+    if (old.currentNodeId != widget.currentNodeId) _scrollToCurrentNode();
+  }
+
+  void _scrollToCurrentNode() {
+    final nodeId = widget.currentNodeId;
+    if (nodeId == null) return;
+
+    final node = widget.nodes.where((n) => n.id == nodeId).firstOrNull;
+    if (node == null) return;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_scrollCtrl.hasClients) return;
+      final distFromBottom = MapSizes.paddingV + node.floor * MapSizes.floorHeight;
+      final viewH   = _scrollCtrl.position.viewportDimension;
+      final target  = (distFromBottom - viewH / 2)
+          .clamp(0.0, _scrollCtrl.position.maxScrollExtent);
+      _scrollCtrl.animateTo(target,
+          duration: const Duration(milliseconds: 450), curve: Curves.easeOut);
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    // LayoutBuilder: 이 위젯이 실제로 할당받은 크기를 런타임에 얻는다.
-    // MediaQuery.of(context).size 대신 사용하는 이유:
-    //   - AppBar·BottomBar 등을 제외한 정확한 캔버스 영역 크기를 알 수 있다.
     return LayoutBuilder(
       builder: (context, constraints) {
-        final canvasSize = Size(constraints.maxWidth, constraints.maxHeight);
-
-        return GestureDetector(
-          // 런이 종료되면 탭을 비활성화한다.
-          onTapUp: isRunOver ? null : (d) => _onTap(d, canvasSize),
-          child: CustomPaint(
-            size: canvasSize,
-            painter: MapPainter(
-              nodes: nodes,
-              currentNodeId: currentNodeId,
-              visitedNodeIds: visitedNodeIds,
+        final canvasSize = computeCanvasSize(widget.nodes, constraints.maxWidth);
+        return SingleChildScrollView(
+          controller: _scrollCtrl,
+          reverse: true,
+          child: GestureDetector(
+            onTapUp: widget.isRunOver ? null : (d) => _onTap(d, canvasSize),
+            child: CustomPaint(
+              size: canvasSize,
+              painter: MapPainter(
+                nodes: widget.nodes,
+                currentNodeId: widget.currentNodeId,
+                visitedNodeIds: widget.visitedNodeIds,
+              ),
             ),
           ),
         );
@@ -153,44 +732,31 @@ class _MapCanvas extends StatelessWidget {
     );
   }
 
-  /// 탭 좌표를 분석해 어느 노드를 탭했는지 판별하고 [onNodeTapped]를 호출한다.
-  ///
-  /// **히트 테스트 알고리즘:**
-  /// 1. [computeNodePositions]으로 각 노드의 캔버스 좌표를 계산한다.
-  /// 2. 탭 좌표와 각 노드 중심 사이의 거리를 비교한다.
-  /// 3. 거리가 `nodeRadius + hitSlop` 이하인 노드가 있으면 그 노드를 선택한다.
   void _onTap(TapUpDetails details, Size canvasSize) {
-    final tapPos = details.localPosition;
-
-    // Painter와 동일한 좌표 함수를 사용 → "그려지는 위치 = 탭 위치" 보장.
-    final positions = computeNodePositions(nodes, canvasSize);
-
-    // 탭 인식 반경 = 노드 반지름 + 여유 간격(hitSlop).
+    final tapPos    = details.localPosition;
+    final positions = computeNodePositions(widget.nodes, canvasSize);
     const hitRadius = MapSizes.nodeRadius + MapSizes.hitSlop;
-
     for (final entry in positions.entries) {
       if ((entry.value - tapPos).distance <= hitRadius) {
-        // RunNotifier.moveToNode()가 이동 가능 여부를 내부에서 검증한다.
-        // Presentation 계층은 ID만 전달하면 된다.
-        onNodeTapped(entry.key);
+        widget.onNodeTapped(entry.key);
         return;
       }
     }
   }
+
+  @override
+  void dispose() {
+    _scrollCtrl.dispose();
+    super.dispose();
+  }
 }
 
 // ──────────────────────────────────────────────────────────────────────────
-// _BottomHintBar — 하단 안내 바
+// _ParchmentHintBar — 양피지 두루마리 스타일 하단 안내바
 // ──────────────────────────────────────────────────────────────────────────
 
-/// 현재 런 상태에 따라 플레이어에게 다음 행동을 안내하는 하단 바.
-///
-/// 표시 규칙:
-/// - 런 종료 → 종료 메시지 (빨간색)
-/// - 미시작  → "출발 방을 선택하세요" (금색)
-/// - 진행 중 → 현재 노드 이름 + "→ 다음 방 선택" (흰색)
-class _BottomHintBar extends StatelessWidget {
-  const _BottomHintBar({
+class _ParchmentHintBar extends StatelessWidget {
+  const _ParchmentHintBar({
     required this.nodes,
     required this.currentNodeId,
     required this.isRunOver,
@@ -203,21 +769,54 @@ class _BottomHintBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 24.0),
-      decoration: const BoxDecoration(
-        border: Border(top: BorderSide(color: Colors.white12)),
-        color: Color(0xFF0D1B2A),
-      ),
-      child: Text(
-        _message,
-        textAlign: TextAlign.center,
-        style: TextStyle(
-          color: _color,
-          fontSize: 13,
-          letterSpacing: 0.5,
-          fontWeight: FontWeight.w500,
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Color(0xFF1A0F06), Color(0xFF251508)],
         ),
+        border: Border(
+          top: BorderSide(
+            color: const Color(0xFFFFD700).withValues(alpha: 0.28),
+            width: 1,
+          ),
+        ),
+      ),
+      child: Stack(
+        children: [
+          // 양피지 텍스처 레이어
+          Positioned.fill(
+            child: CustomPaint(painter: _ParchmentTexturePainter()),
+          ),
+          // 텍스트
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 24),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                if (!isRunOver && currentNodeId != null) ...[
+                  const Text('⬥ ', style: TextStyle(color: Color(0xFFFFD700), fontSize: 10)),
+                ],
+                Flexible(
+                  child: Text(
+                    _message,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: _textColor,
+                      fontSize: 13,
+                      letterSpacing: 0.8,
+                      fontWeight: FontWeight.w500,
+                      height: 1.3,
+                    ),
+                  ),
+                ),
+                if (!isRunOver && currentNodeId != null) ...[
+                  const Text(' ⬥', style: TextStyle(color: Color(0xFFFFD700), fontSize: 10)),
+                ],
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -225,24 +824,18 @@ class _BottomHintBar extends StatelessWidget {
   String get _message {
     if (isRunOver) return MapStrings.hintRunOver;
     if (currentNodeId == null) return MapStrings.hintFirst;
-
     final current = _findNode(currentNodeId!);
     if (current == null) return MapStrings.hintMove;
-
-    // "⚔️ 일반 전투  →  다음 방을 선택하세요" 형식
-    final icon  = MapStrings.iconFor(current.type);
     final label = MapStrings.labelFor(current.type);
-    return '$icon $label  →  ${MapStrings.hintMove}';
+    return '$label  →  ${MapStrings.hintMove}';
   }
 
-  Color get _color {
+  Color get _textColor {
     if (isRunOver) return Colors.redAccent;
-    if (currentNodeId == null) return MapColors.ringCurrent;
-    return Colors.white70;
+    if (currentNodeId == null) return const Color(0xFFFFD700);
+    return const Color(0xFFD4B896);
   }
 
-  /// nodes 리스트에서 [id]에 해당하는 노드를 찾는다.
-  /// 없으면 null을 반환한다 (try/catch 패턴으로 firstWhere 예외를 처리).
   MapNode? _findNode(String id) {
     try {
       return nodes.firstWhere((n) => n.id == id);
@@ -250,4 +843,25 @@ class _BottomHintBar extends StatelessWidget {
       return null;
     }
   }
+}
+
+/// 양피지 질감을 표현하는 배경 페인터.
+class _ParchmentTexturePainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final p = Paint()..color = Colors.white.withValues(alpha: 0.018);
+    for (int i = 0; i < 12; i++) {
+      final x = (i * 43.7) % size.width;
+      final w = 18.0 + (i * 11) % 30;
+      canvas.drawRect(Rect.fromLTWH(x, 0, w, size.height), p);
+    }
+    // 상단 얇은 황금 하이라이트
+    canvas.drawRect(
+      Rect.fromLTWH(0, 0, size.width, 1),
+      Paint()..color = const Color(0xFFFFD700).withValues(alpha: 0.06),
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter old) => false;
 }
