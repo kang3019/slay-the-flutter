@@ -1,9 +1,12 @@
+import 'dart:math';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:slay_the_flutter/domain/battle_engine.dart';
 import 'package:slay_the_flutter/domain/deck.dart';
 import 'package:slay_the_flutter/domain/entities/card.dart';
 import 'package:slay_the_flutter/domain/entities/monster.dart';
 import 'package:slay_the_flutter/domain/entities/player.dart';
+import 'package:slay_the_flutter/domain/map/node_type.dart';
 import 'package:slay_the_flutter/domain/status_effect.dart';
 
 /// 지정 카드 목록으로 엔진을 생성하고 첫 턴을 시작한다.
@@ -425,6 +428,56 @@ void main() {
       );
       engine.playCard(Cards.strike); // floor(6 × 0.75) = 4
       expect(monster.hp, equals(26)); // 30 - 4
+    });
+  });
+
+  // ── 노드 타입별 몬스터 선택 ────────────────────────────────────────────────
+
+  group('BattleEngine.monsterTypeFor — 보스 노드', () {
+    test('boss 노드는 스테이지와 무관하게 항상 ironGolem을 반환한다', () {
+      for (final stage in [1, 2, 3]) {
+        expect(
+          BattleEngine.monsterTypeFor(NodeType.boss, stage, random: Random(0)),
+          MonsterType.ironGolem,
+          reason: 'stage $stage boss',
+        );
+      }
+    });
+  });
+
+  group('BattleEngine.monsterTypeFor — 일반 몬스터 노드', () {
+    test('monster 노드 stage 1: stickySlime 또는 ironScavenger만 반환한다', () {
+      const normalStage1 = {MonsterType.stickySlime, MonsterType.ironScavenger};
+      for (var seed = 0; seed < 20; seed++) {
+        final t = BattleEngine.monsterTypeFor(NodeType.monster, 1, random: Random(seed));
+        expect(normalStage1, contains(t), reason: 'seed=$seed');
+      }
+    });
+
+    test('monster 노드 stage 3: ironGolem을 절대 반환하지 않는다', () {
+      for (var seed = 0; seed < 20; seed++) {
+        final t = BattleEngine.monsterTypeFor(NodeType.monster, 3, random: Random(seed));
+        expect(t, isNot(MonsterType.ironGolem), reason: 'seed=$seed');
+      }
+    });
+  });
+
+  group('BattleEngine.monsterTypeFor — 엘리트 노드', () {
+    test('elite 노드 stage 1: 일반 stage1 몬스터(slime/scavenger)를 반환하지 않는다', () {
+      const normalStage1 = {MonsterType.stickySlime, MonsterType.ironScavenger};
+      for (var seed = 0; seed < 20; seed++) {
+        final t = BattleEngine.monsterTypeFor(NodeType.elite, 1, random: Random(seed));
+        expect(normalStage1, isNot(contains(t)), reason: 'seed=$seed — elite는 더 강해야 함');
+      }
+    });
+
+    test('elite 노드: ironGolem을 절대 반환하지 않는다 (보스 전용)', () {
+      for (final stage in [1, 2, 3]) {
+        for (var seed = 0; seed < 10; seed++) {
+          final t = BattleEngine.monsterTypeFor(NodeType.elite, stage, random: Random(seed));
+          expect(t, isNot(MonsterType.ironGolem), reason: 'stage=$stage seed=$seed');
+        }
+      }
     });
   });
 }

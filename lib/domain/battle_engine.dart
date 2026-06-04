@@ -3,6 +3,7 @@ import 'dart:math';
 import 'entities/card.dart';
 import 'entities/monster.dart';
 import 'entities/player.dart';
+import 'map/node_type.dart';
 import 'entities/relic.dart';
 import 'deck.dart';
 import 'status_effect.dart';
@@ -102,15 +103,37 @@ class BattleEngine {
     return engine;
   }
 
-  /// 스테이지에 맞는 몬스터 타입을 무작위로 반환한다.
-  static MonsterType _randomMonsterType(int stage) {
-    final random = Random();
-    return switch (stage) {
-      1 => random.nextBool() ? MonsterType.stickySlime : MonsterType.ironScavenger,
-      2 => random.nextBool() ? MonsterType.venomSentinel : MonsterType.caveGuardian,
-      _ => MonsterType.ironGolem,
-    };
+  /// [NodeType]과 스테이지를 기반으로 적절한 [MonsterType]을 반환한다.
+  ///
+  /// - boss  → 항상 ironGolem
+  /// - elite → 현재 스테이지보다 강한 몬스터 풀 (ironGolem 제외)
+  /// - 그 외 → 스테이지에 맞는 일반 몬스터 풀 (ironGolem 제외)
+  static MonsterType monsterTypeFor(
+    NodeType nodeType,
+    int stage, {
+    Random? random,
+  }) {
+    if (nodeType == NodeType.boss) return MonsterType.ironGolem;
+    final rng = random ?? Random();
+    if (nodeType == NodeType.elite) return _eliteMonsterType(stage, rng);
+    return _normalMonsterType(stage, rng);
   }
+
+  /// 엘리트 노드 몬스터: 해당 스테이지의 일반 몬스터보다 강한 풀에서 선택.
+  static MonsterType _eliteMonsterType(int stage, Random rng) => switch (stage) {
+        1 => rng.nextBool() ? MonsterType.venomSentinel : MonsterType.caveGuardian,
+        _ => MonsterType.caveGuardian,
+      };
+
+  /// 일반 노드 몬스터: 스테이지별 표준 풀에서 선택. ironGolem은 포함하지 않는다.
+  static MonsterType _normalMonsterType(int stage, Random rng) => switch (stage) {
+        1 => rng.nextBool() ? MonsterType.stickySlime : MonsterType.ironScavenger,
+        _ => rng.nextBool() ? MonsterType.venomSentinel : MonsterType.caveGuardian,
+      };
+
+  /// 스테이지에 맞는 몬스터 타입을 무작위로 반환한다.
+  static MonsterType _randomMonsterType(int stage) =>
+      _normalMonsterType(stage, Random());
 
   /// 플레이어 턴 시작: 에너지 충전, [drawPerTurn]장 드로우.
   ///
