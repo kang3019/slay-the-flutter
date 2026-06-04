@@ -91,6 +91,23 @@ void main() {
     });
   });
 
+  group('Monster 기본 인텐트 시스템 (basic 타입)', () {
+    test('스테이지 1 초기 인텐트 타입은 attack이다', () {
+      expect(Monster(stage: 1).currentIntent.intentType, MonsterIntentType.attack);
+    });
+
+    test('스테이지 1 기본 공격 데미지는 10이다', () {
+      expect(Monster(stage: 1).currentIntent.attackDamage, equals(10));
+    });
+
+    test('executeAction 후 패턴이 순환한다', () {
+      final m = Monster(stage: 1);
+      final p = Player();
+      m.executeAction(p); // basic 패턴은 1개 → 다시 index 0으로
+      expect(m.currentIntent.intentType, MonsterIntentType.attack);
+    });
+  });
+
   group('Monster 상태 이상 — Vulnerable', () {
     test('Vulnerable 상태에서 받는 데미지가 1.5배가 된다', () {
       final monster = Monster(stage: 1); // HP 30
