@@ -6,22 +6,27 @@ import '../battle_constants.dart';
 /// 카드를 꾹 눌렀을 때 화면 중앙에 표시되는 확대 상세 오버레이.
 ///
 /// OverlayEntry로 주입되어 모든 UI 위에 렌더링된다.
-/// 손가락을 떼면 호출자(HandWidget)가 OverlayEntry를 제거한다.
+/// [onDismiss]가 제공되면 오버레이 어디를 탭해도 닫힌다.
 class CardDetailOverlay extends StatelessWidget {
   final GameCard card;
-  const CardDetailOverlay({super.key, required this.card});
+  final VoidCallback? onDismiss;
+  const CardDetailOverlay({super.key, required this.card, this.onDismiss});
 
   @override
   Widget build(BuildContext context) {
     final typeColor = BattleColors.forCard(card.effectType);
     return Material(
       type: MaterialType.transparency,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          const SizedBox.expand(child: ColoredBox(color: Color(0xAA000000))),
-          _BigCard(card: card, typeColor: typeColor),
-        ],
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onDismiss,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            const SizedBox.expand(child: ColoredBox(color: Color(0xAA000000))),
+            _BigCard(card: card, typeColor: typeColor),
+          ],
+        ),
       ),
     );
   }

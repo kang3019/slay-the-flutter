@@ -66,6 +66,12 @@ abstract final class BattleAssets {
   static const background = 'assets/images/battle_bg.png';
 }
 
+/// 플레이어 캐릭터 이미지 경로 상수.
+abstract final class PlayerAssets {
+  static const idle   = 'assets/images/player_idle.png';
+  static const attack = 'assets/images/player_attack.png';
+}
+
 /// 전투 화면 색상 상수.
 ///
 /// 횃불의 금/주황과 돌 회색으로 구성된 다크 판타지 팔레트.

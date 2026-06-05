@@ -53,7 +53,10 @@ class _HandWidgetState extends State<HandWidget> {
   void _showDetail(BuildContext ctx, int index) {
     _removeDetail();
     _detailEntry = OverlayEntry(
-      builder: (_) => CardDetailOverlay(card: widget.hand[index]),
+      builder: (_) => CardDetailOverlay(
+        card: widget.hand[index],
+        onDismiss: _removeDetail,
+      ),
     );
     Overlay.of(ctx).insert(_detailEntry!);
   }
@@ -112,19 +115,20 @@ class _HandWidgetState extends State<HandWidget> {
           onTapCancel: () {
             if (_dragIndex == null) setState(() => _pressedIndex = null);
           },
-          // ── 꾹 눌러 상세보기 ──────────────────────────────────────────
+          // ── 꾹 눌러 상세보기 (탭으로 닫기) ──────────────────────────
           onLongPressStart: (_) {
             setState(() => _pressedIndex = null);
             _showDetail(ctx, i);
           },
-          onLongPressEnd: (_) => _removeDetail(),
-          onLongPressCancel: () => _removeDetail(),
           // ── 드래그 ────────────────────────────────────────────────────
-          onVerticalDragStart: (_) => setState(() {
-            _dragIndex = i;
-            _pressedIndex = null;
-            _dragDy = 0;
-          }),
+          onVerticalDragStart: (_) {
+            _removeDetail();
+            setState(() {
+              _dragIndex = i;
+              _pressedIndex = null;
+              _dragDy = 0;
+            });
+          },
           onVerticalDragUpdate: (d) {
             if (_dragIndex == i) {
               setState(() => _dragDy = (_dragDy + d.delta.dy).clamp(-260, 12));

@@ -5,21 +5,45 @@ import '../../application/battle_provider.dart';
 import '../../application/meta_progress_provider.dart';
 import '../../application/run_provider.dart';
 import '../../domain/battle_engine.dart';
+import '../../domain/entities/card.dart';
 import '../../domain/map/node_type.dart';
 import 'battle_constants.dart';
 import 'widgets/hand_widget.dart';
 import 'widgets/monster_widget.dart';
+import 'widgets/player_character_widget.dart';
 
 /// 전투 화면. 배경 이미지 위에 반투명 패널을 올린 다크 판타지 레이아웃.
 ///
-/// 하단 좌측: 플레이어 HP / 우측: 에너지 원형 / 우하단: 턴 종료 버튼.
-class BattleScreen extends ConsumerWidget {
+/// 하단 좌측: 플레이어 HP + 에너지 / 우하단: 턴 종료 버튼.
+/// 카드 사용 시 [PlayerCharacterWidget]의 공격 모션을 트리거한다.
+class BattleScreen extends ConsumerStatefulWidget {
   const BattleScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<BattleScreen> createState() => _BattleScreenState();
+}
+
+class _BattleScreenState extends ConsumerState<BattleScreen> {
+  /// 공격 카드를 낼 때마다 값을 증가시켜 캐릭터 애니메이션을 트리거한다.
+  final ValueNotifier<int> _attackTrigger = ValueNotifier(0);
+
+  @override
+  void dispose() {
+    _attackTrigger.dispose();
+    super.dispose();
+  }
+
+  /// 카드를 사용할 때 공격 카드면 캐릭터 모션을 동시에 실행한다.
+  void _handleCardTap(GameCard card) {
+    if (card.effectType == CardEffectType.damage) {
+      _attackTrigger.value++;
+    }
+    ref.read(battleProvider.notifier).playCard(card);
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final state    = ref.watch(battleProvider);
-    final notifier = ref.read(battleProvider.notifier);
     final runState = ref.watch(runProvider);
 
     ref.listen<BattleState>(battleProvider, (prev, next) {
@@ -38,6 +62,15 @@ class BattleScreen extends ConsumerWidget {
         children: [
           Positioned.fill(child: Image.asset(BattleAssets.background, fit: BoxFit.cover)),
           const Positioned.fill(child: ColoredBox(color: BattleColors.backgroundOverlay)),
+          // ── 플레이어 캐릭터: 카드 패 아래 레이어 ───────────────────────
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: IgnorePointer(
+              child: PlayerCharacterWidget(attackTrigger: _attackTrigger),
+            ),
+          ),
           SafeArea(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -58,16 +91,16 @@ class BattleScreen extends ConsumerWidget {
                     ),
                   ),
                 ),
-                // ── 플레이어 캐릭터 자리 (추후 스프라이트 배치 영역) ────
-                const Expanded(flex: 2, child: SizedBox.shrink()),
-                // ── 하단 HUD: HP(좌) + 에너지 원(우) ───────────────────
+                // ── 몬스터와 HUD 사이 여백 ──────────────────────────────
+                const SizedBox(height: 12),
+                // ── 하단 HUD: HP + 에너지(좌) ───────────────────────────
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       _HpBlock(state: state),
-                      const Spacer(),
+                      const SizedBox(width: 8),
                       _EnergyCircle(current: state.energy, max: state.maxEnergy),
                     ],
                   ),
@@ -78,7 +111,7 @@ class BattleScreen extends ConsumerWidget {
                   child: HandWidget(
                     hand: state.hand,
                     energy: state.energy,
-                    onCardTap: notifier.playCard,
+                    onCardTap: _handleCardTap,
                   ),
                 ),
                 // ── 턴 종료 버튼 (우하단 정렬) ──────────────────────────
@@ -88,7 +121,7 @@ class BattleScreen extends ConsumerWidget {
                     alignment: Alignment.centerRight,
                     child: _EndTurnButton(
                       isBattleOver: state.isBattleOver,
-                      onPressed: notifier.endTurn,
+                      onPressed: ref.read(battleProvider.notifier).endTurn,
                     ),
                   ),
                 ),
@@ -271,7 +304,7 @@ class _EnergyCircle extends StatelessWidget {
   }
 }
 
-/// 우하단에 배치되는 컴팩트 턴 종료 버튼.
+/// 우하단에 배치되는 턴 종료 버튼.
 class _EndTurnButton extends StatelessWidget {
   final bool isBattleOver;
   final VoidCallback onPressed;
@@ -285,8 +318,8 @@ class _EndTurnButton extends StatelessWidget {
         backgroundColor: BattleColors.torchOrange,
         foregroundColor: Colors.white,
         disabledBackgroundColor: const Color(0xFF333333),
-        minimumSize: const Size(104, 38),
-        padding: const EdgeInsets.symmetric(horizontal: 14),
+        minimumSize: const Size(148, 56),
+        padding: const EdgeInsets.symmetric(horizontal: 20),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
           side: const BorderSide(color: BattleColors.torchGold, width: 1.2),
@@ -297,9 +330,9 @@ class _EndTurnButton extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: const [
-          Text(BattleStrings.endTurn, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-          SizedBox(width: 4),
-          Icon(Icons.arrow_forward_ios, size: 11),
+          Text(BattleStrings.endTurn, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          SizedBox(width: 6),
+          Icon(Icons.arrow_forward_ios, size: 14),
         ],
       ),
     );
