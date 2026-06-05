@@ -99,10 +99,13 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
                   ),
                   const Spacer(),
                   // ── 손패 ────────────────────────────────────────────────
-                  HandWidget(
-                    hand: state.hand,
-                    energy: state.energy,
-                    onCardTap: _handleCardTap,
+                  Transform.translate(
+                    offset: const Offset(0, 48),
+                    child: HandWidget(
+                      hand: state.hand,
+                      energy: state.energy,
+                      onCardTap: _handleCardTap,
+                    ),
                   ),
                   // ── 하단 바: HP/에너지(좌) + 턴 종료(우) ────────────────
                   Padding(
