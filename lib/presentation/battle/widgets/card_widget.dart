@@ -139,13 +139,31 @@ class _CardArt extends StatelessWidget {
   }
 
   IconData get _artIcon => switch (type) {
-        CardType.strike   => Icons.sports_martial_arts,
-        CardType.bash     => Icons.fitness_center,
-        CardType.swiftCut => Icons.air,
-        CardType.defend   => Icons.shield_outlined,
-        CardType.ironWall => Icons.security,
-        CardType.focus    => Icons.visibility,
-        CardType.recover  => Icons.healing,
+        CardType.strike          => Icons.sports_martial_arts,
+        CardType.bash            => Icons.fitness_center,
+        CardType.swiftCut        => Icons.air,
+        CardType.defend          => Icons.shield_outlined,
+        CardType.ironWall        => Icons.security,
+        CardType.focus           => Icons.visibility,
+        CardType.recover         => Icons.healing,
+        CardType.rageBurst       => Icons.flash_on,
+        CardType.toxicJab        => Icons.science,
+        CardType.regroup         => Icons.refresh,
+        CardType.crushingBlow    => Icons.broken_image,
+        CardType.fury            => Icons.local_fire_department,
+        CardType.tripleSlash     => Icons.content_cut,
+        CardType.quickMend       => Icons.favorite,
+        CardType.swiftGuard      => Icons.shield,
+        CardType.exploitWeakness => Icons.arrow_downward,
+        CardType.sharpen         => Icons.auto_fix_high,
+        CardType.weakSlash       => Icons.exposure_minus_1,
+        CardType.blockStrike     => Icons.security_update_good,
+        CardType.bloodRush       => Icons.bloodtype,
+        CardType.devilsDeal      => Icons.dangerous,
+        CardType.battleCry       => Icons.campaign,
+        CardType.indomitable     => Icons.castle,
+        CardType.comboStrike     => Icons.repeat,
+        CardType.gamble          => Icons.casino,
       };
 }
 

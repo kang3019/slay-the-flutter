@@ -5,7 +5,6 @@ import '../../shared/hp_bar_widget.dart';
 import '../battle_constants.dart';
 
 /// 몬스터의 이름·체력·다음 행동 의도·상태 이상을 표시한다.
-/// 몬스터의 실루엣 플레이스홀더, HP·방어도, 다음 행동(인텐트), 상태 이상을 표시한다.
 class MonsterWidget extends StatelessWidget {
   final int hp;
   final int maxHp;
@@ -15,7 +14,6 @@ class MonsterWidget extends StatelessWidget {
   final String intentLabel;
   final String intentDescription;
   final int attackPower;
-  final MonsterIntent intent;
   final bool isVulnerable;
   final bool isWeak;
 
@@ -31,7 +29,6 @@ class MonsterWidget extends StatelessWidget {
     required this.attackPower,
     required this.isVulnerable,
     required this.isWeak,
-    this.block = 0,
   });
 
   @override
@@ -42,46 +39,53 @@ class MonsterWidget extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: BattleColors.panelBorder),
       ),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              Text(
-                '👹 $name',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Text(
+                  '👹 $name',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
                 ),
-              ),
-              const Spacer(),
-              if (isWeak)
-                _StatusBadge(label: BattleStrings.weak, color: Colors.purple[700]!),
-              if (isWeak && isVulnerable) const SizedBox(width: 4),
-              if (isVulnerable)
-                _StatusBadge(label: BattleStrings.vulnerable, color: Colors.orange[800]!),
-            ],
-          ),
-          const SizedBox(height: 10),
-          HpBarWidget(
-            label: 'HP',
-            current: hp,
-            max: maxHp,
-            barColor: Colors.red,
-            block: block,
-          ),
-          const SizedBox(height: 10),
-          _IntentRow(
-            intentType: intentType,
-            intentLabel: intentLabel,
-            intentDescription: intentDescription,
-            attackPower: attackPower,
-          ),
-        ],
+                const Spacer(),
+                if (isWeak) ...[
+                  _StatusBadge(label: BattleStrings.weak, color: Colors.purple[700]!),
+                  if (isVulnerable) const SizedBox(width: 4),
+                ],
+                if (isVulnerable)
+                  _StatusBadge(label: BattleStrings.vulnerable, color: Colors.orange[800]!),
+              ],
+            ),
+            const SizedBox(height: 10),
+            HpBarWidget(
+              label: 'HP',
+              current: hp,
+              max: maxHp,
+              barColor: Colors.red,
+              block: block,
+            ),
+            const SizedBox(height: 10),
+            _IntentRow(
+              intentType: intentType,
+              intentLabel: intentLabel,
+              intentDescription: intentDescription,
+              attackPower: attackPower,
+            ),
+          ],
+        ),
       ),
     );
   }
 }
+
+// ─── 비공개 서브위젯 ──────────────────────────────────────────────────────────
 
 class _StatusBadge extends StatelessWidget {
   final String label;
@@ -117,11 +121,11 @@ class _IntentRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (icon, color, suffix) = switch (intentType) {
-      MonsterIntentType.attack       => (Icons.sports_martial_arts, Colors.redAccent, '$attackPower'),
+      MonsterIntentType.attack       => (Icons.sports_martial_arts, Colors.redAccent,        '$attackPower'),
       MonsterIntentType.attackDebuff => (Icons.sports_martial_arts, Colors.deepOrangeAccent, '$attackPower'),
-      MonsterIntentType.defend       => (Icons.shield_outlined, Colors.blueAccent, ''),
-      MonsterIntentType.buff         => (Icons.arrow_upward, Colors.amberAccent, ''),
-      MonsterIntentType.sleep        => (Icons.bedtime_outlined, Colors.blueGrey, ''),
+      MonsterIntentType.defend       => (Icons.shield_outlined,     Colors.blueAccent,        ''),
+      MonsterIntentType.buff         => (Icons.arrow_upward,        Colors.amberAccent,       ''),
+      MonsterIntentType.sleep        => (Icons.bedtime_outlined,    Colors.blueGrey,          ''),
     };
 
     return GestureDetector(
@@ -157,129 +161,6 @@ class _IntentRow extends StatelessWidget {
           Icon(Icons.info_outline, color: color.withValues(alpha: 0.5), size: 13),
         ],
       ),
-          // ── 실루엣 영역 ───────────────────────────────────────────────
-          Expanded(
-            child: Stack(
-              children: [
-                // 몬스터 이미지 자리 (추후 Image.asset으로 교체)
-                const Center(
-                  child: Icon(
-                    Icons.person,
-                    size: 90,
-                    color: Color(0x18FFFFFF),
-                  ),
-                ),
-
-                // ── 상태 이상 배지 (우상단) ───────────────────────────
-                if (isVulnerable)
-                  Positioned(
-                    top: 8,
-                    right: 8,
-                    child: _StatusChip(
-                      label: BattleStrings.vulnerable,
-                      icon: Icons.water_drop,
-                      color: const Color(0xFFE65100),
-                    ),
-                  ),
-
-                // ── 인텐트 배너 (하단 중앙) ──────────────────────────
-                Positioned(
-                  bottom: 8,
-                  left: 0,
-                  right: 0,
-                  child: Center(child: _IntentBanner(intent: intent)),
-                ),
-              ],
-            ),
-          ),
-
-          // ── HP 바 ──────────────────────────────────────────────────
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-            child: HpBarWidget(
-              label: BattleStrings.hp,
-              current: hp,
-              max: maxHp,
-              barColor: BattleColors.monsterHpBar,
-              block: block,
-            ),
-          ),
-        ],
-      ),
     );
   }
-}
-
-// ─── 비공개 서브위젯 ──────────────────────────────────────────────────────────
-
-class _StatusChip extends StatelessWidget {
-  final String label;
-  final IconData icon;
-  final Color color;
-  const _StatusChip({required this.label, required this.icon, required this.color});
-
-  @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: const [BoxShadow(color: Colors.black45, blurRadius: 4)],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 11, color: Colors.white),
-            const SizedBox(width: 3),
-            Text(label, style: const TextStyle(color: Colors.white, fontSize: 11)),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _IntentBanner extends StatelessWidget {
-  final MonsterIntent intent;
-  const _IntentBanner({required this.intent});
-
-  @override
-  Widget build(BuildContext context) {
-    final (icon, label, color) = _intentVisuals(intent.type);
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.85),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color, width: 1),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 14, color: Colors.white),
-            const SizedBox(width: 5),
-            Text(
-              '$label  ${intent.value}',
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  (IconData icon, String label, Color color) _intentVisuals(
-    MonsterIntentType type,
-  ) => switch (type) {
-        MonsterIntentType.attack     => (Icons.flash_on, BattleStrings.intentAttack, const Color(0xFFC62828)),
-        MonsterIntentType.heavyAttack => (Icons.whatshot, BattleStrings.intentHeavyAttack, const Color(0xFFB71C1C)),
-        MonsterIntentType.gainBlock  => (Icons.shield, BattleStrings.intentBlock, const Color(0xFF1565C0)),
-      };
 }
