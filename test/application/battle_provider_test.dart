@@ -15,7 +15,7 @@ ProviderContainer _makeContainer({
   return ProviderContainer(
     overrides: [
       battleEngineFactoryProvider.overrideWith(
-        (ref) => (s, relics) {
+        (ref) => (s, relics, _, __, ___) {
           final engine = BattleEngine(
             player: Player(),
             monster: Monster(stage: s),
@@ -153,7 +153,7 @@ void main() {
       final container = ProviderContainer(
         overrides: [
           battleEngineFactoryProvider.overrideWith(
-            (ref) => (_, relics) {
+            (ref) => (_, relics, __, ___, ____) {
               final monster = Monster(stage: 1)..takeDamage(24); // HP 30→6
               final engine = BattleEngine(
                 player: Player(),
@@ -179,7 +179,7 @@ void main() {
       final container = ProviderContainer(
         overrides: [
           battleEngineFactoryProvider.overrideWith(
-            (ref) => (_, relics) {
+            (ref) => (_, relics, __, ___, ____) {
               final engine = BattleEngine(
                 player: Player(hp: 5),
                 monster: Monster(stage: 1), // 공격력 10 > HP 5
@@ -204,7 +204,7 @@ void main() {
       final container = ProviderContainer(
         overrides: [
           battleEngineFactoryProvider.overrideWith(
-            (ref) => (_, relics) {
+            (ref) => (_, relics, __, ___, ____) {
               final engine = BattleEngine(
                 player: Player(hp: 5),
                 monster: Monster(stage: 1),

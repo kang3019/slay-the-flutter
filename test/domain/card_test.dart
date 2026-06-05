@@ -46,6 +46,113 @@ void main() {
     });
   });
 
+  group('새 카드 상수 검증', () {
+    test('광분: 비용 0, 데미지 5', () {
+      expect(Cards.rageBurst.cost, equals(0));
+      expect(Cards.rageBurst.value, equals(5));
+      expect(Cards.rageBurst.effectType, equals(CardEffectType.damage));
+    });
+
+    test('독침: 비용 1, 데미지 5', () {
+      expect(Cards.toxicJab.cost, equals(1));
+      expect(Cards.toxicJab.value, equals(5));
+      expect(Cards.toxicJab.effectType, equals(CardEffectType.damage));
+    });
+
+    test('결집: 비용 1, 드로우 2', () {
+      expect(Cards.regroup.cost, equals(1));
+      expect(Cards.regroup.value, equals(2));
+      expect(Cards.regroup.effectType, equals(CardEffectType.draw));
+    });
+
+    test('파괴의 일격: 비용 2, 데미지 20', () {
+      expect(Cards.crushingBlow.cost, equals(2));
+      expect(Cards.crushingBlow.value, equals(20));
+      expect(Cards.crushingBlow.effectType, equals(CardEffectType.damage));
+    });
+
+    test('분노: 비용 1, 힘 2', () {
+      expect(Cards.fury.cost, equals(1));
+      expect(Cards.fury.value, equals(2));
+      expect(Cards.fury.effectType, equals(CardEffectType.strength));
+    });
+
+    test('세 번 베기: 비용 1, 타격당 데미지 3', () {
+      expect(Cards.tripleSlash.cost, equals(1));
+      expect(Cards.tripleSlash.value, equals(3));
+      expect(Cards.tripleSlash.effectType, equals(CardEffectType.damage));
+    });
+
+    test('응급처치: 비용 0, 회복 5', () {
+      expect(Cards.quickMend.cost, equals(0));
+      expect(Cards.quickMend.value, equals(5));
+      expect(Cards.quickMend.effectType, equals(CardEffectType.heal));
+    });
+
+    test('날렵한 방어: 비용 1, 방어도 6', () {
+      expect(Cards.swiftGuard.cost, equals(1));
+      expect(Cards.swiftGuard.value, equals(6));
+      expect(Cards.swiftGuard.effectType, equals(CardEffectType.blockDraw));
+    });
+
+    test('취약 틈새: 비용 1, 데미지 9', () {
+      expect(Cards.exploitWeakness.cost, equals(1));
+      expect(Cards.exploitWeakness.value, equals(9));
+      expect(Cards.exploitWeakness.effectType, equals(CardEffectType.damage));
+    });
+
+    test('무기 연마: 비용 0, 버프 타입', () {
+      expect(Cards.sharpen.cost, equals(0));
+      expect(Cards.sharpen.effectType, equals(CardEffectType.buff));
+    });
+
+    test('약화 강타: 비용 2, 데미지 12', () {
+      expect(Cards.weakSlash.cost, equals(2));
+      expect(Cards.weakSlash.value, equals(12));
+      expect(Cards.weakSlash.effectType, equals(CardEffectType.damage));
+    });
+
+    test('방어도 공격: 비용 1, 데미지 타입', () {
+      expect(Cards.blockStrike.cost, equals(1));
+      expect(Cards.blockStrike.effectType, equals(CardEffectType.damage));
+    });
+
+    test('혈기: X 비용(-1), 데미지 타입, 타격당 6', () {
+      expect(Cards.bloodRush.cost, equals(-1));
+      expect(Cards.bloodRush.value, equals(6));
+      expect(Cards.bloodRush.effectType, equals(CardEffectType.damage));
+    });
+
+    test('악마의 거래: 비용 0, HP 비용 6', () {
+      expect(Cards.devilsDeal.cost, equals(0));
+      expect(Cards.devilsDeal.value, equals(6));
+      expect(Cards.devilsDeal.effectType, equals(CardEffectType.draw));
+    });
+
+    test('전투 함성: 비용 1, 드로우 타입', () {
+      expect(Cards.battleCry.cost, equals(1));
+      expect(Cards.battleCry.effectType, equals(CardEffectType.draw));
+    });
+
+    test('불굴: 비용 0, 방어도 3', () {
+      expect(Cards.indomitable.cost, equals(0));
+      expect(Cards.indomitable.value, equals(3));
+      expect(Cards.indomitable.effectType, equals(CardEffectType.block));
+    });
+
+    test('연속 강타: 비용 1, 타격당 4', () {
+      expect(Cards.comboStrike.cost, equals(1));
+      expect(Cards.comboStrike.value, equals(4));
+      expect(Cards.comboStrike.effectType, equals(CardEffectType.damage));
+    });
+
+    test('승부수: 비용 0, HP 비용 4', () {
+      expect(Cards.gamble.cost, equals(0));
+      expect(Cards.gamble.value, equals(4));
+      expect(Cards.gamble.effectType, equals(CardEffectType.buff));
+    });
+  });
+
   group('데미지 배율 상수 — SPECS.md 공식 검증', () {
     test('Vulnerable 배율은 1.5', () {
       expect(Player.vulnerableMultiplier, equals(1.5));

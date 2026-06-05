@@ -2,17 +2,30 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../domain/battle_engine.dart';
 import '../domain/entities/card.dart';
-import '../domain/entities/monster_intent.dart';
+import '../domain/entities/monster.dart';
 import '../domain/entities/player.dart';
+import '../domain/map/node_type.dart';
 import '../domain/entities/relic.dart';
 
 /// BattleEngine 생성 팩토리 타입.
 /// 테스트에서 overrideWith()로 교체해 결정론적 덱을 주입한다.
-typedef BattleEngineFactory = BattleEngine Function(int stage, List<Relic> relics);
+typedef BattleEngineFactory = BattleEngine Function(
+  int stage,
+  List<Relic> relics,
+  List<GameCard> cards,
+  int playerHp,
+  MonsterType? monsterType,
+);
 
 /// 프로덕션 기본 팩토리. BattleEngine.start()로 셔플된 정규 덱을 생성한다.
 final battleEngineFactoryProvider = Provider<BattleEngineFactory>((ref) {
-  return (stage, relics) => BattleEngine.start(stage: stage, relics: relics);
+  return (stage, relics, cards, playerHp, monsterType) => BattleEngine.start(
+        stage: stage,
+        relics: relics,
+        cards: cards,
+        playerHp: playerHp,
+        monsterType: monsterType,
+      );
 });
 
 /// UI에 노출되는 전투 상태 스냅샷.
@@ -27,7 +40,12 @@ class BattleState {
   final int monsterMaxHp;
   final int monsterBlock;
   final bool monsterIsVulnerable;
-  final MonsterIntent monsterIntent;
+  final bool monsterIsWeak;
+  final int monsterAttackPower;
+  final String monsterName;
+  final MonsterIntentType monsterIntentType;
+  final String monsterIntentLabel;
+  final String monsterIntentDescription;
   final List<GameCard> hand;
   final int energy;
   final int maxEnergy;
@@ -45,7 +63,12 @@ class BattleState {
     required this.monsterMaxHp,
     required this.monsterBlock,
     required this.monsterIsVulnerable,
-    required this.monsterIntent,
+    required this.monsterIsWeak,
+    required this.monsterAttackPower,
+    required this.monsterName,
+    required this.monsterIntentType,
+    required this.monsterIntentLabel,
+    required this.monsterIntentDescription,
     required this.hand,
     required this.energy,
     required this.maxEnergy,
@@ -64,7 +87,7 @@ class BattleNotifier extends Notifier<BattleState> {
 
   @override
   BattleState build() {
-    _engine = ref.read(battleEngineFactoryProvider)(1, const []);
+    _engine = ref.read(battleEngineFactoryProvider)(1, const [], const [], Player.maxHp, null);
     return _fromEngine();
   }
 
@@ -87,8 +110,18 @@ class BattleNotifier extends Notifier<BattleState> {
   /// 지정 스테이지로 새 전투를 시작한다.
   ///
   /// [relics]: 현재 런에서 보유한 유물 목록. 전투 시작 시 유물 효과가 자동 적용된다.
-  void startBattle(int stage, {List<Relic> relics = const []}) {
-    _engine = ref.read(battleEngineFactoryProvider)(stage, relics);
+  /// [cards]: 현재 런의 덱. 비어있으면 기본 덱(강타5+방어5)을 사용한다.
+  /// [playerHp]: 전투 시작 시 플레이어 HP.
+  /// [nodeType]: 현재 노드 타입. boss/elite/monster 구분으로 몬스터 풀이 달라진다.
+  void startBattle(
+    int stage, {
+    List<Relic> relics = const [],
+    List<GameCard> cards = const [],
+    int playerHp = Player.maxHp,
+    NodeType nodeType = NodeType.monster,
+  }) {
+    final monsterType = BattleEngine.monsterTypeFor(nodeType, stage);
+    _engine = ref.read(battleEngineFactoryProvider)(stage, relics, cards, playerHp, monsterType);
     state = _fromEngine();
   }
 
@@ -102,7 +135,12 @@ class BattleNotifier extends Notifier<BattleState> {
         monsterMaxHp: _engine.monster.maxHp,
         monsterBlock: _engine.monster.block,
         monsterIsVulnerable: _engine.monster.isVulnerable,
-        monsterIntent: _engine.monster.currentIntent,
+        monsterIsWeak: _engine.monster.isWeak,
+        monsterAttackPower: _engine.monster.attackPower,
+        monsterName: _engine.monster.name,
+        monsterIntentType: _engine.monster.currentIntent.intentType,
+        monsterIntentLabel: _engine.monster.currentIntent.label,
+        monsterIntentDescription: _engine.monster.currentIntent.description,
         hand: List.of(_engine.deck.hand),
         energy: _engine.energy,
         maxEnergy: BattleEngine.energyPerTurn,

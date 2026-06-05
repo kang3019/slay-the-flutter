@@ -5,6 +5,7 @@ import '../../application/battle_provider.dart';
 import '../../application/meta_progress_provider.dart';
 import '../../application/run_provider.dart';
 import '../../domain/battle_engine.dart';
+import '../../domain/entities/relic.dart';
 import '../../domain/entities/card.dart';
 import '../../domain/map/node_type.dart';
 import 'battle_constants.dart';
@@ -72,6 +73,27 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
             ),
           ),
           SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _StageHeader(stage: state.stage),
+                  const SizedBox(height: 8),
+                  if (runState.relics.isNotEmpty)
+                    _RelicRow(relics: runState.relics),
+                  const SizedBox(height: 8),
+                  MonsterWidget(
+                    hp: state.monsterHp,
+                    maxHp: state.monsterMaxHp,
+                    block: state.monsterBlock,
+                    name: state.monsterName,
+                    intentType: state.monsterIntentType,
+                    intentLabel: state.monsterIntentLabel,
+                    intentDescription: state.monsterIntentDescription,
+                    attackPower: state.monsterAttackPower,
+                    isVulnerable: state.monsterIsVulnerable,
+                    isWeak: state.monsterIsWeak,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -148,6 +170,71 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
 
 // ─── 비공개 위젯 ──────────────────────────────────────────────────────────────
 
+class _RelicRow extends StatelessWidget {
+  final List<Relic> relics;
+  const _RelicRow({required this.relics});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 36,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: relics.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 6),
+        itemBuilder: (context, i) => _RelicChip(relic: relics[i]),
+      ),
+    );
+  }
+}
+
+class _RelicChip extends StatelessWidget {
+  final Relic relic;
+  const _RelicChip({required this.relic});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => showDialog<void>(
+        context: context,
+        builder: (_) => AlertDialog(
+          backgroundColor: BattleColors.surface,
+          title: Text(
+            relic.name,
+            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          ),
+          content: Text(
+            relic.description,
+            style: const TextStyle(color: Colors.white70),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('닫기', style: TextStyle(color: Colors.amber)),
+            ),
+          ],
+        ),
+      ),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: const Color(0xFF2A2A4A),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: const Color(0xFFFFD700), width: 1),
+        ),
+        child: Text(
+          relic.name,
+          style: const TextStyle(
+            color: Color(0xFFFFD700),
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _StageHeader extends StatelessWidget {
   final int stage;
   const _StageHeader({required this.stage});
@@ -193,6 +280,77 @@ class _HpBlock extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: BattleColors.panelBorder),
       ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: HpBarWidget(
+                  label: 'HP',
+                  current: state.playerHp,
+                  max: state.playerMaxHp,
+                  barColor: Colors.green,
+                  block: state.playerBlock,
+                ),
+              ),
+              const SizedBox(width: 16),
+              _EnergyDisplay(current: state.energy, max: state.maxEnergy),
+            ],
+          ),
+          if (state.playerIsVulnerable || state.playerIsWeak) ...[
+            const SizedBox(height: 8),
+            _PlayerStatusBadges(
+              isVulnerable: state.playerIsVulnerable,
+              isWeak: state.playerIsWeak,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _PlayerStatusBadges extends StatelessWidget {
+  final bool isVulnerable;
+  final bool isWeak;
+  const _PlayerStatusBadges({required this.isVulnerable, required this.isWeak});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        const Text('나: ', style: TextStyle(color: Colors.white54, fontSize: 11)),
+        if (isVulnerable) ...[
+          _StatusChip(label: BattleStrings.vulnerable, color: Colors.orange[800]!),
+          const SizedBox(width: 4),
+        ],
+        if (isWeak)
+          _StatusChip(label: BattleStrings.weak, color: Colors.purple[700]!),
+      ],
+    );
+  }
+}
+
+class _StatusChip extends StatelessWidget {
+  final String label;
+  final Color color;
+  const _StatusChip({required this.label, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(label, style: const TextStyle(color: Colors.white, fontSize: 11)),
+    );
+  }
+}
+
+class _EnergyDisplay extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
         child: Column(

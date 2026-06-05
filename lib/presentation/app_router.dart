@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../application/battle_provider.dart';
 import '../application/run_provider.dart';
+import '../domain/map/node_type.dart';
 import 'battle/battle_screen.dart';
 import 'event/event_screen.dart';
 import 'map/map_screen.dart';
@@ -47,6 +48,9 @@ class AppRouter extends ConsumerWidget {
         ref.read(battleProvider.notifier).startBattle(
               next.currentStage,
               relics: next.relics,
+              cards: next.deck,
+              playerHp: next.playerHp,
+              nodeType: next.currentNode?.type ?? NodeType.monster,
             );
       }
     });

@@ -106,7 +106,7 @@ class _CostGem extends StatelessWidget {
       ),
       child: Center(
         child: Text(
-          '$cost',
+          cost == -1 ? 'X' : '$cost',
           style: const TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.bold,

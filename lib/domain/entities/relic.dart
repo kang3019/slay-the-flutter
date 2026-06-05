@@ -30,6 +30,36 @@ enum RelicEffect {
 
   /// 매 전투 첫 번째 공격 카드에 +value 데미지.
   firstAttackBonus,
+
+  /// 매 전투 두 번째 공격 카드에 +value 데미지.
+  secondAttackBonus,
+
+  /// 매 플레이어 턴 시작 시 HP +value 회복.
+  healOnTurnStart,
+
+  /// 플레이어 턴 종료 시 남은 에너지 1당 방어도 +value.
+  blockPerRemainingEnergy,
+
+  /// 매 전투 첫 번째 블록 카드에 +value 방어도 추가.
+  firstBlockBonus,
+
+  /// 전투 시작 시 방어도 +value, 카드 1장 추가 드로우.
+  blockAndExtraDrawOnCombatStart,
+
+  /// 전투 시작 시 적에게 취약 value턴 + 약화 value턴 동시 부여.
+  vulnerableAndWeakOnCombatStart,
+
+  /// 전투 시작 시 플레이어 힘 +value.
+  strengthOnCombatStart,
+
+  /// 보스 전투(stage 3) 시작 시 플레이어 힘 +value.
+  strengthOnBossCombatStart,
+
+  /// 전투 시작 시 HP가 최대 HP의 50% 이하면 에너지 +value.
+  extraEnergyOnLowHP,
+
+  /// 전투 시작 시 집중 카드를 손패에 value장 추가한다.
+  addFocusCardOnCombatStart,
 }
 
 /// 런 내내 패시브 효과를 제공하는 유물.
@@ -154,6 +184,96 @@ class GameRelics {
     value: 4,
   );
 
+  /// 두 번째 공격 카드 데미지 +5.
+  static const warriorsCrest = Relic(
+    id: 'warriors_crest',
+    name: '전사의 낙인',
+    description: '매 전투 두 번째 공격 카드가 5 추가 데미지를 준다.',
+    effect: RelicEffect.secondAttackBonus,
+    value: 5,
+  );
+
+  /// 매 플레이어 턴 시작 시 HP +1 회복.
+  static const regenTattoo = Relic(
+    id: 'regen_tattoo',
+    name: '재생의 문신',
+    description: '매 플레이어 턴 시작 시 HP 1을 회복한다.',
+    effect: RelicEffect.healOnTurnStart,
+    value: 1,
+  );
+
+  /// 턴 종료 시 남은 에너지 1당 방어도 +2.
+  static const frostCrystal = Relic(
+    id: 'frost_crystal',
+    name: '냉각 보석',
+    description: '턴 종료 시 남은 에너지 1당 방어도 2를 획득한다.',
+    effect: RelicEffect.blockPerRemainingEnergy,
+    value: 2,
+  );
+
+  /// 첫 번째 블록 카드에 +5 방어도.
+  static const bloodstainedGloves = Relic(
+    id: 'bloodstained_gloves',
+    name: '피 묻은 장갑',
+    description: '매 전투 첫 번째 블록 카드가 5 추가 방어도를 제공한다.',
+    effect: RelicEffect.firstBlockBonus,
+    value: 5,
+  );
+
+  /// 전투 시작 시 방어도 3 + 카드 1장 추가 드로우.
+  static const guardianBangle = Relic(
+    id: 'guardian_bangle',
+    name: '수호의 팔찌',
+    description: '전투 시작 시 방어도 3을 획득하고 카드 1장을 추가로 드로우한다.',
+    effect: RelicEffect.blockAndExtraDrawOnCombatStart,
+    value: 3,
+  );
+
+  /// 전투 시작 시 적에게 취약 2턴 + 약화 2턴 동시 부여.
+  static const venomBolt = Relic(
+    id: 'venom_bolt',
+    name: '독화살촉',
+    description: '전투 시작 시 적에게 취약 2턴과 약화 2턴을 부여한다.',
+    effect: RelicEffect.vulnerableAndWeakOnCombatStart,
+    value: 2,
+  );
+
+  /// 전투 시작 시 힘 +1.
+  static const rageSeal = Relic(
+    id: 'rage_seal',
+    name: '분노의 인장',
+    description: '매 전투 시작 시 힘 1을 획득한다.',
+    effect: RelicEffect.strengthOnCombatStart,
+    value: 1,
+  );
+
+  /// 보스 전투 시작 시 힘 +2.
+  static const fightersBand = Relic(
+    id: 'fighters_band',
+    name: '격투사의 띠',
+    description: '보스 전투 시작 시 힘 2를 획득한다.',
+    effect: RelicEffect.strengthOnBossCombatStart,
+    value: 2,
+  );
+
+  /// 전투 시작 시 HP가 최대 HP의 50% 이하면 에너지 +1.
+  static const crisisTalisman = Relic(
+    id: 'crisis_talisman',
+    name: '위기의 부적',
+    description: '전투 시작 시 HP가 최대치의 50% 이하이면 에너지 1을 추가로 얻는다.',
+    effect: RelicEffect.extraEnergyOnLowHP,
+    value: 1,
+  );
+
+  /// 전투 시작 시 집중 카드 1장을 손패에 추가.
+  static const focusLens = Relic(
+    id: 'focus_lens',
+    name: '집중의 렌즈',
+    description: '전투 시작 시 집중 카드 1장이 손패에 추가된다.',
+    effect: RelicEffect.addFocusCardOnCombatStart,
+    value: 1,
+  );
+
   static const List<Relic> all = [
     shieldAmulet,
     bloodVial,
@@ -165,5 +285,15 @@ class GameRelics {
     bossCloak,
     lizardTail,
     warAxe,
+    warriorsCrest,
+    regenTattoo,
+    frostCrystal,
+    bloodstainedGloves,
+    guardianBangle,
+    venomBolt,
+    rageSeal,
+    fightersBand,
+    crisisTalisman,
+    focusLens,
   ];
 }

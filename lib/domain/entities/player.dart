@@ -14,11 +14,17 @@ class Player {
 
   int hp;
   int block;
+
+  /// 이번 전투 내 모든 데미지 카드의 공격력에 더해지는 힘 수치.
+  /// 전투가 끝나면 새 BattleEngine이 생성되므로 자동 초기화된다.
+  int strength;
+
   List<StatusEffect> statusEffects;
 
   Player({
     this.hp = maxHp,
     this.block = 0,
+    this.strength = 0,
     List<StatusEffect>? statusEffects,
   }) : statusEffects = statusEffects ?? [];
 

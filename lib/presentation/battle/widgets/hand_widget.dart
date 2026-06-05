@@ -79,6 +79,20 @@ class _HandWidgetState extends State<HandWidget> {
       );
     }
     return SizedBox(
+      height: 140,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 4),
+        itemCount: hand.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        itemBuilder: (context, index) {
+          final card = hand[index];
+          return CardWidget(
+            card: card,
+            canPlay: card.cost == -1 ? energy > 0 : energy >= card.cost,
+            onTap: () => onCardTap(card),
+          );
+        },
       height: _kHandHeight,
       child: LayoutBuilder(
         builder: (ctx, constraints) => Stack(

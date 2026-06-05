@@ -25,8 +25,8 @@ BattleEngine _makeEngine({
 
 void main() {
   group('GameRelics 목록', () {
-    test('10개 유물이 등록되어 있다', () {
-      expect(GameRelics.all.length, equals(10));
+    test('20개 유물이 등록되어 있다', () {
+      expect(GameRelics.all.length, equals(20));
     });
 
     test('모든 유물은 고유한 id를 가진다', () {
@@ -187,6 +187,149 @@ void main() {
       final hpAfterFirst = engine.monster.hp;
       engine.playCard(Cards.strike); // 두 번째: 6 데미지만
       expect(engine.monster.hp, equals(hpAfterFirst - 6));
+    });
+  });
+
+  group('전사의 낙인 — secondAttackBonus', () {
+    test('두 번째 공격 카드가 5 추가 데미지를 준다', () {
+      final engine = _makeEngine(relics: [GameRelics.warriorsCrest]);
+      final hpAfterFirst = engine.monster.hp - 6; // 첫 공격: 보너스 없음
+      engine.playCard(Cards.strike);
+      expect(engine.monster.hp, equals(hpAfterFirst));
+      final hpAfterSecond = hpAfterFirst - 11; // 두 번째: 6 + 5
+      engine.playCard(Cards.strike);
+      expect(engine.monster.hp, equals(hpAfterSecond));
+    });
+
+    test('첫 번째 공격에는 보너스가 없다', () {
+      final engine = _makeEngine(relics: [GameRelics.warriorsCrest]);
+      final hpBefore = engine.monster.hp;
+      engine.playCard(Cards.strike);
+      expect(engine.monster.hp, equals(hpBefore - 6));
+    });
+  });
+
+  group('재생의 문신 — healOnTurnStart', () {
+    test('매 턴 시작 시 HP +1 회복', () {
+      final engine = _makeEngine(relics: [GameRelics.regenTattoo], playerHp: 50);
+      expect(engine.player.hp, equals(51)); // 첫 턴 시작 시 +1
+    });
+
+    test('두 번째 턴 시작에도 HP +1', () {
+      final engine = _makeEngine(relics: [GameRelics.regenTattoo], playerHp: 50);
+      engine.endPlayerTurn(); // 몬스터 공격 -10
+      engine.startPlayerTurn(); // +1
+      expect(engine.player.hp, equals(42)); // 51 - 10 + 1
+    });
+  });
+
+  group('냉각 보석 — blockPerRemainingEnergy', () {
+    test('턴 종료 시 남은 에너지 1당 방어도 +2', () {
+      final engine = _makeEngine(
+        relics: [GameRelics.frostCrystal],
+        cards: List.filled(10, Cards.strike),
+      );
+      engine.playCard(Cards.strike); // 에너지 3 → 2 남음
+      // 턴 종료: 방어도 4 획득 후 몬스터 공격 10 → 10 - 4 = 6 피해
+      engine.endPlayerTurn();
+      expect(engine.player.hp, equals(Player.maxHp - 6));
+    });
+
+    test('에너지를 모두 소비하면 방어도 보너스 없음', () {
+      final engine = _makeEngine(
+        relics: [GameRelics.frostCrystal],
+        cards: [Cards.ironWall, Cards.strike],
+      );
+      engine.playCard(Cards.ironWall); // 에너지 3 → 1
+      engine.playCard(Cards.strike);  // 에너지 1 → 0
+      // 냉각 보석 발동 안 됨, 방어도 10만 존재 → 몬스터 10 흡수, HP 그대로
+      engine.endPlayerTurn();
+      expect(engine.player.hp, equals(Player.maxHp));
+    });
+  });
+
+  group('수호의 팔찌 — blockAndExtraDrawOnCombatStart', () {
+    test('전투 시작 시 방어도 3 + 카드 1장 추가 드로우', () {
+      final engine = _makeEngine(relics: [GameRelics.guardianBangle]);
+      expect(engine.player.block, equals(3));
+      expect(engine.deck.hand.length, equals(6)); // 기본 5 + 1
+    });
+  });
+
+  group('위기의 부적 — extraEnergyOnLowHP', () {
+    test('HP 50% 이하면 전투 시작 시 에너지 +1', () {
+      final engine = _makeEngine(
+        relics: [GameRelics.crisisTalisman],
+        playerHp: 35, // 35/70 = 50%
+      );
+      expect(engine.energy, equals(4));
+    });
+
+    test('HP 50% 초과면 에너지 보너스 없음', () {
+      final engine = _makeEngine(
+        relics: [GameRelics.crisisTalisman],
+        playerHp: 36,
+      );
+      expect(engine.energy, equals(3));
+    });
+  });
+
+  group('독화살촉 — vulnerableAndWeakOnCombatStart', () {
+    test('전투 시작 시 적에게 취약 2턴 + 약화 2턴 동시 부여', () {
+      final engine = _makeEngine(relics: [GameRelics.venomBolt]);
+      expect(engine.monster.isVulnerable, isTrue);
+      expect(engine.monster.isWeak, isTrue);
+    });
+  });
+
+  group('분노의 인장 — strengthOnCombatStart', () {
+    test('전투 시작 시 힘 +1, 공격 데미지 증가', () {
+      final engine = _makeEngine(relics: [GameRelics.rageSeal]);
+      expect(engine.player.strength, equals(1));
+      final hpBefore = engine.monster.hp;
+      engine.playCard(Cards.strike); // 6 + 1 = 7 데미지
+      expect(engine.monster.hp, equals(hpBefore - 7));
+    });
+  });
+
+  group('피 묻은 장갑 — firstBlockBonus', () {
+    test('첫 번째 블록 카드에 +5 방어도', () {
+      final engine = _makeEngine(
+        relics: [GameRelics.bloodstainedGloves],
+        cards: List.filled(10, Cards.defend),
+      );
+      engine.playCard(Cards.defend); // 첫 번째: 5 + 5 = 10
+      expect(engine.player.block, equals(10));
+    });
+
+    test('두 번째 블록 카드부터는 보너스 없음', () {
+      final engine = _makeEngine(
+        relics: [GameRelics.bloodstainedGloves],
+        cards: List.filled(10, Cards.defend),
+      );
+      engine.playCard(Cards.defend); // 첫 번째: 10
+      engine.playCard(Cards.defend); // 두 번째: 5 (보너스 없음)
+      expect(engine.player.block, equals(15));
+    });
+  });
+
+  group('집중의 렌즈 — addFocusCardOnCombatStart', () {
+    test('전투 시작 시 손패에 집중 카드 1장 추가', () {
+      final engine = _makeEngine(relics: [GameRelics.focusLens]);
+      expect(engine.deck.hand.length, equals(6)); // 5 + 1 focus
+      expect(engine.deck.hand.contains(Cards.focus), isTrue);
+    });
+  });
+
+  group('격투사의 띠 — strengthOnBossCombatStart', () {
+    test('보스 전투(stage 3)에서 힘 +2', () {
+      final engine = _makeEngine(relics: [GameRelics.fightersBand], stage: 3);
+      expect(engine.player.strength, equals(2));
+    });
+
+    test('일반 전투(stage 1)에서는 힘 보너스 없음', () {
+      final engine = _makeEngine(relics: [GameRelics.fightersBand], stage: 1);
+      expect(engine.player.strength, equals(0));
     });
   });
 
