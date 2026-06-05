@@ -6,43 +6,72 @@ import '../../application/meta_progress_provider.dart';
 import '../../application/run_provider.dart';
 import '../../domain/battle_engine.dart';
 import '../../domain/entities/relic.dart';
+import '../../domain/entities/card.dart';
 import '../../domain/map/node_type.dart';
-import '../shared/hp_bar_widget.dart';
 import 'battle_constants.dart';
 import 'widgets/hand_widget.dart';
 import 'widgets/monster_widget.dart';
+import 'widgets/player_character_widget.dart';
 
-/// 전투 화면. battleProvider를 구독해 상태 변경 시 자동 재빌드된다.
+/// 전투 화면. 배경 이미지 위에 반투명 패널을 올린 다크 판타지 레이아웃.
 ///
-/// ref.watch는 이 build() 안에서만 사용한다.
-/// 자식 위젯은 콜백을 받는 순수 StatelessWidget으로 유지된다.
-class BattleScreen extends ConsumerWidget {
+/// 하단 좌측: 플레이어 HP + 에너지 / 우하단: 턴 종료 버튼.
+/// 카드 사용 시 [PlayerCharacterWidget]의 공격 모션을 트리거한다.
+class BattleScreen extends ConsumerStatefulWidget {
   const BattleScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<BattleScreen> createState() => _BattleScreenState();
+}
+
+class _BattleScreenState extends ConsumerState<BattleScreen> {
+  /// 공격 카드를 낼 때마다 값을 증가시켜 캐릭터 애니메이션을 트리거한다.
+  final ValueNotifier<int> _attackTrigger = ValueNotifier(0);
+
+  @override
+  void dispose() {
+    _attackTrigger.dispose();
+    super.dispose();
+  }
+
+  /// 카드를 사용할 때 공격 카드면 캐릭터 모션을 동시에 실행한다.
+  void _handleCardTap(GameCard card) {
+    if (card.effectType == CardEffectType.damage) {
+      _attackTrigger.value++;
+    }
+    ref.read(battleProvider.notifier).playCard(card);
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final state    = ref.watch(battleProvider);
-    final notifier = ref.read(battleProvider.notifier);
     final runState = ref.watch(runProvider);
 
-    // 전투가 승리로 끝나는 순간 한 번만 XP를 적립한다.
     ref.listen<BattleState>(battleProvider, (prev, next) {
       if (next.isBattleOver &&
           next.result == BattleResult.playerWon &&
           (prev == null || !prev.isBattleOver)) {
-        ref
-            .read(metaProgressProvider.notifier)
+        ref.read(metaProgressProvider.notifier)
             .addXp(BattleXpRewards.xpForStage(next.stage));
       }
     });
 
-    // 현재 전투가 보스 전투인지 판별한다.
     final isBossBattle = runState.currentNode?.type == NodeType.boss;
 
     return Scaffold(
-      backgroundColor: BattleColors.background,
       body: Stack(
         children: [
+          Positioned.fill(child: Image.asset(BattleAssets.background, fit: BoxFit.cover)),
+          const Positioned.fill(child: ColoredBox(color: BattleColors.backgroundOverlay)),
+          // ── 플레이어 캐릭터: 카드 패 아래 레이어 ───────────────────────
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: IgnorePointer(
+              child: PlayerCharacterWidget(attackTrigger: _attackTrigger),
+            ),
+          ),
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -65,23 +94,60 @@ class BattleScreen extends ConsumerWidget {
                     attackPower: state.monsterAttackPower,
                     isVulnerable: state.monsterIsVulnerable,
                     isWeak: state.monsterIsWeak,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _StageHeader(stage: state.stage),
+                const SizedBox(height: 8),
+                // ── 몬스터 영역 ─────────────────────────────────────────
+                Expanded(
+                  flex: 5,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: MonsterWidget(
+                      hp: state.monsterHp,
+                      maxHp: state.monsterMaxHp,
+                      block: state.monsterBlock,
+                      intent: state.monsterIntent,
+                      isVulnerable: state.monsterIsVulnerable,
+                    ),
                   ),
-                  const Spacer(),
-                  _PlayerStatusSection(state: state),
-                  const SizedBox(height: 12),
-                  HandWidget(
+                ),
+                // ── 몬스터와 HUD 사이 여백 ──────────────────────────────
+                const SizedBox(height: 12),
+                // ── 하단 HUD: HP + 에너지(좌) ───────────────────────────
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      _HpBlock(state: state),
+                      const SizedBox(width: 8),
+                      _EnergyCircle(current: state.energy, max: state.maxEnergy),
+                    ],
+                  ),
+                ),
+                // ── 손패 ────────────────────────────────────────────────
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: HandWidget(
                     hand: state.hand,
                     energy: state.energy,
-                    onCardTap: notifier.playCard,
+                    onCardTap: _handleCardTap,
                   ),
-                  const SizedBox(height: 12),
-                  _EndTurnButton(
-                    isBattleOver: state.isBattleOver,
-                    onPressed: notifier.endTurn,
+                ),
+                // ── 턴 종료 버튼 (우하단 정렬) ──────────────────────────
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(0, 8, 16, 14),
+                  child: Align(
+                    alignment: Alignment.centerRight,
+                    child: _EndTurnButton(
+                      isBattleOver: state.isBattleOver,
+                      onPressed: ref.read(battleProvider.notifier).endTurn,
+                    ),
                   ),
-                  const SizedBox(height: 8),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
           if (state.isBattleOver)
@@ -90,16 +156,11 @@ class BattleScreen extends ConsumerWidget {
               xpGained: BattleXpRewards.xpForStage(state.stage),
               goldEarned: BattleGoldRewards.forStage(state.stage),
               isBossBattle: isBossBattle,
-              // 일반 승리: 보상 카드 선택 화면으로 전환
-              onReturnToMap: () => ref
-                  .read(runProvider.notifier)
-                  .startReward(
+              onReturnToMap: () => ref.read(runProvider.notifier).startReward(
                     remainingHp: state.playerHp,
                     goldEarned: BattleGoldRewards.forStage(state.stage),
                   ),
-              // 패배: 런을 초기화하고 맵으로 돌아간다
-              onNewRun: () =>
-                  ref.read(runProvider.notifier).startNewRun(),
+              onNewRun: () => ref.read(runProvider.notifier).startNewRun(),
             ),
         ],
       ),
@@ -180,28 +241,44 @@ class _StageHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Text(
-      '${BattleStrings.stageLabel} $stage',
-      style: const TextStyle(
-        color: Colors.white54,
-        fontSize: 14,
-        fontWeight: FontWeight.w600,
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+      child: Row(
+        children: [
+          const Icon(Icons.shield, size: 13, color: BattleColors.torchGold),
+          const SizedBox(width: 5),
+          Text(
+            '${BattleStrings.stageLabel} $stage',
+            style: const TextStyle(
+              color: BattleColors.torchGold,
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 1.2,
+            ),
+          ),
+          const Spacer(),
+          const Icon(Icons.local_fire_department, size: 13, color: BattleColors.torchOrange),
+        ],
       ),
     );
   }
 }
 
-class _PlayerStatusSection extends StatelessWidget {
+/// 플레이어 HP와 방어도를 좌측 하단에 표시하는 컴팩트 블록.
+class _HpBlock extends StatelessWidget {
   final BattleState state;
-  const _PlayerStatusSection({required this.state});
+  const _HpBlock({required this.state});
+
+  static const double _barWidth = 116.0;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(12),
+    final ratio = (state.playerHp / state.playerMaxHp).clamp(0.0, 1.0);
+    return DecoratedBox(
       decoration: BoxDecoration(
-        color: BattleColors.surface,
+        color: BattleColors.panelBg,
         borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: BattleColors.panelBorder),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -274,28 +351,118 @@ class _StatusChip extends StatelessWidget {
 }
 
 class _EnergyDisplay extends StatelessWidget {
-  final int current;
-  final int max;
-  const _EnergyDisplay({required this.current, required this.max});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        const Text('⚡', style: TextStyle(fontSize: 22)),
-        Text(
-          '$current / $max',
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-            fontSize: 13,
-          ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.favorite, size: 12, color: BattleColors.playerHpBar),
+                const SizedBox(width: 4),
+                Text(
+                  '${state.playerHp} / ${state.playerMaxHp}',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            SizedBox(
+              width: _barWidth,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(3),
+                child: LinearProgressIndicator(
+                  value: ratio,
+                  minHeight: 6,
+                  backgroundColor: const Color(0xFF333333),
+                  valueColor: const AlwaysStoppedAnimation<Color>(BattleColors.playerHpBar),
+                ),
+              ),
+            ),
+            if (state.playerBlock > 0) ...[
+              const SizedBox(height: 4),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.shield, size: 11, color: Color(0xFF64B5F6)),
+                  const SizedBox(width: 3),
+                  Text(
+                    '${state.playerBlock}',
+                    style: const TextStyle(
+                      color: Color(0xFF64B5F6),
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ],
         ),
-      ],
+      ),
     );
   }
 }
 
+/// 현재/최대 에너지를 원형 테두리 안에 숫자로 표시한다.
+///
+/// 간결하고 시인성이 높아 한 손 조작 환경에서 빠른 파악이 가능하다.
+class _EnergyCircle extends StatelessWidget {
+  final int current;
+  final int max;
+  const _EnergyCircle({required this.current, required this.max});
+
+  static const double _size = 64.0;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: _size,
+      height: _size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: BattleColors.panelBg,
+        border: Border.all(color: BattleColors.torchGold, width: 2.5),
+        boxShadow: [
+          BoxShadow(
+            color: BattleColors.torchGold.withValues(alpha: 0.55),
+            blurRadius: 14,
+            spreadRadius: 2,
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            '$current/$max',
+            style: const TextStyle(
+              color: BattleColors.torchGold,
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          Text(
+            'EP',
+            style: TextStyle(
+              color: BattleColors.torchGold.withValues(alpha: 0.65),
+              fontSize: 9,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 우하단에 배치되는 턴 종료 버튼.
 class _EndTurnButton extends StatelessWidget {
   final bool isBattleOver;
   final VoidCallback onPressed;
@@ -306,27 +473,31 @@ class _EndTurnButton extends StatelessWidget {
     return ElevatedButton(
       onPressed: isBattleOver ? null : onPressed,
       style: ElevatedButton.styleFrom(
-        backgroundColor: Colors.amber[800],
+        backgroundColor: BattleColors.torchOrange,
         foregroundColor: Colors.white,
-        disabledBackgroundColor: Colors.grey[800],
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        disabledBackgroundColor: const Color(0xFF333333),
+        minimumSize: const Size(148, 56),
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: const BorderSide(color: BattleColors.torchGold, width: 1.2),
+        ),
+        elevation: 6,
+        shadowColor: BattleColors.torchGold,
       ),
-      child: const Text(
-        BattleStrings.endTurn,
-        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: const [
+          Text(BattleStrings.endTurn, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          SizedBox(width: 6),
+          Icon(Icons.arrow_forward_ios, size: 14),
+        ],
       ),
     );
   }
 }
 
-/// 전투 결과 오버레이.
-///
-/// 승리·패배·보스 클리어 세 가지 상황을 구분해 표시한다.
-///
-/// - 일반 승리: "승리!" + XP·골드 → "맵으로 이동" → [onReturnToMap]
-/// - 보스 승리: "런 클리어!" + XP → "새 런 시작" → [onNewRun]
-/// - 패배:      "패배..." → "새 런 시작" → [onNewRun]
+/// 전투 결과 오버레이 (승리·패배·보스 클리어).
 class _BattleResultOverlay extends StatelessWidget {
   final BattleResult result;
   final int xpGained;
@@ -348,76 +519,71 @@ class _BattleResultOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      color: Colors.black54,
+    return ColoredBox(
+      color: const Color(0x99000000),
       child: Center(
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 36),
+        child: DecoratedBox(
           decoration: BoxDecoration(
-            color: BattleColors.surface,
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // ── 타이틀 ──────────────────────────────────────────────
-              Text(
-                _titleText,
-                style: TextStyle(
-                  fontSize: 36,
-                  fontWeight: FontWeight.bold,
-                  color: _isVictory ? Colors.amber : Colors.redAccent,
-                ),
-              ),
-
-              // ── XP 표시 (승리 시) ───────────────────────────────────
-              if (_isVictory) ...[
-                const SizedBox(height: 8),
-                Text(
-                  BattleXpRewards.xpGainedLabel(xpGained),
-                  style: const TextStyle(
-                    color: Colors.greenAccent,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-
-              // ── 골드 표시 (일반 승리 시만) ───────────────────────────
-              if (_isVictory && !isBossBattle && goldEarned > 0) ...[
-                const SizedBox(height: 4),
-                Text(
-                  BattleGoldRewards.goldLabel(goldEarned),
-                  style: const TextStyle(
-                    color: Color(0xFFFFD700),
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-
-              const SizedBox(height: 28),
-
-              // ── 액션 버튼 ────────────────────────────────────────────
-              ElevatedButton(
-                onPressed: _buttonAction,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor:
-                      _isVictory && !isBossBattle ? Colors.amber[800] : Colors.blueGrey[700],
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 36,
-                    vertical: 12,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                ),
-                child: Text(
-                  _buttonLabel,
-                  style: const TextStyle(color: Colors.white, fontSize: 15),
-                ),
+            color: BattleColors.panelBg,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+              color: _isVictory ? BattleColors.torchGold : const Color(0xFFB71C1C),
+              width: 1.5,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: (_isVictory ? BattleColors.torchGold : const Color(0xFFB71C1C))
+                    .withValues(alpha: 0.4),
+                blurRadius: 20,
               ),
             ],
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 36),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  _isVictory ? Icons.emoji_events : Icons.sentiment_very_dissatisfied,
+                  size: 48,
+                  color: _isVictory ? BattleColors.torchGold : const Color(0xFFEF5350),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  _titleText,
+                  style: TextStyle(
+                    fontSize: 30,
+                    fontWeight: FontWeight.bold,
+                    color: _isVictory ? BattleColors.torchGold : const Color(0xFFEF5350),
+                    letterSpacing: 1,
+                  ),
+                ),
+                if (_isVictory) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    BattleXpRewards.xpGainedLabel(xpGained),
+                    style: const TextStyle(color: Color(0xFF66BB6A), fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                ],
+                if (_isVictory && !isBossBattle && goldEarned > 0) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    BattleGoldRewards.goldLabel(goldEarned),
+                    style: const TextStyle(color: BattleColors.torchGold, fontSize: 14, fontWeight: FontWeight.w600),
+                  ),
+                ],
+                const SizedBox(height: 28),
+                ElevatedButton(
+                  onPressed: _isVictory && !isBossBattle ? onReturnToMap : onNewRun,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _isVictory ? BattleColors.torchOrange : const Color(0xFF455A64),
+                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                  child: Text(_buttonLabel, style: const TextStyle(color: Colors.white, fontSize: 14)),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -430,13 +596,6 @@ class _BattleResultOverlay extends StatelessWidget {
     return BattleStrings.victory;
   }
 
-  String get _buttonLabel {
-    if (_isVictory && !isBossBattle) return BattleStrings.selectReward;
-    return BattleStrings.restart;
-  }
-
-  VoidCallback get _buttonAction {
-    if (_isVictory && !isBossBattle) return onReturnToMap;
-    return onNewRun;
-  }
+  String get _buttonLabel =>
+      _isVictory && !isBossBattle ? BattleStrings.selectReward : BattleStrings.restart;
 }
