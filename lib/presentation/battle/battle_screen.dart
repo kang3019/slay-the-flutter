@@ -5,8 +5,8 @@ import '../../application/battle_provider.dart';
 import '../../application/meta_progress_provider.dart';
 import '../../application/run_provider.dart';
 import '../../domain/battle_engine.dart';
-import '../../domain/entities/relic.dart';
 import '../../domain/entities/card.dart';
+import '../../domain/entities/relic.dart';
 import '../../domain/map/node_type.dart';
 import 'battle_constants.dart';
 import 'widgets/hand_widget.dart';
@@ -15,8 +15,8 @@ import 'widgets/player_character_widget.dart';
 
 /// 전투 화면. 배경 이미지 위에 반투명 패널을 올린 다크 판타지 레이아웃.
 ///
-/// 하단 좌측: 플레이어 HP + 에너지 / 우하단: 턴 종료 버튼.
-/// 카드 사용 시 [PlayerCharacterWidget]의 공격 모션을 트리거한다.
+/// 카드 아래 하단 바: 좌측에 [_PlayerHud](HP·에너지·상태이상), 우측에 턴 종료 버튼.
+/// 공격 카드 사용 시 [PlayerCharacterWidget]의 공격 모션을 트리거한다.
 class BattleScreen extends ConsumerStatefulWidget {
   const BattleScreen({super.key});
 
@@ -80,9 +80,11 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
                 children: [
                   _StageHeader(stage: state.stage),
                   const SizedBox(height: 8),
-                  if (runState.relics.isNotEmpty)
+                  if (runState.relics.isNotEmpty) ...[
                     _RelicRow(relics: runState.relics),
-                  const SizedBox(height: 8),
+                    const SizedBox(height: 8),
+                  ],
+                  // ── 몬스터 영역 ─────────────────────────────────────────
                   MonsterWidget(
                     hp: state.monsterHp,
                     maxHp: state.monsterMaxHp,
@@ -94,60 +96,34 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
                     attackPower: state.monsterAttackPower,
                     isVulnerable: state.monsterIsVulnerable,
                     isWeak: state.monsterIsWeak,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _StageHeader(stage: state.stage),
-                const SizedBox(height: 8),
-                // ── 몬스터 영역 ─────────────────────────────────────────
-                Expanded(
-                  flex: 5,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: MonsterWidget(
-                      hp: state.monsterHp,
-                      maxHp: state.monsterMaxHp,
-                      block: state.monsterBlock,
-                      intent: state.monsterIntent,
-                      isVulnerable: state.monsterIsVulnerable,
+                  ),
+                  const Spacer(),
+                  // ── 손패 ────────────────────────────────────────────────
+                  Transform.translate(
+                    offset: const Offset(0, 48),
+                    child: HandWidget(
+                      hand: state.hand,
+                      energy: state.energy,
+                      onCardTap: _handleCardTap,
                     ),
                   ),
-                ),
-                // ── 몬스터와 HUD 사이 여백 ──────────────────────────────
-                const SizedBox(height: 12),
-                // ── 하단 HUD: HP + 에너지(좌) ───────────────────────────
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      _HpBlock(state: state),
-                      const SizedBox(width: 8),
-                      _EnergyCircle(current: state.energy, max: state.maxEnergy),
-                    ],
-                  ),
-                ),
-                // ── 손패 ────────────────────────────────────────────────
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: HandWidget(
-                    hand: state.hand,
-                    energy: state.energy,
-                    onCardTap: _handleCardTap,
-                  ),
-                ),
-                // ── 턴 종료 버튼 (우하단 정렬) ──────────────────────────
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(0, 8, 16, 14),
-                  child: Align(
-                    alignment: Alignment.centerRight,
-                    child: _EndTurnButton(
-                      isBattleOver: state.isBattleOver,
-                      onPressed: ref.read(battleProvider.notifier).endTurn,
+                  // ── 하단 바: HP/에너지(좌) + 턴 종료(우) ────────────────
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8, bottom: 2),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        _PlayerHud(state: state),
+                        const Spacer(),
+                        _EndTurnButton(
+                          isBattleOver: state.isBattleOver,
+                          onPressed: ref.read(battleProvider.notifier).endTurn,
+                        ),
+                      ],
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
           if (state.isBattleOver)
@@ -169,6 +145,32 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
 }
 
 // ─── 비공개 위젯 ──────────────────────────────────────────────────────────────
+
+class _StageHeader extends StatelessWidget {
+  final int stage;
+  const _StageHeader({required this.stage});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        const Icon(Icons.shield, size: 13, color: BattleColors.torchGold),
+        const SizedBox(width: 5),
+        Text(
+          '${BattleStrings.stageLabel} $stage',
+          style: const TextStyle(
+            color: BattleColors.torchGold,
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 1.2,
+          ),
+        ),
+        const Spacer(),
+        const Icon(Icons.local_fire_department, size: 13, color: BattleColors.torchOrange),
+      ],
+    );
+  }
+}
 
 class _RelicRow extends StatelessWidget {
   final List<Relic> relics;
@@ -235,171 +237,99 @@ class _RelicChip extends StatelessWidget {
   }
 }
 
-class _StageHeader extends StatelessWidget {
-  final int stage;
-  const _StageHeader({required this.stage});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-      child: Row(
-        children: [
-          const Icon(Icons.shield, size: 13, color: BattleColors.torchGold),
-          const SizedBox(width: 5),
-          Text(
-            '${BattleStrings.stageLabel} $stage',
-            style: const TextStyle(
-              color: BattleColors.torchGold,
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 1.2,
-            ),
-          ),
-          const Spacer(),
-          const Icon(Icons.local_fire_department, size: 13, color: BattleColors.torchOrange),
-        ],
-      ),
-    );
-  }
-}
-
-/// 플레이어 HP와 방어도를 좌측 하단에 표시하는 컴팩트 블록.
-class _HpBlock extends StatelessWidget {
+/// 좌측 하단 컴팩트 HUD: HP 바 + 에너지 + 상태이상.
+class _PlayerHud extends StatelessWidget {
   final BattleState state;
-  const _HpBlock({required this.state});
+  const _PlayerHud({required this.state});
 
-  static const double _barWidth = 116.0;
+  static const Color _kHpColor = Color(0xFF66BB6A);
 
   @override
   Widget build(BuildContext context) {
-    final ratio = (state.playerHp / state.playerMaxHp).clamp(0.0, 1.0);
     return DecoratedBox(
       decoration: BoxDecoration(
         color: BattleColors.panelBg,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(10),
         border: Border.all(color: BattleColors.panelBorder),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: HpBarWidget(
-                  label: 'HP',
-                  current: state.playerHp,
-                  max: state.playerMaxHp,
-                  barColor: Colors.green,
-                  block: state.playerBlock,
-                ),
-              ),
-              const SizedBox(width: 16),
-              _EnergyDisplay(current: state.energy, max: state.maxEnergy),
-            ],
-          ),
-          if (state.playerIsVulnerable || state.playerIsWeak) ...[
-            const SizedBox(height: 8),
-            _PlayerStatusBadges(
-              isVulnerable: state.playerIsVulnerable,
-              isWeak: state.playerIsWeak,
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _PlayerStatusBadges extends StatelessWidget {
-  final bool isVulnerable;
-  final bool isWeak;
-  const _PlayerStatusBadges({required this.isVulnerable, required this.isWeak});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        const Text('나: ', style: TextStyle(color: Colors.white54, fontSize: 11)),
-        if (isVulnerable) ...[
-          _StatusChip(label: BattleStrings.vulnerable, color: Colors.orange[800]!),
-          const SizedBox(width: 4),
-        ],
-        if (isWeak)
-          _StatusChip(label: BattleStrings.weak, color: Colors.purple[700]!),
-      ],
-    );
-  }
-}
-
-class _StatusChip extends StatelessWidget {
-  final String label;
-  final Color color;
-  const _StatusChip({required this.label, required this.color});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Text(label, style: const TextStyle(color: Colors.white, fontSize: 11)),
-    );
-  }
-}
-
-class _EnergyDisplay extends StatelessWidget {
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
+            // ── HP 수치 + 방어도 ──────────────────────────────────────
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.favorite, size: 12, color: BattleColors.playerHpBar),
-                const SizedBox(width: 4),
+                const Icon(Icons.favorite, size: 14, color: _kHpColor),
+                const SizedBox(width: 5),
                 Text(
                   '${state.playerHp} / ${state.playerMaxHp}',
                   style: const TextStyle(
                     color: Colors.white,
-                    fontSize: 13,
+                    fontSize: 15,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-              ],
-            ),
-            const SizedBox(height: 4),
-            SizedBox(
-              width: _barWidth,
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(3),
-                child: LinearProgressIndicator(
-                  value: ratio,
-                  minHeight: 6,
-                  backgroundColor: const Color(0xFF333333),
-                  valueColor: const AlwaysStoppedAnimation<Color>(BattleColors.playerHpBar),
-                ),
-              ),
-            ),
-            if (state.playerBlock > 0) ...[
-              const SizedBox(height: 4),
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.shield, size: 11, color: Color(0xFF64B5F6)),
+                if (state.playerBlock > 0) ...[
+                  const SizedBox(width: 8),
+                  const Icon(Icons.shield, size: 13, color: Color(0xFF64B5F6)),
                   const SizedBox(width: 3),
                   Text(
                     '${state.playerBlock}',
                     style: const TextStyle(
                       color: Color(0xFF64B5F6),
-                      fontSize: 11,
+                      fontSize: 14,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
+                ],
+              ],
+            ),
+            const SizedBox(height: 5),
+            // ── HP 바 ─────────────────────────────────────────────────
+            ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: SizedBox(
+                width: 160,
+                child: LinearProgressIndicator(
+                  value: (state.playerHp / state.playerMaxHp).clamp(0.0, 1.0),
+                  minHeight: 12,
+                  backgroundColor: const Color(0xFF333333),
+                  valueColor: const AlwaysStoppedAnimation<Color>(_kHpColor),
+                ),
+              ),
+            ),
+            const SizedBox(height: 7),
+            // ── 에너지 ────────────────────────────────────────────────
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.bolt, size: 14, color: BattleColors.torchGold),
+                const SizedBox(width: 4),
+                Text(
+                  '${state.energy} / ${state.maxEnergy} EP',
+                  style: const TextStyle(
+                    color: BattleColors.torchGold,
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            // ── 상태이상 ──────────────────────────────────────────────
+            if (state.playerIsVulnerable || state.playerIsWeak) ...[
+              const SizedBox(height: 5),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (state.playerIsVulnerable)
+                    _SmallChip(label: BattleStrings.vulnerable, color: Colors.orange[800]!),
+                  if (state.playerIsVulnerable && state.playerIsWeak)
+                    const SizedBox(width: 4),
+                  if (state.playerIsWeak)
+                    _SmallChip(label: BattleStrings.weak, color: Colors.purple[700]!),
                 ],
               ),
             ],
@@ -410,53 +340,22 @@ class _EnergyDisplay extends StatelessWidget {
   }
 }
 
-/// 현재/최대 에너지를 원형 테두리 안에 숫자로 표시한다.
-///
-/// 간결하고 시인성이 높아 한 손 조작 환경에서 빠른 파악이 가능하다.
-class _EnergyCircle extends StatelessWidget {
-  final int current;
-  final int max;
-  const _EnergyCircle({required this.current, required this.max});
-
-  static const double _size = 64.0;
+class _SmallChip extends StatelessWidget {
+  final String label;
+  final Color color;
+  const _SmallChip({required this.label, required this.color});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: _size,
-      height: _size,
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: BattleColors.panelBg,
-        border: Border.all(color: BattleColors.torchGold, width: 2.5),
-        boxShadow: [
-          BoxShadow(
-            color: BattleColors.torchGold.withValues(alpha: 0.55),
-            blurRadius: 14,
-            spreadRadius: 2,
-          ),
-        ],
+        color: color,
+        borderRadius: BorderRadius.circular(8),
       ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(
-            '$current/$max',
-            style: const TextStyle(
-              color: BattleColors.torchGold,
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          Text(
-            'EP',
-            style: TextStyle(
-              color: BattleColors.torchGold.withValues(alpha: 0.65),
-              fontSize: 9,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
+      child: Text(
+        label,
+        style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w600),
       ),
     );
   }
