@@ -19,14 +19,18 @@ class CardWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final typeColor   = BattleColors.forCard(card.effectType);
-    final borderColor = BattleColors.borderForCard(card.effectType);
+    // 강화된 카드는 골드 테두리로 시각적으로 구분한다.
+    final borderColor = card.isUpgraded
+        ? const Color(0xFFFFD700)
+        : BattleColors.borderForCard(card.effectType);
 
     return Opacity(
       opacity: canPlay ? 1.0 : 0.42,
       child: SizedBox(
         width: cardWidth,
         height: cardHeight,
-        child: DecoratedBox(
+        child: Container(
+          // 배경: 그라디언트 + 그림자
           decoration: BoxDecoration(
             gradient: const LinearGradient(
               begin: Alignment.topCenter,
@@ -34,7 +38,6 @@ class CardWidget extends StatelessWidget {
               colors: [Color(0xFF2A2215), Color(0xFF110E09)],
             ),
             borderRadius: BorderRadius.circular(9),
-            border: Border.all(color: borderColor, width: 1.8),
             boxShadow: [
               BoxShadow(
                 color: typeColor.withValues(alpha: canPlay ? 0.4 : 0.12),
@@ -42,6 +45,11 @@ class CardWidget extends StatelessWidget {
                 spreadRadius: 1,
               ),
             ],
+          ),
+          // 전경: 테두리만 자식 위에 덧그려 헤더 배경색에 가려지지 않게 한다.
+          foregroundDecoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(9),
+            border: Border.all(color: borderColor, width: 1.8),
           ),
           child: Column(
             children: [
@@ -164,6 +172,7 @@ class _CardArt extends StatelessWidget {
         CardType.indomitable     => Icons.castle,
         CardType.comboStrike     => Icons.repeat,
         CardType.gamble          => Icons.casino,
+        CardType.poisonDart      => Icons.pest_control,
       };
 }
 

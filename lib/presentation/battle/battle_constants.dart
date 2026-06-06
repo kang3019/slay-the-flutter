@@ -17,8 +17,12 @@ abstract final class BattleStrings {
   static const restart           = '새 런 시작';
   static const selectReward      = '보상 카드 선택';
   static const returnToMap       = '맵으로 이동';
-  static const vulnerable        = '취약';
-  static const weak              = '약화';
+  static const vulnerable            = '취약';
+  static const vulnerableDescription = '받는 피해가 50% 증가한다. (×1.5)';
+  static const weak                  = '약화';
+  static const weakDescription       = '주는 피해가 25% 감소한다. (×0.75)';
+  static const poison                = '독';
+  static const poisonDescription     = '매 턴 시작 시 스택 수치만큼 피해를 입는다. (블록 무시)\n턴마다 스택이 1 감소한다.';
   static const emptyHand         = '패에 카드가 없습니다';
   static const hp                = 'HP';
   static const block             = '방어도';
@@ -31,26 +35,27 @@ abstract final class BattleStrings {
         CardType.swiftCut        => '${card.value}×2 데미지',
         CardType.defend          => '방어도 ${card.value}',
         CardType.ironWall        => '방어도 ${card.value}',
-        CardType.focus           => '다음 카드 효과 +50%',
+        CardType.focus           => '다음 카드 효과 +${card.value}%',
         CardType.recover         => 'HP +${card.value}',
-        CardType.rageBurst       => '${card.value} 데미지 (복사본 생성)',
-        CardType.toxicJab        => '${card.value} 데미지 + 취약 2턴',
+        CardType.rageBurst       => '${card.value} 데미지, 사용 후 복사본이 버리는 더미에 추가됨',
+        CardType.toxicJab        => '${card.value} 데미지 + 취약 ${card.isUpgraded ? 3 : 2}턴',
         CardType.regroup         => '카드 ${card.value}장 드로우',
-        CardType.crushingBlow    => '${card.value} 데미지 (소멸)',
+        CardType.crushingBlow    => '${card.value} 데미지 (사용 후 덱에서 제거)',
         CardType.fury            => '힘 +${card.value} (지속)',
         CardType.tripleSlash     => '${card.value}×3 데미지',
-        CardType.quickMend       => 'HP +${card.value} (소멸)',
+        CardType.quickMend       => 'HP +${card.value} (사용 후 덱에서 제거)',
         CardType.swiftGuard      => '방어도 ${card.value} + 드로우 1',
-        CardType.exploitWeakness => '${card.value} 데미지 (취약 시 +6)',
-        CardType.sharpen         => '이번 턴 공격 +${card.value}',
-        CardType.weakSlash       => '${card.value} 데미지 + 약화 2턴',
-        CardType.blockStrike     => '방어도만큼 데미지',
-        CardType.bloodRush       => 'X×${card.value} 데미지',
+        CardType.exploitWeakness => '${card.value} 데미지 (취약 시 +${card.isUpgraded ? 9 : 6})',
+        CardType.sharpen         => '이번 턴 공격 카드 전부 +${card.value} 데미지',
+        CardType.weakSlash       => '${card.value} 데미지 + 약화 ${card.isUpgraded ? 3 : 2}턴',
+        CardType.blockStrike     => card.isUpgraded ? '방어도×1.5 데미지' : '방어도만큼 데미지',
+        CardType.bloodRush       => '남은 에너지(X)×${card.value} 데미지',
         CardType.devilsDeal      => 'HP -${card.value}, 카드 3장 드로우',
-        CardType.battleCry       => '드로우 2 + 힘 +1 (소멸)',
+        CardType.battleCry       => '드로우 2 + 힘 +${card.isUpgraded ? 2 : 1} (사용 후 덱에서 제거)',
         CardType.indomitable     => '방어도 ${card.value} (+ 힘)',
-        CardType.comboStrike     => '공격패 수 × ${card.value} 데미지',
+        CardType.comboStrike     => '손패 공격 카드 수 × ${card.value} 데미지',
         CardType.gamble          => 'HP -${card.value}, 에너지 +2',
+        CardType.poisonDart      => '${card.value} 데미지 + 독 ${card.isUpgraded ? 5 : 3}스택',
       };
 }
 

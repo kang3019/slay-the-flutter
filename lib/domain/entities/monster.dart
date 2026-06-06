@@ -52,14 +52,19 @@ class MonsterTurnAction {
     if (intentType == MonsterIntentType.sleep) parts.add('이번 턴 행동하지 않는다');
     if (attackDamage > 0) {
       parts.add(hitCount > 1
-          ? '$attackDamage × $hitCount = ${totalDamage} 데미지'
+          ? '$attackDamage × $hitCount = $totalDamage 데미지'
           : '$attackDamage 데미지');
     }
     if (blockGain > 0) parts.add('방어도 $blockGain 획득');
     if (strengthGain > 0) parts.add('힘 +$strengthGain (공격력 증가)');
     if (playerDebuff != null) {
-      final name = playerDebuff!.type == StatusEffectType.vulnerable ? '취약' : '약화';
-      parts.add('플레이어에게 $name ${playerDebuff!.duration}턴 부여');
+      final d = playerDebuff!;
+      final (name, suffix) = switch (d.type) {
+        StatusEffectType.poison    => ('독', '${d.duration}스택 부여'),
+        StatusEffectType.vulnerable => ('취약', '${d.duration}턴 부여'),
+        StatusEffectType.weak      => ('약화', '${d.duration}턴 부여'),
+      };
+      parts.add('플레이어에게 $name $suffix');
     }
     return parts.join('\n');
   }
@@ -151,6 +156,14 @@ class Monster {
         (e) => e.type == StatusEffectType.weak && e.duration > 0,
       );
 
+  /// 현재 독 스택 수. 0이면 독 없음.
+  int get poisonStacks {
+    for (final e in statusEffects) {
+      if (e.type == StatusEffectType.poison) return e.duration;
+    }
+    return 0;
+  }
+
   /// 이번 턴에 취할 행동. UI의 의도 표시에 사용된다.
   MonsterTurnAction get currentIntent {
     if (_turnIndex < _pattern.length) return _pattern[_turnIndex];
@@ -204,8 +217,15 @@ class Monster {
     }
   }
 
-  /// 턴 종료: 방어도 소멸, 상태 이상 duration 1 감소 후 만료된 것 제거.
+  /// 턴 종료: 독 피해(블록 무시) → 방어도 소멸 → 상태 이상 duration 1 감소 후 만료 제거.
   void endTurn() {
+    // 독: 스택 수치만큼 직접 HP 감소 (블록 무시).
+    for (final e in statusEffects) {
+      if (e.type == StatusEffectType.poison && e.duration > 0) {
+        hp = (hp - e.duration).clamp(0, maxHp);
+        break;
+      }
+    }
     block = 0;
     statusEffects = statusEffects
         .map((e) => e.withDuration(e.duration - 1))

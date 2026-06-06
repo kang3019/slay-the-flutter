@@ -480,4 +480,252 @@ void main() {
       }
     });
   });
+
+  // ── 독(poison) 상태이상 ──────────────────────────────────────────────────
+
+  group('독화살 — poisonDart', () {
+    test('독화살: 4 데미지 + 몬스터에게 독 3스택 부여', () {
+      final monster = Monster(stage: 1); // HP 30
+      final engine = _makeEngine(cards: [Cards.poisonDart], monster: monster);
+      engine.playCard(Cards.poisonDart);
+      expect(monster.hp, equals(26));        // 30 - 4
+      expect(monster.poisonStacks, equals(3));
+    });
+
+    test('독화살 중복 사용 시 독 스택이 누적된다', () {
+      final monster = Monster(stage: 1);
+      final engine = _makeEngine(
+        cards: [Cards.poisonDart, Cards.poisonDart],
+        monster: monster,
+      );
+      engine.playCard(Cards.poisonDart);
+      engine.playCard(Cards.poisonDart);
+      expect(monster.poisonStacks, equals(6)); // 3 + 3
+    });
+  });
+
+  group('몬스터 독 피해 — 턴 종료 시 틱', () {
+    test('턴 종료 시 독 스택만큼 몬스터 HP 감소 (블록 무시)', () {
+      final monster = Monster(stage: 1); // HP 30, 공격력 10
+      monster.applyStatusEffect(
+        const StatusEffect(type: StatusEffectType.poison, duration: 3),
+      );
+      // 방어도 10을 직접 주고 독이 블록을 무시하는지 확인
+      monster.gainBlock(10);
+      final engine = BattleEngine(
+        player: Player(),
+        monster: monster,
+        deck: Deck(initialCards: []),
+      );
+      engine.startPlayerTurn();
+      engine.endPlayerTurn(); // monster.endTurn() → 독 3 피해
+      expect(monster.hp, equals(27)); // 30 - 3
+    });
+
+    test('독 스택은 매 턴 1씩 감소한다', () {
+      final monster = Monster(stage: 1);
+      monster.applyStatusEffect(
+        const StatusEffect(type: StatusEffectType.poison, duration: 3),
+      );
+      final engine = BattleEngine(
+        player: Player(hp: 70),
+        monster: monster,
+        deck: Deck(initialCards: []),
+      );
+      engine.startPlayerTurn();
+      engine.endPlayerTurn(); // 독 3 피해, 스택 3→2
+      expect(monster.poisonStacks, equals(2));
+      engine.startPlayerTurn();
+      engine.endPlayerTurn(); // 독 2 피해, 스택 2→1
+      expect(monster.poisonStacks, equals(1));
+      engine.startPlayerTurn();
+      engine.endPlayerTurn(); // 독 1 피해, 스택 1→0
+      expect(monster.poisonStacks, equals(0));
+    });
+
+    test('독으로 몬스터 HP가 0이 되면 즉시 전투 종료 (몬스터 행동 없음)', () {
+      final monster = Monster(stage: 1); // HP 30
+      monster.applyStatusEffect(
+        const StatusEffect(type: StatusEffectType.poison, duration: 30),
+      );
+      final player = Player(hp: 70);
+      final engine = BattleEngine(
+        player: player,
+        monster: monster,
+        deck: Deck(initialCards: []),
+      );
+      engine.startPlayerTurn();
+      engine.endPlayerTurn();
+      expect(engine.isBattleOver, isTrue);
+      expect(engine.result, equals(BattleResult.playerWon));
+      // 몬스터가 행동하지 않았으므로 플레이어 HP는 그대로
+      expect(player.hp, equals(70));
+    });
+  });
+
+  group('플레이어 독 피해 — 턴 시작 시 틱', () {
+    test('턴 시작 시 독 스택만큼 플레이어 HP 감소 (블록 무시)', () {
+      final player = Player(hp: 70);
+      player.applyStatusEffect(
+        const StatusEffect(type: StatusEffectType.poison, duration: 4),
+      );
+      final engine = BattleEngine(
+        player: player,
+        monster: Monster(stage: 1),
+        deck: Deck(initialCards: []),
+      );
+      engine.startPlayerTurn(); // 독 4 틱 → HP 66
+      expect(player.hp, equals(66)); // 70 - 4
+    });
+
+    test('플레이어 독 스택도 매 턴 1씩 감소한다', () {
+      final player = Player(hp: 70);
+      player.applyStatusEffect(
+        const StatusEffect(type: StatusEffectType.poison, duration: 3),
+      );
+      final engine = BattleEngine(
+        player: player,
+        monster: Monster(stage: 1), // 공격력 10
+        deck: Deck(initialCards: []),
+      );
+      engine.startPlayerTurn(); // 독 3 틱 → HP 67
+      engine.endPlayerTurn();   // 몬스터 공격 10 → HP 57, 스택 3→2
+      expect(player.poisonStacks, equals(2));
+      engine.startPlayerTurn(); // 독 2 틱 → HP 55
+      // 총 피해: 독3(3) + 몬스터(10) + 독2(2) = 15
+      expect(player.hp, equals(70 - 3 - 10 - 2)); // 55
+    });
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // 카드 강화 (upgrade)
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  group('강화 카드 — 값 증가', () {
+    test('강타+ 는 9 데미지', () {
+      final engine = _makeEngine(cards: [Cards.strikeUpgraded]);
+      engine.playCard(Cards.strikeUpgraded);
+      expect(engine.monster.hp, equals(Monster(stage: 1).hp - 9));
+    });
+
+    test('방어+ 는 방어도 8', () {
+      final engine = _makeEngine(cards: [Cards.defendUpgraded]);
+      engine.playCard(Cards.defendUpgraded);
+      expect(engine.player.block, equals(8));
+    });
+
+    test('철벽+ 은 비용 1로 방어도 10', () {
+      final engine = _makeEngine(cards: [Cards.ironWallUpgraded]);
+      expect(Cards.ironWallUpgraded.cost, equals(1));
+      engine.playCard(Cards.ironWallUpgraded);
+      expect(engine.player.block, equals(10));
+    });
+
+    test('집중+ 은 다음 카드 효과 +75%', () {
+      // 강타+(9) × 1.75 = 15.75 → floor → 15
+      final engine = _makeEngine(
+        cards: [Cards.focusUpgraded, Cards.strikeUpgraded],
+      );
+      engine.playCard(Cards.focusUpgraded);
+      engine.playCard(Cards.strikeUpgraded);
+      expect(engine.monster.hp, equals(Monster(stage: 1).hp - 15));
+    });
+
+    test('분노+ 는 힘 +3', () {
+      final engine = _makeEngine(cards: [Cards.furyUpgraded]);
+      engine.playCard(Cards.furyUpgraded);
+      expect(engine.player.strength, equals(3));
+    });
+
+    test('파괴의 일격+ 은 25 데미지, 소멸', () {
+      final engine = _makeEngine(cards: [Cards.crushingBlowUpgraded]);
+      final beforeHp = engine.monster.hp;
+      engine.playCard(Cards.crushingBlowUpgraded);
+      expect(engine.monster.hp, equals(beforeHp - 25));
+      expect(engine.deck.exhaustPile.length, equals(1));
+    });
+
+    test('광분+ 은 8 데미지 + 버리는 더미에 복사본', () {
+      final engine = _makeEngine(cards: [Cards.rageBurstUpgraded]);
+      final beforeHp = engine.monster.hp;
+      engine.playCard(Cards.rageBurstUpgraded);
+      expect(engine.monster.hp, equals(beforeHp - 8));
+      expect(engine.deck.discardPile.length, equals(2));
+    });
+  });
+
+  group('강화 카드 — 특수 분기', () {
+    test('독침+ 은 취약 3턴 부여', () {
+      final engine = _makeEngine(cards: [Cards.toxicJabUpgraded]);
+      engine.playCard(Cards.toxicJabUpgraded);
+      expect(engine.monster.isVulnerable, isTrue);
+      // 3턴 후 해제 확인
+      engine.endPlayerTurn();
+      engine.startPlayerTurn();
+      engine.endPlayerTurn();
+      engine.startPlayerTurn();
+      engine.endPlayerTurn();
+      engine.startPlayerTurn();
+      expect(engine.monster.isVulnerable, isFalse);
+    });
+
+    test('취약 틈새+ 는 취약 시 +9 보너스', () {
+      final monster = Monster(stage: 1);
+      monster.applyStatusEffect(
+        const StatusEffect(type: StatusEffectType.vulnerable, duration: 3),
+      );
+      final engine = _makeEngine(
+        cards: [Cards.exploitWeaknessUpgraded],
+        monster: monster,
+      );
+      // 취약 시: 9 base + 9 bonus = 18, 취약 배율 ×1.5 = 27
+      final beforeHp = engine.monster.hp;
+      engine.playCard(Cards.exploitWeaknessUpgraded);
+      expect(engine.monster.hp, equals(beforeHp - 27));
+    });
+
+    test('약화 강타+ 는 약화 3턴 부여', () {
+      final engine = _makeEngine(cards: [Cards.weakSlashUpgraded]);
+      engine.playCard(Cards.weakSlashUpgraded);
+      expect(engine.monster.isWeak, isTrue);
+      for (var i = 0; i < 3; i++) {
+        engine.endPlayerTurn();
+        engine.startPlayerTurn();
+      }
+      expect(engine.monster.isWeak, isFalse);
+    });
+
+    test('방어도 공격+ 은 방어도의 1.5배 데미지', () {
+      final engine = _makeEngine(cards: [Cards.defendUpgraded, Cards.blockStrikeUpgraded]);
+      engine.playCard(Cards.defendUpgraded);   // 방어도 8 획득
+      expect(engine.player.block, equals(8));
+      final beforeHp = engine.monster.hp;
+      engine.playCard(Cards.blockStrikeUpgraded); // 8 × 1.5 = 12 데미지
+      expect(engine.monster.hp, equals(beforeHp - 12));
+    });
+
+    test('전투 함성+ 은 힘 +2', () {
+      final engine = _makeEngine(cards: [Cards.battleCryUpgraded]);
+      engine.playCard(Cards.battleCryUpgraded);
+      expect(engine.player.strength, equals(2));
+    });
+
+    test('독화살+ 은 독 5스택 부여', () {
+      final engine = _makeEngine(cards: [Cards.poisonDartUpgraded]);
+      engine.playCard(Cards.poisonDartUpgraded);
+      expect(engine.monster.poisonStacks, equals(5));
+    });
+  });
+
+  group('Cards.upgrade()', () {
+    test('이미 강화된 카드를 upgrade() 하면 원본 반환', () {
+      expect(Cards.upgrade(Cards.strikeUpgraded), same(Cards.strikeUpgraded));
+    });
+
+    test('미강화 카드를 upgrade() 하면 isUpgraded == true 반환', () {
+      final upgraded = Cards.upgrade(Cards.strike);
+      expect(upgraded.isUpgraded, isTrue);
+      expect(upgraded.type, equals(CardType.strike));
+    });
+  });
 }

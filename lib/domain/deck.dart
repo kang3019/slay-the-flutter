@@ -71,6 +71,22 @@ class Deck {
   /// [card]를 패에 직접 추가한다. 유물의 전투 시작 시 손패 지급에 사용된다.
   void addToHand(GameCard card) => _hand.add(card);
 
+  /// 덱 전체(뽑는 더미 + 버리는 더미)에서 [oldCard]의 첫 번째 인스턴스를 [newCard]로 교체한다.
+  ///
+  /// 카드를 찾지 못하면 아무 작업도 하지 않는다.
+  /// 손패에 있는 카드는 교체하지 않는다 — 강화는 전투 밖에서만 발생한다.
+  void replaceCard(GameCard oldCard, GameCard newCard) {
+    final drawIdx = _drawPile.indexOf(oldCard);
+    if (drawIdx >= 0) {
+      _drawPile[drawIdx] = newCard;
+      return;
+    }
+    final discardIdx = _discardPile.indexOf(oldCard);
+    if (discardIdx >= 0) {
+      _discardPile[discardIdx] = newCard;
+    }
+  }
+
   /// 버리는 더미의 마지막 카드를 소멸 더미로 이동한다.
   /// Exhaust 카드([CardType.crushingBlow], [CardType.quickMend])의 효과 적용 직후 호출된다.
   void exhaustLastPlayed() {
