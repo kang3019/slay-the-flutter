@@ -65,12 +65,12 @@ void main() {
       expect(state.result, isNull);
     });
 
-    test('스테이지 1 몬스터 HP는 30이다', () {
-      expect(container.read(battleProvider).monsterHp, equals(30));
+    test('스테이지 1 몬스터 HP는 24이다', () {
+      expect(container.read(battleProvider).monsterHp, equals(24));
     });
 
-    test('스테이지 1 몬스터 최대 HP는 30이다', () {
-      expect(container.read(battleProvider).monsterMaxHp, equals(30));
+    test('스테이지 1 몬스터 최대 HP는 24이다', () {
+      expect(container.read(battleProvider).monsterMaxHp, equals(24));
     });
   });
 
@@ -94,7 +94,7 @@ void main() {
 
     test('Strike 사용 시 몬스터 HP가 6 감소한다', () {
       container.read(battleProvider.notifier).playCard(Cards.strike);
-      expect(container.read(battleProvider).monsterHp, equals(24));
+      expect(container.read(battleProvider).monsterHp, equals(18));
     });
 
     test('에너지가 부족하면 상태가 변하지 않는다', () {
@@ -154,7 +154,7 @@ void main() {
         overrides: [
           battleEngineFactoryProvider.overrideWith(
             (ref) => (_, relics, __, ___, ____) {
-              final monster = Monster(stage: 1)..takeDamage(24); // HP 30→6
+              final monster = Monster(stage: 1)..takeDamage(18); // HP 24→6
               final engine = BattleEngine(
                 player: Player(),
                 monster: monster,
@@ -244,14 +244,14 @@ void main() {
       expect(container.read(battleProvider).isBattleOver, isFalse);
     });
 
-    test('스테이지 2로 시작하면 몬스터 HP가 40이다', () {
+    test('스테이지 2로 시작하면 몬스터 HP가 32이다', () {
       container.read(battleProvider.notifier).startBattle(2);
-      expect(container.read(battleProvider).monsterHp, equals(40));
+      expect(container.read(battleProvider).monsterHp, equals(32));
     });
 
-    test('스테이지 3으로 시작하면 몬스터 HP가 50이다', () {
+    test('스테이지 3으로 시작하면 몬스터 HP가 40이다', () {
       container.read(battleProvider.notifier).startBattle(3);
-      expect(container.read(battleProvider).monsterHp, equals(50));
+      expect(container.read(battleProvider).monsterHp, equals(40));
     });
   });
 }

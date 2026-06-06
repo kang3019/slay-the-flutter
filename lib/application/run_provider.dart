@@ -243,6 +243,7 @@ class RunNotifier extends Notifier<RunState> {
     Cards.indomitable,
     Cards.comboStrike,
     Cards.gamble,
+    Cards.poisonDart,
   ];
 
   final _random = Random();
@@ -438,6 +439,22 @@ class RunNotifier extends Notifier<RunState> {
     state = state.copyWith(deck: List.unmodifiable(newDeck));
   }
 
+  /// 덱에서 [card]를 강화 버전으로 교체하고 맵으로 돌아간다.
+  ///
+  /// 이미 강화된 카드이거나 덱에 없으면 상태 변경 없이 반환한다.
+  void upgradeCard(GameCard card) {
+    if (state.phase != RunPhase.rest) return;
+    if (card.isUpgraded) return;
+    final idx = state.deck.indexOf(card);
+    if (idx < 0) return;
+    final newDeck = List<GameCard>.of(state.deck)
+      ..[idx] = Cards.upgrade(card);
+    state = state.copyWith(
+      phase: RunPhase.map,
+      deck: List.unmodifiable(newDeck),
+    );
+  }
+
   // ── 런 리셋 ────────────────────────────────────────────────────────────
 
   /// 현재 런을 종료하고 초기 상태(새 런)로 리셋한다.
@@ -455,7 +472,16 @@ class RunNotifier extends Notifier<RunState> {
   /// 1. HP 변화 (clamp: 1 ~ [Player.maxHp])
   /// 2. 골드 변화 (clamp: 0 이상)
   /// 3. 카드 추가 ([EventEffect.addRandomCard]가 true면 보상 풀에서 1장)
-  void resolveEvent(EventChoice choice) {
+  /// 이벤트 결과 화면용 카드를 미리 뽑아 반환한다.
+  /// 반환된 카드를 [resolveEvent]의 [prePickedCard]로 전달해야 실제로 덱에 추가된다.
+  GameCard pickPreviewCard() {
+    final shuffled = List.of(_rewardPool)..shuffle(_random);
+    return shuffled.first;
+  }
+
+  /// [prePickedCard]가 있으면 해당 카드를 덱에 추가한다.
+  /// 없으면 풀에서 새로 뽑는다.
+  void resolveEvent(EventChoice choice, {GameCard? prePickedCard}) {
     if (state.phase != RunPhase.event) return;
 
     final effect = choice.effect;
@@ -464,8 +490,8 @@ class RunNotifier extends Notifier<RunState> {
 
     var newDeck = state.deck;
     if (effect.addRandomCard) {
-      final shuffled = List.of(_rewardPool)..shuffle(_random);
-      newDeck = List.unmodifiable([...state.deck, shuffled.first]);
+      final card = prePickedCard ?? pickPreviewCard();
+      newDeck = List.unmodifiable([...state.deck, card]);
     }
 
     state = state.copyWith(

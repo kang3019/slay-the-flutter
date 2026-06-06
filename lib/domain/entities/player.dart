@@ -38,6 +38,14 @@ class Player {
         (e) => e.type == StatusEffectType.weak && e.duration > 0,
       );
 
+  /// 현재 독 스택 수. 0이면 독 없음.
+  int get poisonStacks {
+    for (final e in statusEffects) {
+      if (e.type == StatusEffectType.poison) return e.duration;
+    }
+    return 0;
+  }
+
   /// 방어도를 먼저 차감한 뒤 나머지를 체력에서 감소시킨다.
   /// Vulnerable 상태이면 rawDamage × 1.5를 적용한 뒤 처리한다.
   void takeDamage(int rawDamage) {

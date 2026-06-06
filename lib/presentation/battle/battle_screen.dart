@@ -82,7 +82,11 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
                   const SizedBox(height: 8),
                   if (runState.relics.isNotEmpty) ...[
                     _RelicRow(relics: runState.relics),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 4),
+                  ],
+                  if (state.lastRelicTriggers.isNotEmpty) ...[
+                    _RelicTriggerRow(triggers: state.lastRelicTriggers),
+                    const SizedBox(height: 4),
                   ],
                   // ── 몬스터 영역 ─────────────────────────────────────────
                   MonsterWidget(
@@ -96,6 +100,7 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
                     attackPower: state.monsterAttackPower,
                     isVulnerable: state.monsterIsVulnerable,
                     isWeak: state.monsterIsWeak,
+                    poisonStacks: state.monsterPoisonStacks,
                   ),
                   const Spacer(),
                   // ── 손패 ────────────────────────────────────────────────
@@ -319,17 +324,29 @@ class _PlayerHud extends StatelessWidget {
               ],
             ),
             // ── 상태이상 ──────────────────────────────────────────────
-            if (state.playerIsVulnerable || state.playerIsWeak) ...[
+            if (state.playerIsVulnerable || state.playerIsWeak || state.playerPoisonStacks > 0) ...[
               const SizedBox(height: 5),
-              Row(
-                mainAxisSize: MainAxisSize.min,
+              Wrap(
+                spacing: 4,
                 children: [
                   if (state.playerIsVulnerable)
-                    _SmallChip(label: BattleStrings.vulnerable, color: Colors.orange[800]!),
-                  if (state.playerIsVulnerable && state.playerIsWeak)
-                    const SizedBox(width: 4),
+                    _SmallChip(
+                      label: BattleStrings.vulnerable,
+                      description: BattleStrings.vulnerableDescription,
+                      color: Colors.orange[800]!,
+                    ),
                   if (state.playerIsWeak)
-                    _SmallChip(label: BattleStrings.weak, color: Colors.purple[700]!),
+                    _SmallChip(
+                      label: BattleStrings.weak,
+                      description: BattleStrings.weakDescription,
+                      color: Colors.purple[700]!,
+                    ),
+                  if (state.playerPoisonStacks > 0)
+                    _SmallChip(
+                      label: '${BattleStrings.poison} ${state.playerPoisonStacks}',
+                      description: BattleStrings.poisonDescription,
+                      color: Colors.green[700]!,
+                    ),
                 ],
               ),
             ],
@@ -342,20 +359,47 @@ class _PlayerHud extends StatelessWidget {
 
 class _SmallChip extends StatelessWidget {
   final String label;
+  final String description;
   final Color color;
-  const _SmallChip({required this.label, required this.color});
+  const _SmallChip({
+    required this.label,
+    required this.description,
+    required this.color,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(8),
+    return GestureDetector(
+      onTap: () => showDialog<void>(
+        context: context,
+        builder: (_) => AlertDialog(
+          backgroundColor: const Color(0xFF16213E),
+          title: Text(
+            label,
+            style: TextStyle(color: color, fontWeight: FontWeight.bold),
+          ),
+          content: Text(
+            description,
+            style: const TextStyle(color: Colors.white70, height: 1.6),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('닫기', style: TextStyle(color: Colors.amber)),
+            ),
+          ],
+        ),
       ),
-      child: Text(
-        label,
-        style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w600),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Text(
+          label,
+          style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w600),
+        ),
       ),
     );
   }
@@ -497,4 +541,44 @@ class _BattleResultOverlay extends StatelessWidget {
 
   String get _buttonLabel =>
       _isVictory && !isBossBattle ? BattleStrings.selectReward : BattleStrings.restart;
+}
+
+/// 직전 턴 종료 시 발동된 유물 효과를 황금 태그로 나열한다.
+class _RelicTriggerRow extends StatelessWidget {
+  final List<String> triggers;
+  const _RelicTriggerRow({required this.triggers});
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 6,
+      runSpacing: 4,
+      children: [
+        for (final t in triggers)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            decoration: BoxDecoration(
+              color: const Color(0xFF1A1A2E),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFFFD700), width: 0.8),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.shield, size: 11, color: Color(0xFFFFD700)),
+                const SizedBox(width: 4),
+                Text(
+                  t,
+                  style: const TextStyle(
+                    color: Color(0xFFFFD700),
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
 }

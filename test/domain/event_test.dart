@@ -5,8 +5,8 @@ import 'package:slay_the_flutter/domain/events/game_event.dart';
 
 void main() {
   group('GameEvents', () {
-    test('all 풀에 4개 이벤트가 등록되어 있다', () {
-      expect(GameEvents.all.length, equals(4));
+    test('all 풀에 10개 이벤트가 등록되어 있다', () {
+      expect(GameEvents.all.length, equals(10));
     });
 
     test('모든 이벤트는 고유한 id를 가진다', () {
@@ -74,6 +74,55 @@ void main() {
       final choice = GameEvents.abandonedSafe.choices[1];
       expect(choice.effect.goldDelta, equals(45));
       expect(choice.effect.hpDelta, equals(-12));
+    });
+
+    test('고대 제단 — 피를 바친다: HP -7, 카드 획득', () {
+      final choice = GameEvents.ancientAltar.choices[1];
+      expect(choice.effect.hpDelta, equals(-7));
+      expect(choice.effect.addRandomCard, isTrue);
+    });
+
+    test('고대 제단 — 헌금을 챙긴다: 골드 +12', () {
+      final choice = GameEvents.ancientAltar.choices[0];
+      expect(choice.effect.goldDelta, equals(12));
+      expect(choice.effect.hpDelta, equals(0));
+    });
+
+    test('길 잃은 상인 — 짐을 빼앗는다: 카드 획득, HP -8', () {
+      final choice = GameEvents.lostMerchant.choices[1];
+      expect(choice.effect.addRandomCard, isTrue);
+      expect(choice.effect.hpDelta, equals(-8));
+    });
+
+    test('오래된 우물 — 소원을 빈다: 골드 -15, HP +25', () {
+      final choice = GameEvents.ancientWell.choices[1];
+      expect(choice.effect.goldDelta, equals(-15));
+      expect(choice.effect.hpDelta, equals(25));
+    });
+
+    test('저주받은 보물 — 손에 넣는다: 골드 +35, 카드 획득, HP -15', () {
+      final choice = GameEvents.cursedTreasure.choices[0];
+      expect(choice.effect.goldDelta, equals(35));
+      expect(choice.effect.addRandomCard, isTrue);
+      expect(choice.effect.hpDelta, equals(-15));
+    });
+
+    test('수상한 편지 — 편지를 읽는다: 카드 획득', () {
+      final choice = GameEvents.suspiciousLetter.choices[0];
+      expect(choice.effect.addRandomCard, isTrue);
+      expect(choice.effect.goldDelta, equals(0));
+    });
+
+    test('무너지는 다리 — 뱃사공을 부른다: 골드 -10, HP +10', () {
+      final choice = GameEvents.collapsingBridge.choices[0];
+      expect(choice.effect.goldDelta, equals(-10));
+      expect(choice.effect.hpDelta, equals(10));
+    });
+
+    test('무너지는 다리 — 뛰어간다: HP -10, 카드 획득', () {
+      final choice = GameEvents.collapsingBridge.choices[1];
+      expect(choice.effect.hpDelta, equals(-10));
+      expect(choice.effect.addRandomCard, isTrue);
     });
   });
 }

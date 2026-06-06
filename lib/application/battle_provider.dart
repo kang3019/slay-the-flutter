@@ -53,6 +53,15 @@ class BattleState {
   final BattleResult? result;
   final int stage;
 
+  /// 직전 턴 종료 시 발동된 유물 메시지 목록. 다음 턴 종료 시 초기화된다.
+  final List<String> lastRelicTriggers;
+
+  /// 몬스터의 현재 독 스택. 0이면 독 없음.
+  final int monsterPoisonStacks;
+
+  /// 플레이어의 현재 독 스택. 0이면 독 없음.
+  final int playerPoisonStacks;
+
   const BattleState({
     required this.playerHp,
     required this.playerMaxHp,
@@ -75,6 +84,9 @@ class BattleState {
     required this.isBattleOver,
     required this.stage,
     this.result,
+    this.lastRelicTriggers = const [],
+    this.monsterPoisonStacks = 0,
+    this.playerPoisonStacks = 0,
   });
 }
 
@@ -147,5 +159,8 @@ class BattleNotifier extends Notifier<BattleState> {
         isBattleOver: _engine.isBattleOver,
         result: _engine.result,
         stage: _engine.monster.stage,
+        lastRelicTriggers: List.unmodifiable(_engine.lastRelicTriggers),
+        monsterPoisonStacks: _engine.monster.poisonStacks,
+        playerPoisonStacks: _engine.player.poisonStacks,
       );
 }

@@ -16,6 +16,7 @@ class MonsterWidget extends StatelessWidget {
   final int attackPower;
   final bool isVulnerable;
   final bool isWeak;
+  final int poisonStacks;
 
   const MonsterWidget({
     super.key,
@@ -29,6 +30,7 @@ class MonsterWidget extends StatelessWidget {
     required this.attackPower,
     required this.isVulnerable,
     required this.isWeak,
+    this.poisonStacks = 0,
   });
 
   @override
@@ -56,11 +58,27 @@ class MonsterWidget extends StatelessWidget {
                 ),
                 const Spacer(),
                 if (isWeak) ...[
-                  _StatusBadge(label: BattleStrings.weak, color: Colors.purple[700]!),
-                  if (isVulnerable) const SizedBox(width: 4),
+                  _StatusBadge(
+                    label: BattleStrings.weak,
+                    description: BattleStrings.weakDescription,
+                    color: Colors.purple[700]!,
+                  ),
+                  if (isVulnerable || poisonStacks > 0) const SizedBox(width: 4),
                 ],
-                if (isVulnerable)
-                  _StatusBadge(label: BattleStrings.vulnerable, color: Colors.orange[800]!),
+                if (isVulnerable) ...[
+                  _StatusBadge(
+                    label: BattleStrings.vulnerable,
+                    description: BattleStrings.vulnerableDescription,
+                    color: Colors.orange[800]!,
+                  ),
+                  if (poisonStacks > 0) const SizedBox(width: 4),
+                ],
+                if (poisonStacks > 0)
+                  _StatusBadge(
+                    label: '${BattleStrings.poison} $poisonStacks',
+                    description: BattleStrings.poisonDescription,
+                    color: Colors.green[700]!,
+                  ),
               ],
             ),
             const SizedBox(height: 10),
@@ -89,18 +107,45 @@ class MonsterWidget extends StatelessWidget {
 
 class _StatusBadge extends StatelessWidget {
   final String label;
+  final String description;
   final Color color;
-  const _StatusBadge({required this.label, required this.color});
+  const _StatusBadge({
+    required this.label,
+    required this.description,
+    required this.color,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(12),
+    return GestureDetector(
+      onTap: () => showDialog<void>(
+        context: context,
+        builder: (_) => AlertDialog(
+          backgroundColor: const Color(0xFF16213E),
+          title: Text(
+            label,
+            style: TextStyle(color: color, fontWeight: FontWeight.bold),
+          ),
+          content: Text(
+            description,
+            style: const TextStyle(color: Colors.white70, height: 1.6),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('닫기', style: TextStyle(color: Colors.amber)),
+            ),
+          ],
+        ),
       ),
-      child: Text(label, style: const TextStyle(color: Colors.white, fontSize: 11)),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Text(label, style: const TextStyle(color: Colors.white, fontSize: 11)),
+      ),
     );
   }
 }

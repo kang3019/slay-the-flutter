@@ -37,6 +37,10 @@ class BattleEngine {
   BattleResult? result;
   bool _focusActive;
 
+  /// 활성화된 집중([CardType.focus]) 카드의 보너스 퍼센트 (50 또는 75).
+  /// [_focusActive]가 true일 때만 유효하다.
+  int _focusBonus;
+
   // ── 유물 상태 추적 플래그 ─────────────────────────────────────────────────
 
   /// 아직 첫 번째 턴이 시작되지 않았으면 true. [extraEnergyOnFirstTurn] 적용에 사용.
@@ -57,6 +61,10 @@ class BattleEngine {
   /// 무기 연마([CardType.sharpen])로 이번 턴 공격 카드에 더해지는 추가 데미지.
   int _sharpenBonus;
 
+  /// 직전 [endPlayerTurn]에서 발동된 턴 종료 유물 메시지.
+  /// [endPlayerTurn] 시작 시 초기화, [_applyTurnEndRelics]에서 채워진다.
+  final List<String> lastRelicTriggers = [];
+
   BattleEngine({
     required this.player,
     required this.monster,
@@ -66,6 +74,7 @@ class BattleEngine {
         isBattleOver = false,
         result = null,
         _focusActive = false,
+        _focusBonus = 0,
         _isFirstTurn = true,
         _attackCountThisCombat = 0,
         _hasBlockedThisCombat = false,
@@ -149,6 +158,14 @@ class BattleEngine {
       }
     }
 
+    // 독 피해: 블록을 무시하고 stack 수치만큼 직접 HP 감소.
+    final playerPoison = player.poisonStacks;
+    if (playerPoison > 0) {
+      player.hp = (player.hp - playerPoison).clamp(0, Player.maxHp);
+      _checkBattleOver();
+      if (isBattleOver) return;
+    }
+
     if (_isFirstTurn) {
       for (final relic in relics) {
         if (relic.effect == RelicEffect.extraEnergyOnFirstTurn) {
@@ -198,13 +215,17 @@ class BattleEngine {
   /// 패 버림 → 턴 종료 유물 → 몬스터 행동(블록 활성) → monster.endTurn →
   ///   player.endTurn(블록 소멸).
   void endPlayerTurn() {
+    lastRelicTriggers.clear();
     deck.discardHand();
     _applyTurnEndRelics();
 
     if (!isBattleOver) {
-      monster.endTurn();   // 이전 턴 방어도·상태이상 정리
-      _runMonsterTurn();   // 몬스터 행동 (새 방어도·공격 적용)
-      _checkBattleOver();
+      monster.endTurn();   // 독 피해 + 방어도·상태이상 정리
+      _checkBattleOver();  // 독으로 몬스터 사망 여부 확인
+      if (!isBattleOver) {
+        _runMonsterTurn();   // 몬스터 행동 (새 방어도·공격 적용)
+        _checkBattleOver();
+      }
     }
 
     player.endTurn();
@@ -257,9 +278,16 @@ class BattleEngine {
     for (final relic in relics) {
       switch (relic.effect) {
         case RelicEffect.blockIfNoneOnTurnEnd:
-          if (player.block == 0) player.gainBlock(relic.value);
+          if (player.block == 0) {
+            player.gainBlock(relic.value);
+            lastRelicTriggers.add('${relic.name} +${relic.value} 방어도');
+          }
         case RelicEffect.blockPerRemainingEnergy:
-          if (energy > 0) player.gainBlock(energy * relic.value);
+          if (energy > 0) {
+            final gained = energy * relic.value;
+            player.gainBlock(gained);
+            lastRelicTriggers.add('${relic.name} +$gained 방어도');
+          }
         default:
           break;
       }
@@ -284,12 +312,14 @@ class BattleEngine {
       }
     }
 
-    // Focus: 다음 비-버프·비-드로우 카드의 효과값을 +50% 증가시킨다.
+    // Focus: 다음 비-버프·비-드로우 카드의 효과값을 증가시킨다.
+    // 기본 집중 +50%, 강화 집중 +75% — _focusBonus(50 또는 75)로 배율을 결정한다.
     if (_focusActive &&
         card.effectType != CardEffectType.buff &&
         card.effectType != CardEffectType.draw) {
-      value = (value * 1.5).floor();
+      value = (value * (1.0 + _focusBonus / 100)).floor();
       _focusActive = false;
+      _focusBonus = 0;
     }
 
     switch (card.type) {
@@ -309,6 +339,8 @@ class BattleEngine {
         player.gainBlock(_applyFirstBlockBonus(value));
       case CardType.focus:
         _focusActive = true;
+        // card.value = 50(기본) 또는 75(강화+). 플레이 시 보너스 퍼센트를 저장한다.
+        _focusBonus = card.value;
       case CardType.recover:
         player.heal(value);
       case CardType.rageBurst:
@@ -316,8 +348,9 @@ class BattleEngine {
         deck.addToDiscard(card);
       case CardType.toxicJab:
         monster.takeDamage(_weakAdjusted(value));
+        // 강화 시 취약 3턴, 기본 2턴.
         monster.applyStatusEffect(
-          const StatusEffect(type: StatusEffectType.vulnerable, duration: 2),
+          StatusEffect(type: StatusEffectType.vulnerable, duration: card.isUpgraded ? 3 : 2),
         );
       case CardType.regroup:
         deck.draw(value);
@@ -338,17 +371,23 @@ class BattleEngine {
         player.gainBlock(_applyFirstBlockBonus(value));
         deck.draw(1);
       case CardType.exploitWeakness:
-        final bonus = monster.isVulnerable ? 6 : 0;
+        // 강화 시 취약 보너스 +9, 기본 +6.
+        final bonus = monster.isVulnerable ? (card.isUpgraded ? 9 : 6) : 0;
         monster.takeDamage(_weakAdjusted(value + bonus));
       case CardType.sharpen:
         _sharpenBonus += value;
       case CardType.weakSlash:
         monster.takeDamage(_weakAdjusted(value));
+        // 강화 시 약화 3턴, 기본 2턴.
         monster.applyStatusEffect(
-          const StatusEffect(type: StatusEffectType.weak, duration: 2),
+          StatusEffect(type: StatusEffectType.weak, duration: card.isUpgraded ? 3 : 2),
         );
       case CardType.blockStrike:
-        monster.takeDamage(_weakAdjusted(player.block));
+        // 강화 시 방어도 × 1.5 데미지, 기본 방어도 수치 그대로.
+        final blockDmg = card.isUpgraded
+            ? (player.block * 1.5).floor()
+            : player.block;
+        monster.takeDamage(_weakAdjusted(blockDmg));
       case CardType.bloodRush:
         monster.takeDamage(_weakAdjusted(xValue * card.value));
       case CardType.devilsDeal:
@@ -356,7 +395,8 @@ class BattleEngine {
         if (!player.isDead) deck.draw(3);
       case CardType.battleCry:
         deck.draw(2);
-        player.strength += 1;
+        // 강화 시 힘 +2, 기본 힘 +1.
+        player.strength += card.isUpgraded ? 2 : 1;
         deck.exhaustLastPlayed();
       case CardType.indomitable:
         final blockAmt = card.value + (player.strength > 0 ? player.strength : 0);
@@ -369,6 +409,12 @@ class BattleEngine {
       case CardType.gamble:
         player.hp = (player.hp - card.value).clamp(0, Player.maxHp);
         if (!player.isDead) energy += 2;
+      case CardType.poisonDart:
+        monster.takeDamage(_weakAdjusted(value));
+        // 강화 시 독 5스택, 기본 3스택.
+        monster.applyStatusEffect(
+          StatusEffect(type: StatusEffectType.poison, duration: card.isUpgraded ? 5 : 3),
+        );
     }
   }
 

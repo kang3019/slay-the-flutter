@@ -71,7 +71,7 @@ void main() {
     });
 
     test('전투 종료 후 카드 플레이는 실패한다', () {
-      final monster = Monster(stage: 1)..takeDamage(25); // HP = 5
+      final monster = Monster(stage: 1)..takeDamage(19); // HP = 5
       final engine = _makeEngine(cards: [Cards.strike, Cards.strike], monster: monster);
       engine.playCard(Cards.strike); // 6 데미지 → 몬스터 사망, 전투 종료
       expect(engine.playCard(Cards.strike), isFalse);
@@ -80,10 +80,10 @@ void main() {
 
   group('카드 효과', () {
     test('Strike: 몬스터에게 6 데미지를 준다', () {
-      final monster = Monster(stage: 1); // HP 30
+      final monster = Monster(stage: 1); // HP 24
       final engine = _makeEngine(cards: [Cards.strike], monster: monster);
       engine.playCard(Cards.strike);
-      expect(monster.hp, equals(24));
+      expect(monster.hp, equals(18));
     });
 
     test('Defend: 플레이어에게 방어도 5를 부여한다', () {
@@ -101,18 +101,18 @@ void main() {
     });
 
     test('Bash: 몬스터에게 8 데미지 + Vulnerable 2턴을 부여한다', () {
-      final monster = Monster(stage: 1); // HP 30
+      final monster = Monster(stage: 1); // HP 24
       final engine = _makeEngine(cards: [Cards.bash], monster: monster);
       engine.playCard(Cards.bash);
-      expect(monster.hp, equals(22)); // 30 - 8
+      expect(monster.hp, equals(16)); // 24 - 8
       expect(monster.isVulnerable, isTrue);
     });
 
     test('SwiftCut: 몬스터에게 4 데미지 × 2회 (합계 8)를 준다', () {
-      final monster = Monster(stage: 1); // HP 30
+      final monster = Monster(stage: 1); // HP 24
       final engine = _makeEngine(cards: [Cards.swiftCut], monster: monster);
       engine.playCard(Cards.swiftCut);
-      expect(monster.hp, equals(22)); // 30 - 4 - 4
+      expect(monster.hp, equals(16)); // 24 - 8
     });
 
     test('Recover: 플레이어 HP를 8 회복한다', () {
@@ -130,14 +130,14 @@ void main() {
     });
 
     test('Focus: 다음 카드 데미지를 +50% 증가시킨다', () {
-      final monster = Monster(stage: 1); // HP 30
+      final monster = Monster(stage: 1); // HP 24
       final engine = _makeEngine(
         cards: [Cards.focus, Cards.strike],
         monster: monster,
       );
       engine.playCard(Cards.focus);
       engine.playCard(Cards.strike); // floor(6 × 1.5) = 9 데미지
-      expect(monster.hp, equals(21)); // 30 - 9
+      expect(monster.hp, equals(15)); // 24 - 9
     });
 
     test('Focus: 버프 카드에는 적용되지 않는다', () {
@@ -149,7 +149,7 @@ void main() {
       engine.playCard(Cards.focus);
       engine.playCard(Cards.focus); // 버프 카드 → Focus 소비 안 됨
       engine.playCard(Cards.strike); // Focus 여전히 활성 → 9 데미지
-      expect(monster.hp, equals(21));
+      expect(monster.hp, equals(15));
     });
   });
 
@@ -188,7 +188,7 @@ void main() {
 
   group('전투 승패 판정', () {
     test('몬스터 HP가 0이 되면 플레이어 승리', () {
-      final monster = Monster(stage: 1)..takeDamage(25); // HP = 5
+      final monster = Monster(stage: 1)..takeDamage(19); // HP = 5
       final engine = _makeEngine(cards: [Cards.strike], monster: monster);
       engine.playCard(Cards.strike); // 6 데미지 → 몬스터 사망
       expect(engine.isBattleOver, isTrue);
@@ -210,19 +210,19 @@ void main() {
 
   group('새 카드 효과', () {
     test('광분: 5 데미지 + 버리는 더미에 복사본 추가', () {
-      final monster = Monster(stage: 1); // HP 30
+      final monster = Monster(stage: 1); // HP 24
       final engine = _makeEngine(cards: [Cards.rageBurst], monster: monster);
       engine.playCard(Cards.rageBurst);
-      expect(monster.hp, equals(25));
+      expect(monster.hp, equals(19));
       // 플레이한 원본 + 복사본 = 2장
       expect(engine.deck.discardPile.where((c) => c == Cards.rageBurst).length, equals(2));
     });
 
     test('독침: 5 데미지 + 적에게 취약 2턴', () {
-      final monster = Monster(stage: 1); // HP 30
+      final monster = Monster(stage: 1); // HP 24
       final engine = _makeEngine(cards: [Cards.toxicJab], monster: monster);
       engine.playCard(Cards.toxicJab);
-      expect(monster.hp, equals(25));
+      expect(monster.hp, equals(19));
       expect(monster.isVulnerable, isTrue);
     });
 
@@ -236,29 +236,29 @@ void main() {
     });
 
     test('파괴의 일격: 20 데미지 + 소멸(버리는 더미에 없음)', () {
-      final monster = Monster(stage: 1); // HP 30
+      final monster = Monster(stage: 1); // HP 24
       final engine = _makeEngine(cards: [Cards.crushingBlow], monster: monster);
       engine.playCard(Cards.crushingBlow);
-      expect(monster.hp, equals(10));
+      expect(monster.hp, equals(4));
       expect(engine.deck.discardPile, isEmpty);
       expect(engine.deck.exhaustPile.length, equals(1));
     });
 
     test('분노: 힘 +2 후 공격 카드 데미지 증가', () {
-      final monster = Monster(stage: 1); // HP 30
+      final monster = Monster(stage: 1); // HP 24
       final player = Player();
       final engine = _makeEngine(cards: [Cards.fury, Cards.strike], player: player, monster: monster);
       engine.playCard(Cards.fury);
       expect(player.strength, equals(2));
       engine.playCard(Cards.strike); // 6 + 2 = 8 데미지
-      expect(monster.hp, equals(22));
+      expect(monster.hp, equals(16));
     });
 
     test('세 번 베기: 3 데미지 × 3회 = 합계 9', () {
-      final monster = Monster(stage: 1); // HP 30
+      final monster = Monster(stage: 1); // HP 24
       final engine = _makeEngine(cards: [Cards.tripleSlash], monster: monster);
       engine.playCard(Cards.tripleSlash);
-      expect(monster.hp, equals(21));
+      expect(monster.hp, equals(15));
     });
 
     test('응급처치: HP 5 회복 + 소멸', () {
@@ -281,10 +281,10 @@ void main() {
     });
 
     test('취약 틈새: 일반 상태 9 데미지', () {
-      final monster = Monster(stage: 1); // HP 30
+      final monster = Monster(stage: 1); // HP 24
       final engine = _makeEngine(cards: [Cards.exploitWeakness], monster: monster);
       engine.playCard(Cards.exploitWeakness);
-      expect(monster.hp, equals(21));
+      expect(monster.hp, equals(15));
     });
 
     test('취약 틈새: 적이 취약 상태면 (9+6)=15 → 몬스터 1.5배 적용 = 22 데미지', () {
@@ -292,38 +292,38 @@ void main() {
         ..applyStatusEffect(const StatusEffect(type: StatusEffectType.vulnerable, duration: 2));
       final engine = _makeEngine(cards: [Cards.exploitWeakness], monster: monster);
       engine.playCard(Cards.exploitWeakness);
-      expect(monster.hp, equals(8)); // 30 - floor(15 × 1.5) = 30 - 22
+      expect(monster.hp, equals(2)); // 24 - floor(15 × 1.5) = 24 - 22
     });
 
     test('약화 강타: 12 데미지 + 적 약화 2턴', () {
-      final monster = Monster(stage: 1); // HP 30
+      final monster = Monster(stage: 1); // HP 24
       final engine = _makeEngine(cards: [Cards.weakSlash], monster: monster);
       engine.playCard(Cards.weakSlash);
-      expect(monster.hp, equals(18)); // 30 - 12
+      expect(monster.hp, equals(12)); // 24 - 12
       expect(monster.isWeak, isTrue);
     });
 
     test('방어도 공격: 방어도만큼 데미지', () {
-      final monster = Monster(stage: 1); // HP 30
+      final monster = Monster(stage: 1); // HP 24
       final player = Player();
       final engine = _makeEngine(cards: [Cards.blockStrike], player: player, monster: monster);
       player.gainBlock(8);
       engine.playCard(Cards.blockStrike);
-      expect(monster.hp, equals(22)); // 30 - 8
+      expect(monster.hp, equals(16)); // 24 - 8
     });
 
     test('방어도 공격: 방어도 0이면 데미지 0', () {
-      final monster = Monster(stage: 1); // HP 30
+      final monster = Monster(stage: 1); // HP 24
       final engine = _makeEngine(cards: [Cards.blockStrike], monster: monster);
       engine.playCard(Cards.blockStrike);
-      expect(monster.hp, equals(30));
+      expect(monster.hp, equals(24));
     });
 
     test('혈기: 에너지 3이면 X=3, 18 데미지 후 에너지 소진', () {
-      final monster = Monster(stage: 1); // HP 30
+      final monster = Monster(stage: 1); // HP 24
       final engine = _makeEngine(cards: [Cards.bloodRush], monster: monster);
       engine.playCard(Cards.bloodRush); // X=3, 3×6=18
-      expect(monster.hp, equals(12));
+      expect(monster.hp, equals(6));
       expect(engine.energy, equals(0));
     });
 
@@ -334,11 +334,11 @@ void main() {
     });
 
     test('혈기: 에너지 1이면 X=1, 6 데미지', () {
-      final monster = Monster(stage: 1); // HP 30
+      final monster = Monster(stage: 1); // HP 24
       final engine = _makeEngine(cards: [Cards.bloodRush], monster: monster);
       engine.energy = 1;
       engine.playCard(Cards.bloodRush); // X=1, 1×6=6
-      expect(monster.hp, equals(24));
+      expect(monster.hp, equals(18));
     });
 
     test('악마의 거래: HP -6, 카드 3장 드로우', () {
@@ -377,20 +377,20 @@ void main() {
     });
 
     test('연속 강타: 손패의 공격 카드 수 × 4 데미지', () {
-      final monster = Monster(stage: 1); // HP 30
+      final monster = Monster(stage: 1); // HP 24
       // 손패: [defend, strike, strike, comboStrike] → comboStrike 사용 후 공격패 2장 → 2×4=8
       final cards = [Cards.defend, Cards.strike, Cards.strike, Cards.comboStrike];
       final engine = _makeEngine(cards: cards, monster: monster);
       engine.playCard(Cards.comboStrike);
-      expect(monster.hp, equals(22)); // 30 - 8
+      expect(monster.hp, equals(16)); // 24 - 8
     });
 
     test('연속 강타: 공격 카드 없으면 데미지 0', () {
-      final monster = Monster(stage: 1); // HP 30
+      final monster = Monster(stage: 1); // HP 24
       final cards = [Cards.defend, Cards.defend, Cards.comboStrike];
       final engine = _makeEngine(cards: cards, monster: monster);
       engine.playCard(Cards.comboStrike);
-      expect(monster.hp, equals(30));
+      expect(monster.hp, equals(24));
     });
 
     test('승부수: HP -4, 에너지 +2', () {
@@ -402,7 +402,7 @@ void main() {
     });
 
     test('무기 연마: 이번 턴 공격 카드 전부 +4 데미지', () {
-      final monster = Monster(stage: 1); // HP 30
+      final monster = Monster(stage: 1); // HP 24
       final engine = _makeEngine(
         cards: [Cards.sharpen, Cards.strike, Cards.strike],
         monster: monster,
@@ -410,7 +410,7 @@ void main() {
       engine.playCard(Cards.sharpen);
       engine.playCard(Cards.strike); // 6 + 4 = 10
       engine.playCard(Cards.strike); // 6 + 4 = 10
-      expect(monster.hp, equals(10)); // 30 - 10 - 10
+      expect(monster.hp, equals(4)); // 24 - 20
     });
   });
 
@@ -420,14 +420,14 @@ void main() {
       player.applyStatusEffect(
         const StatusEffect(type: StatusEffectType.weak, duration: 2),
       );
-      final monster = Monster(stage: 1); // HP 30
+      final monster = Monster(stage: 1); // HP 24
       final engine = _makeEngine(
         cards: [Cards.strike],
         player: player,
         monster: monster,
       );
       engine.playCard(Cards.strike); // floor(6 × 0.75) = 4
-      expect(monster.hp, equals(26)); // 30 - 4
+      expect(monster.hp, equals(20)); // 24 - 4
     });
   });
 
@@ -478,6 +478,254 @@ void main() {
           expect(t, isNot(MonsterType.ironGolem), reason: 'stage=$stage seed=$seed');
         }
       }
+    });
+  });
+
+  // ── 독(poison) 상태이상 ──────────────────────────────────────────────────
+
+  group('독화살 — poisonDart', () {
+    test('독화살: 4 데미지 + 몬스터에게 독 3스택 부여', () {
+      final monster = Monster(stage: 1); // HP 24
+      final engine = _makeEngine(cards: [Cards.poisonDart], monster: monster);
+      engine.playCard(Cards.poisonDart);
+      expect(monster.hp, equals(20));        // 24 - 4
+      expect(monster.poisonStacks, equals(3));
+    });
+
+    test('독화살 중복 사용 시 독 스택이 누적된다', () {
+      final monster = Monster(stage: 1);
+      final engine = _makeEngine(
+        cards: [Cards.poisonDart, Cards.poisonDart],
+        monster: monster,
+      );
+      engine.playCard(Cards.poisonDart);
+      engine.playCard(Cards.poisonDart);
+      expect(monster.poisonStacks, equals(6)); // 3 + 3
+    });
+  });
+
+  group('몬스터 독 피해 — 턴 종료 시 틱', () {
+    test('턴 종료 시 독 스택만큼 몬스터 HP 감소 (블록 무시)', () {
+      final monster = Monster(stage: 1); // HP 24, 공격력 10
+      monster.applyStatusEffect(
+        const StatusEffect(type: StatusEffectType.poison, duration: 3),
+      );
+      // 방어도 10을 직접 주고 독이 블록을 무시하는지 확인
+      monster.gainBlock(10);
+      final engine = BattleEngine(
+        player: Player(),
+        monster: monster,
+        deck: Deck(initialCards: []),
+      );
+      engine.startPlayerTurn();
+      engine.endPlayerTurn(); // monster.endTurn() → 독 3 피해
+      expect(monster.hp, equals(21)); // 24 - 3
+    });
+
+    test('독 스택은 매 턴 1씩 감소한다', () {
+      final monster = Monster(stage: 1);
+      monster.applyStatusEffect(
+        const StatusEffect(type: StatusEffectType.poison, duration: 3),
+      );
+      final engine = BattleEngine(
+        player: Player(hp: 70),
+        monster: monster,
+        deck: Deck(initialCards: []),
+      );
+      engine.startPlayerTurn();
+      engine.endPlayerTurn(); // 독 3 피해, 스택 3→2
+      expect(monster.poisonStacks, equals(2));
+      engine.startPlayerTurn();
+      engine.endPlayerTurn(); // 독 2 피해, 스택 2→1
+      expect(monster.poisonStacks, equals(1));
+      engine.startPlayerTurn();
+      engine.endPlayerTurn(); // 독 1 피해, 스택 1→0
+      expect(monster.poisonStacks, equals(0));
+    });
+
+    test('독으로 몬스터 HP가 0이 되면 즉시 전투 종료 (몬스터 행동 없음)', () {
+      final monster = Monster(stage: 1); // HP 24
+      monster.applyStatusEffect(
+        const StatusEffect(type: StatusEffectType.poison, duration: 30),
+      );
+      final player = Player(hp: 70);
+      final engine = BattleEngine(
+        player: player,
+        monster: monster,
+        deck: Deck(initialCards: []),
+      );
+      engine.startPlayerTurn();
+      engine.endPlayerTurn();
+      expect(engine.isBattleOver, isTrue);
+      expect(engine.result, equals(BattleResult.playerWon));
+      // 몬스터가 행동하지 않았으므로 플레이어 HP는 그대로
+      expect(player.hp, equals(70));
+    });
+  });
+
+  group('플레이어 독 피해 — 턴 시작 시 틱', () {
+    test('턴 시작 시 독 스택만큼 플레이어 HP 감소 (블록 무시)', () {
+      final player = Player(hp: 70);
+      player.applyStatusEffect(
+        const StatusEffect(type: StatusEffectType.poison, duration: 4),
+      );
+      final engine = BattleEngine(
+        player: player,
+        monster: Monster(stage: 1),
+        deck: Deck(initialCards: []),
+      );
+      engine.startPlayerTurn(); // 독 4 틱 → HP 66
+      expect(player.hp, equals(66)); // 70 - 4
+    });
+
+    test('플레이어 독 스택도 매 턴 1씩 감소한다', () {
+      final player = Player(hp: 70);
+      player.applyStatusEffect(
+        const StatusEffect(type: StatusEffectType.poison, duration: 3),
+      );
+      final engine = BattleEngine(
+        player: player,
+        monster: Monster(stage: 1), // 공격력 10
+        deck: Deck(initialCards: []),
+      );
+      engine.startPlayerTurn(); // 독 3 틱 → HP 67
+      engine.endPlayerTurn();   // 몬스터 공격 10 → HP 57, 스택 3→2
+      expect(player.poisonStacks, equals(2));
+      engine.startPlayerTurn(); // 독 2 틱 → HP 55
+      // 총 피해: 독3(3) + 몬스터(10) + 독2(2) = 15
+      expect(player.hp, equals(70 - 3 - 10 - 2)); // 55
+    });
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // 카드 강화 (upgrade)
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  group('강화 카드 — 값 증가', () {
+    test('강타+ 는 9 데미지', () {
+      final engine = _makeEngine(cards: [Cards.strikeUpgraded]);
+      engine.playCard(Cards.strikeUpgraded);
+      expect(engine.monster.hp, equals(Monster(stage: 1).hp - 9));
+    });
+
+    test('방어+ 는 방어도 8', () {
+      final engine = _makeEngine(cards: [Cards.defendUpgraded]);
+      engine.playCard(Cards.defendUpgraded);
+      expect(engine.player.block, equals(8));
+    });
+
+    test('철벽+ 은 비용 1로 방어도 10', () {
+      final engine = _makeEngine(cards: [Cards.ironWallUpgraded]);
+      expect(Cards.ironWallUpgraded.cost, equals(1));
+      engine.playCard(Cards.ironWallUpgraded);
+      expect(engine.player.block, equals(10));
+    });
+
+    test('집중+ 은 다음 카드 효과 +75%', () {
+      // 강타+(9) × 1.75 = 15.75 → floor → 15
+      final engine = _makeEngine(
+        cards: [Cards.focusUpgraded, Cards.strikeUpgraded],
+      );
+      engine.playCard(Cards.focusUpgraded);
+      engine.playCard(Cards.strikeUpgraded);
+      expect(engine.monster.hp, equals(Monster(stage: 1).hp - 15));
+    });
+
+    test('분노+ 는 힘 +3', () {
+      final engine = _makeEngine(cards: [Cards.furyUpgraded]);
+      engine.playCard(Cards.furyUpgraded);
+      expect(engine.player.strength, equals(3));
+    });
+
+    test('파괴의 일격+ 은 25 데미지, 소멸', () {
+      final engine = _makeEngine(cards: [Cards.crushingBlowUpgraded], monster: Monster(stage: 2)); // HP 32
+      final beforeHp = engine.monster.hp;
+      engine.playCard(Cards.crushingBlowUpgraded);
+      expect(engine.monster.hp, equals(beforeHp - 25));
+      expect(engine.deck.exhaustPile.length, equals(1));
+    });
+
+    test('광분+ 은 8 데미지 + 버리는 더미에 복사본', () {
+      final engine = _makeEngine(cards: [Cards.rageBurstUpgraded]);
+      final beforeHp = engine.monster.hp;
+      engine.playCard(Cards.rageBurstUpgraded);
+      expect(engine.monster.hp, equals(beforeHp - 8));
+      expect(engine.deck.discardPile.length, equals(2));
+    });
+  });
+
+  group('강화 카드 — 특수 분기', () {
+    test('독침+ 은 취약 3턴 부여', () {
+      final engine = _makeEngine(cards: [Cards.toxicJabUpgraded]);
+      engine.playCard(Cards.toxicJabUpgraded);
+      expect(engine.monster.isVulnerable, isTrue);
+      // 3턴 후 해제 확인
+      engine.endPlayerTurn();
+      engine.startPlayerTurn();
+      engine.endPlayerTurn();
+      engine.startPlayerTurn();
+      engine.endPlayerTurn();
+      engine.startPlayerTurn();
+      expect(engine.monster.isVulnerable, isFalse);
+    });
+
+    test('취약 틈새+ 는 취약 시 +9 보너스', () {
+      final monster = Monster(stage: 2); // HP 32 — 27 데미지 흡수 가능
+      monster.applyStatusEffect(
+        const StatusEffect(type: StatusEffectType.vulnerable, duration: 3),
+      );
+      final engine = _makeEngine(
+        cards: [Cards.exploitWeaknessUpgraded],
+        monster: monster,
+      );
+      // 취약 시: 9 base + 9 bonus = 18, 취약 배율 ×1.5 = 27
+      final beforeHp = engine.monster.hp;
+      engine.playCard(Cards.exploitWeaknessUpgraded);
+      expect(engine.monster.hp, equals(beforeHp - 27));
+    });
+
+    test('약화 강타+ 는 약화 3턴 부여', () {
+      final engine = _makeEngine(cards: [Cards.weakSlashUpgraded]);
+      engine.playCard(Cards.weakSlashUpgraded);
+      expect(engine.monster.isWeak, isTrue);
+      for (var i = 0; i < 3; i++) {
+        engine.endPlayerTurn();
+        engine.startPlayerTurn();
+      }
+      expect(engine.monster.isWeak, isFalse);
+    });
+
+    test('방어도 공격+ 은 방어도의 1.5배 데미지', () {
+      final engine = _makeEngine(cards: [Cards.defendUpgraded, Cards.blockStrikeUpgraded]);
+      engine.playCard(Cards.defendUpgraded);   // 방어도 8 획득
+      expect(engine.player.block, equals(8));
+      final beforeHp = engine.monster.hp;
+      engine.playCard(Cards.blockStrikeUpgraded); // 8 × 1.5 = 12 데미지
+      expect(engine.monster.hp, equals(beforeHp - 12));
+    });
+
+    test('전투 함성+ 은 힘 +2', () {
+      final engine = _makeEngine(cards: [Cards.battleCryUpgraded]);
+      engine.playCard(Cards.battleCryUpgraded);
+      expect(engine.player.strength, equals(2));
+    });
+
+    test('독화살+ 은 독 5스택 부여', () {
+      final engine = _makeEngine(cards: [Cards.poisonDartUpgraded]);
+      engine.playCard(Cards.poisonDartUpgraded);
+      expect(engine.monster.poisonStacks, equals(5));
+    });
+  });
+
+  group('Cards.upgrade()', () {
+    test('이미 강화된 카드를 upgrade() 하면 원본 반환', () {
+      expect(Cards.upgrade(Cards.strikeUpgraded), same(Cards.strikeUpgraded));
+    });
+
+    test('미강화 카드를 upgrade() 하면 isUpgraded == true 반환', () {
+      final upgraded = Cards.upgrade(Cards.strike);
+      expect(upgraded.isUpgraded, isTrue);
+      expect(upgraded.type, equals(CardType.strike));
     });
   });
 }
