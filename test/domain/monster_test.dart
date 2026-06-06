@@ -4,20 +4,20 @@ import 'package:slay_the_flutter/domain/entities/player.dart';
 import 'package:slay_the_flutter/domain/status_effect.dart';
 
 void main() {
-  group('Monster 스탯 공식 — SPECS.md: HP = 20 + (stage × 10)', () {
-    test('스테이지 1: HP = 30', () {
+  group('Monster 스탯 공식 — HP = 16 + (stage × 8)', () {
+    test('스테이지 1: HP = 24', () {
       final monster = Monster(stage: 1);
-      expect(monster.hp, equals(30));
+      expect(monster.hp, equals(24));
     });
 
-    test('스테이지 2: HP = 40', () {
+    test('스테이지 2: HP = 32', () {
       final monster = Monster(stage: 2);
-      expect(monster.hp, equals(40));
+      expect(monster.hp, equals(32));
     });
 
-    test('스테이지 3: HP = 50', () {
+    test('스테이지 3: HP = 40', () {
       final monster = Monster(stage: 3);
-      expect(monster.hp, equals(50));
+      expect(monster.hp, equals(40));
     });
   });
 
@@ -40,9 +40,9 @@ void main() {
 
   group('Monster 데미지 처리', () {
     test('몬스터가 데미지를 입으면 체력이 감소한다', () {
-      final monster = Monster(stage: 1); // HP 30
+      final monster = Monster(stage: 1); // HP 24
       monster.takeDamage(10);
-      expect(monster.hp, equals(20));
+      expect(monster.hp, equals(14));
     });
 
     test('체력은 0 아래로 내려가지 않는다', () {
@@ -65,11 +65,11 @@ void main() {
 
   group('Monster 방어도(Block) 처리', () {
     test('방어도가 있으면 데미지가 방어도에 먼저 흡수된다', () {
-      final monster = Monster(stage: 1); // HP 30
+      final monster = Monster(stage: 1); // HP 24
       monster.gainBlock(5);
       monster.takeDamage(3);
 
-      expect(monster.hp, equals(30));
+      expect(monster.hp, equals(24));
       expect(monster.block, equals(2));
     });
 
@@ -79,7 +79,7 @@ void main() {
       monster.takeDamage(8);
 
       expect(monster.block, equals(0));
-      expect(monster.hp, equals(27)); // 30 - (8 - 5)
+      expect(monster.hp, equals(21)); // 24 - (8 - 5)
     });
 
     test('턴 종료 시 방어도가 0으로 초기화된다', () {
@@ -110,13 +110,13 @@ void main() {
 
   group('Monster 상태 이상 — Vulnerable', () {
     test('Vulnerable 상태에서 받는 데미지가 1.5배가 된다', () {
-      final monster = Monster(stage: 1); // HP 30
+      final monster = Monster(stage: 1); // HP 24
       monster.applyStatusEffect(
         const StatusEffect(type: StatusEffectType.vulnerable, duration: 2),
       );
       monster.takeDamage(10); // floor(10 × 1.5) = 15
 
-      expect(monster.hp, equals(15)); // 30 - 15
+      expect(monster.hp, equals(9)); // 24 - 15
     });
 
     test('Vulnerable은 턴 종료 후 duration이 감소한다', () {
@@ -141,7 +141,7 @@ void main() {
       p = Player();
     });
 
-    test('초기 HP = 44', () => expect(m.maxHp, equals(44)));
+    test('초기 HP = 35', () => expect(m.maxHp, equals(35)));
 
     test('1턴: 분비 — 힘 +3, 플레이어 피해 없음', () {
       m.executeAction(p);
@@ -174,7 +174,7 @@ void main() {
       p = Player();
     });
 
-    test('초기 HP = 40', () => expect(m.maxHp, equals(40)));
+    test('초기 HP = 32', () => expect(m.maxHp, equals(32)));
 
     test('1턴: 물기 — 11 데미지', () {
       m.executeAction(p);
@@ -217,7 +217,7 @@ void main() {
       p = Player();
     });
 
-    test('초기 HP = 60', () => expect(m.maxHp, equals(60)));
+    test('초기 HP = 48', () => expect(m.maxHp, equals(48)));
 
     test('1턴: 독기 분출 — 4 데미지 + 플레이어 취약 2턴', () {
       m.executeAction(p);
@@ -254,7 +254,7 @@ void main() {
       p = Player();
     });
 
-    test('초기 HP = 80', () => expect(m.maxHp, equals(80)));
+    test('초기 HP = 64', () => expect(m.maxHp, equals(64)));
 
     test('1턴: 수면 — 방어도 +5, 공격 없음', () {
       m.executeAction(p);
@@ -310,7 +310,7 @@ void main() {
       p = Player();
     });
 
-    test('초기 HP = 120', () => expect(m.maxHp, equals(120)));
+    test('초기 HP = 96', () => expect(m.maxHp, equals(96)));
 
     test('1턴: 장갑 강화 — 방어도 10 획득, 공격 없음', () {
       m.executeAction(p);

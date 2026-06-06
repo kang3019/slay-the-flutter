@@ -43,6 +43,8 @@ class _EventScreenState extends ConsumerState<EventScreen> {
 
     if (event == null) return const SizedBox.shrink();
 
+    final playerGold = ref.watch(runProvider.select((s) => s.gold));
+
     return Scaffold(
       backgroundColor: const Color(0xFF0D0D26),
       body: SafeArea(
@@ -51,6 +53,7 @@ class _EventScreenState extends ConsumerState<EventScreen> {
           child: _selectedChoice == null
               ? _ChoiceView(
                   event: event,
+                  playerGold: playerGold,
                   onChoiceSelected: _handleChoiceSelected,
                 )
               : _ResultView(
@@ -73,9 +76,19 @@ class _EventScreenState extends ConsumerState<EventScreen> {
 
 class _ChoiceView extends StatelessWidget {
   final GameEvent event;
+  final int playerGold;
   final ValueChanged<EventChoice> onChoiceSelected;
 
-  const _ChoiceView({required this.event, required this.onChoiceSelected});
+  const _ChoiceView({
+    required this.event,
+    required this.playerGold,
+    required this.onChoiceSelected,
+  });
+
+  bool _canAfford(EventChoice choice) {
+    if (choice.effect.goldDelta >= 0) return true;
+    return playerGold >= -choice.effect.goldDelta;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -142,13 +155,17 @@ class _ChoiceView extends StatelessWidget {
 
         // ── 선택지 버튼들 ──────────────────────────────────────────────────
         ...event.choices.map(
-          (choice) => Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: _ChoiceButton(
-              choice: choice,
-              onTap: () => onChoiceSelected(choice),
-            ),
-          ),
+          (choice) {
+            final disabled = !_canAfford(choice);
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: _ChoiceButton(
+                choice: choice,
+                isDisabled: disabled,
+                onTap: disabled ? null : () => onChoiceSelected(choice),
+              ),
+            );
+          },
         ),
 
         const SizedBox(height: 8),
@@ -215,7 +232,29 @@ class _ResultView extends StatelessWidget {
           textAlign: TextAlign.center,
         ),
 
-        const SizedBox(height: 24),
+        const SizedBox(height: 16),
+
+        // ── 서사 묘사 ─────────────────────────────────────────────────────
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+          decoration: BoxDecoration(
+            color: const Color(0xFF0F0F28),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xFF3A3A6A)),
+          ),
+          child: Text(
+            choice.resultDescription,
+            style: const TextStyle(
+              color: Color(0xFFCCC0E0),
+              fontSize: 15,
+              height: 1.6,
+              fontStyle: FontStyle.italic,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ),
+
+        const SizedBox(height: 20),
 
         // ── HP / 골드 결과 (카드가 없을 때는 기존 박스 유지) ─────────────
         if (statItems.isNotEmpty || !hasCard)
@@ -419,39 +458,72 @@ class _ResultItem extends StatelessWidget {
 
 class _ChoiceButton extends StatelessWidget {
   final EventChoice choice;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
+  final bool isDisabled;
 
-  const _ChoiceButton({required this.choice, required this.onTap});
+  const _ChoiceButton({
+    required this.choice,
+    required this.onTap,
+    this.isDisabled = false,
+  });
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
-        decoration: BoxDecoration(
-          color: const Color(0xFF1D1D46),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: const Color(0xFF4A4A8A)),
-        ),
-        child: Row(
-          children: [
-            const Text(
-              EventConstants.choiceButtonPrefix,
-              style: TextStyle(color: Color(0xFFA78BFA), fontSize: 16),
+      child: Opacity(
+        opacity: isDisabled ? 0.5 : 1.0,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+          decoration: BoxDecoration(
+            color: isDisabled ? const Color(0xFF111130) : const Color(0xFF1D1D46),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: isDisabled ? const Color(0xFF2A2A50) : const Color(0xFF4A4A8A),
             ),
-            const SizedBox(width: 6),
-            Expanded(
-              child: Text(
-                choice.label,
-                style: const TextStyle(
-                  color: Colors.white,
+          ),
+          child: Row(
+            children: [
+              Text(
+                EventConstants.choiceButtonPrefix,
+                style: TextStyle(
+                  color: isDisabled
+                      ? const Color(0xFF4A4A70)
+                      : const Color(0xFFA78BFA),
                   fontSize: 16,
-                  fontWeight: FontWeight.w700,
                 ),
               ),
-            ),
-          ],
+              const SizedBox(width: 6),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      choice.label,
+                      style: TextStyle(
+                        color: isDisabled
+                            ? const Color(0xFF5A5A7A)
+                            : Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    if (isDisabled) ...[
+                      const SizedBox(height: 4),
+                      const Text(
+                        '골드 부족',
+                        style: TextStyle(
+                          color: Color(0xFFFF8F00),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

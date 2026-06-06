@@ -236,12 +236,12 @@ class Monster {
   // ── Static helpers ────────────────────────────────────────────────────────
 
   static int _computeMaxHp(MonsterType type, int stage) => switch (type) {
-        MonsterType.basic         => 20 + (stage * 10),
-        MonsterType.stickySlime   => 44,
-        MonsterType.ironScavenger => 40,
-        MonsterType.venomSentinel => 60,
-        MonsterType.caveGuardian  => 80,
-        MonsterType.ironGolem     => 120,
+        MonsterType.basic         => 16 + (stage * 8),
+        MonsterType.stickySlime   => 35,
+        MonsterType.ironScavenger => 32,
+        MonsterType.venomSentinel => 48,
+        MonsterType.caveGuardian  => 64,
+        MonsterType.ironGolem     => 96,
       };
 
   /// 패턴 종료 후 루프를 시작할 인덱스.
