@@ -2,10 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../application/run_provider.dart';
+import '../../domain/entities/card.dart';
 import '../../domain/entities/player.dart';
 import '../../domain/map/map_node.dart';
 import '../../domain/map/node_type.dart';
+import '../save_slot/save_slot_screen.dart';
+import '../settings/settings_screen.dart';
 import 'map_constants.dart';
+import 'widgets/deck_view_sheet.dart';
 import 'widgets/map_painter.dart';
 import 'widgets/node_icon_widget.dart';
 
@@ -28,6 +32,7 @@ class MapScreen extends ConsumerWidget {
             run: run,
             onSettingsTap: () => _showSettings(context, ref),
             onLegendTap: () => _showLegend(context),
+            onDeckTap: () => _showDeckViewer(context, run.deck),
           ),
           Expanded(
             child: _MapCanvas(
@@ -50,6 +55,18 @@ class MapScreen extends ConsumerWidget {
       ),
     );
   }
+}
+
+void _showDeckViewer(BuildContext context, List<GameCard> deck) {
+  showModalBottomSheet<void>(
+    context: context,
+    backgroundColor: const Color(0xFF0D1220),
+    isScrollControlled: true,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+    ),
+    builder: (_) => DeckViewSheet(deck: deck),
+  );
 }
 
 void _showLegend(BuildContext context) {
@@ -77,10 +94,30 @@ void _showSettings(BuildContext context, WidgetRef ref) {
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
     ),
-    builder: (_) => _SettingsSheet(onNewRun: () {
-      Navigator.pop(context);
-      ref.read(runProvider.notifier).startNewRun();
-    }),
+    builder: (_) => _SettingsSheet(
+      onNewRun: () {
+        Navigator.pop(context);
+        ref.read(runProvider.notifier).startNewRun();
+      },
+      onSaveSlot: () {
+        Navigator.pop(context);
+        Navigator.push<void>(
+          context,
+          MaterialPageRoute(
+            builder: (_) => SaveSlotScreen(
+              onSlotLoaded: () => Navigator.pop(context),
+            ),
+          ),
+        );
+      },
+      onSettings: () {
+        Navigator.pop(context);
+        Navigator.push<void>(
+          context,
+          MaterialPageRoute(builder: (_) => const SettingsScreen()),
+        );
+      },
+    ),
   );
 }
 
@@ -90,7 +127,13 @@ void _showSettings(BuildContext context, WidgetRef ref) {
 
 class _SettingsSheet extends StatelessWidget {
   final VoidCallback onNewRun;
-  const _SettingsSheet({required this.onNewRun});
+  final VoidCallback onSaveSlot;
+  final VoidCallback onSettings;
+  const _SettingsSheet({
+    required this.onNewRun,
+    required this.onSaveSlot,
+    required this.onSettings,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -124,6 +167,20 @@ class _SettingsSheet extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 24),
+            _SettingsTile(
+              icon: Icons.save_outlined,
+              label: '세이브 슬롯',
+              color: const Color(0xFFF59E0B),
+              onTap: onSaveSlot,
+            ),
+            const SizedBox(height: 12),
+            _SettingsTile(
+              icon: Icons.tune,
+              label: '설정',
+              color: const Color(0xFF64B5F6),
+              onTap: onSettings,
+            ),
+            const SizedBox(height: 12),
             _SettingsTile(
               icon: Icons.refresh,
               label: '새 런 시작',
@@ -189,10 +246,12 @@ class _GothicAppBar extends StatelessWidget {
   final RunState run;
   final VoidCallback onSettingsTap;
   final VoidCallback onLegendTap;
+  final VoidCallback onDeckTap;
   const _GothicAppBar({
     required this.run,
     required this.onSettingsTap,
     required this.onLegendTap,
+    required this.onDeckTap,
   });
 
   @override
@@ -272,6 +331,7 @@ class _GothicAppBar extends StatelessWidget {
               run: run,
               onSettingsTap: onSettingsTap,
               onLegendTap: onLegendTap,
+              onDeckTap: onDeckTap,
             ),
 
             // 하단 구분선
@@ -304,10 +364,12 @@ class _RunStatusBar extends StatelessWidget {
   final RunState run;
   final VoidCallback onSettingsTap;
   final VoidCallback onLegendTap;
+  final VoidCallback onDeckTap;
   const _RunStatusBar({
     required this.run,
     required this.onSettingsTap,
     required this.onLegendTap,
+    required this.onDeckTap,
   });
 
   @override
@@ -331,11 +393,14 @@ class _RunStatusBar extends StatelessWidget {
             label: '${run.playerHp} / ${Player.maxHp}',
           ),
           const SizedBox(width: 16),
-          // 덱
-          _StatChip(
-            icon: Icons.style,
-            color: const Color(0xFF64B5F6),
-            label: '${run.deck.length}장',
+          // 덱 — 탭 시 덱 목록 표시
+          GestureDetector(
+            onTap: onDeckTap,
+            child: _StatChip(
+              icon: Icons.style,
+              color: const Color(0xFF64B5F6),
+              label: '${run.deck.length}장',
+            ),
           ),
           const Spacer(),
           // 골드

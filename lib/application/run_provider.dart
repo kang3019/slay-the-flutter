@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:math';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -104,6 +105,133 @@ class RunState {
     this.currentEvent,
     this.currentTreasureRelic,
   });
+
+  // ── 직렬화 ────────────────────────────────────────────────────────────
+
+  /// 세이브 슬롯 저장을 위한 JSON 직렬화.
+  Map<String, dynamic> toJson() => {
+    'phase': phase.name,
+    'floor': floor,
+    'playerHp': playerHp,
+    'gold': gold,
+    'deck': deck.map(_cardToJson).toList(),
+    'mapNodes': mapNodes.map(_nodeToJson).toList(),
+    'currentNodeId': currentNodeId,
+    'visitedNodeIds': visitedNodeIds,
+    'isRunOver': isRunOver,
+    'rewardCards': rewardCards.map(_cardToJson).toList(),
+    'relics': relics.map((r) => r.id).toList(),
+    'currentEvent': currentEvent?.id,
+    'currentTreasureRelic': currentTreasureRelic?.id,
+  };
+
+  static Map<String, dynamic> _cardToJson(GameCard c) => {
+    'type': c.type.name,
+    'isUpgraded': c.isUpgraded,
+  };
+
+  static Map<String, dynamic> _nodeToJson(MapNode n) => {
+    'id': n.id,
+    'type': n.type.name,
+    'floor': n.floor,
+    'connectedNodeIds': n.connectedNodeIds,
+  };
+
+  /// 세이브 슬롯 로드를 위한 JSON 역직렬화.
+  static RunState fromJson(Map<String, dynamic> json) {
+    GameCard cardFromJson(Map<String, dynamic> j) {
+      final type       = CardType.values.byName(j['type'] as String);
+      final isUpgraded = j['isUpgraded'] as bool? ?? false;
+      final base       = _cardForType(type);
+      return isUpgraded ? Cards.upgrade(base) : base;
+    }
+
+    MapNode nodeFromJson(Map<String, dynamic> j) => MapNode(
+      id: j['id'] as String,
+      type: NodeType.values.byName(j['type'] as String),
+      floor: j['floor'] as int,
+      connectedNodeIds: List<String>.from(j['connectedNodeIds'] as List),
+    );
+
+    final relicIds = List<String>.from(json['relics'] as List? ?? []);
+    final relics   = relicIds
+        .map((id) {
+          try { return GameRelics.all.firstWhere((r) => r.id == id); }
+          catch (_) { return null; }
+        })
+        .whereType<Relic>()
+        .toList();
+
+    final eventId = json['currentEvent'] as String?;
+    GameEvent? event;
+    if (eventId != null) {
+      try { event = GameEvents.all.firstWhere((e) => e.id == eventId); }
+      catch (_) {}
+    }
+
+    final treasureId = json['currentTreasureRelic'] as String?;
+    Relic? treasure;
+    if (treasureId != null) {
+      try { treasure = GameRelics.all.firstWhere((r) => r.id == treasureId); }
+      catch (_) {}
+    }
+
+    final rawDeck   = (json['deck']        as List?)?.cast<Map<String, dynamic>>() ?? [];
+    final rawNodes  = (json['mapNodes']    as List?)?.cast<Map<String, dynamic>>() ?? [];
+    final rawReward = (json['rewardCards'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+
+    return RunState(
+      phase:              RunPhase.values.byName(json['phase'] as String? ?? 'map'),
+      floor:              json['floor']    as int? ?? -1,
+      playerHp:           json['playerHp'] as int? ?? Player.maxHp,
+      gold:               json['gold']     as int? ?? 0,
+      deck:               rawDeck.map(cardFromJson).toList(),
+      mapNodes:           rawNodes.map(nodeFromJson).toList(),
+      currentNodeId:      json['currentNodeId'] as String?,
+      visitedNodeIds:     List<String>.from(json['visitedNodeIds'] as List? ?? []),
+      isRunOver:          json['isRunOver'] as bool? ?? false,
+      rewardCards:        rawReward.map(cardFromJson).toList(),
+      relics:             relics,
+      currentEvent:       event,
+      currentTreasureRelic: treasure,
+    );
+  }
+
+  /// 세이브 슬롯 저장 시 JSON 문자열로 인코딩한다.
+  String toJsonString() => jsonEncode(toJson());
+
+  /// JSON 문자열에서 [RunState]를 복원한다.
+  static RunState fromJsonString(String s) =>
+      fromJson(jsonDecode(s) as Map<String, dynamic>);
+
+  static GameCard _cardForType(CardType type) => switch (type) {
+    CardType.strike          => Cards.strike,
+    CardType.bash            => Cards.bash,
+    CardType.swiftCut        => Cards.swiftCut,
+    CardType.defend          => Cards.defend,
+    CardType.ironWall        => Cards.ironWall,
+    CardType.focus           => Cards.focus,
+    CardType.recover         => Cards.recover,
+    CardType.rageBurst       => Cards.rageBurst,
+    CardType.toxicJab        => Cards.toxicJab,
+    CardType.regroup         => Cards.regroup,
+    CardType.crushingBlow    => Cards.crushingBlow,
+    CardType.fury            => Cards.fury,
+    CardType.tripleSlash     => Cards.tripleSlash,
+    CardType.quickMend       => Cards.quickMend,
+    CardType.swiftGuard      => Cards.swiftGuard,
+    CardType.exploitWeakness => Cards.exploitWeakness,
+    CardType.sharpen         => Cards.sharpen,
+    CardType.weakSlash       => Cards.weakSlash,
+    CardType.blockStrike     => Cards.blockStrike,
+    CardType.bloodRush       => Cards.bloodRush,
+    CardType.devilsDeal      => Cards.devilsDeal,
+    CardType.battleCry       => Cards.battleCry,
+    CardType.indomitable     => Cards.indomitable,
+    CardType.comboStrike     => Cards.comboStrike,
+    CardType.gamble          => Cards.gamble,
+    CardType.poisonDart      => Cards.poisonDart,
+  };
 
   // ── 파생 값 (getter) ───────────────────────────────────────────────────
 
@@ -460,6 +588,11 @@ class RunNotifier extends Notifier<RunState> {
   /// 현재 런을 종료하고 초기 상태(새 런)로 리셋한다.
   void startNewRun() {
     state = _initialState();
+  }
+
+  /// 세이브 슬롯에서 로드된 [savedState]를 현재 런으로 복원한다.
+  void restoreFromSaveSlot(RunState savedState) {
+    state = savedState;
   }
 
   // ── 내부 헬퍼 ──────────────────────────────────────────────────────────

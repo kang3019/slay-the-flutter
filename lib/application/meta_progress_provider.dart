@@ -1,20 +1,16 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../data/local_storage.dart';
 import '../domain/entities/meta_progress.dart';
 
-/// SharedPreferences 인스턴스 Provider.
-///
-/// main.dart의 ProviderScope에서 overrideWithValue로 주입한다.
-/// 테스트에서는 mock 인스턴스로 override한다.
-final sharedPreferencesProvider = Provider<SharedPreferences>((ref) {
-  throw UnimplementedError('sharedPreferencesProvider must be overridden in ProviderScope');
-});
-
 /// LocalStorage 인스턴스 Provider.
+///
+/// main.dart의 ProviderScope에서 반드시 overrideWithValue로 주입한다.
+/// 테스트에서는 mock SharedPreferences로 생성한 인스턴스로 override한다.
 final localStorageProvider = Provider<LocalStorage>((ref) {
-  return LocalStorage(ref.watch(sharedPreferencesProvider));
+  throw UnimplementedError(
+    'localStorageProvider는 ProviderScope에서 overrideWithValue로 주입해야 합니다.',
+  );
 });
 
 /// 메타 진행 상태 Provider.

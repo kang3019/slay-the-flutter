@@ -1,0 +1,16 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Flutter Web (Chrome, 데이터 유지)",
+      "type": "dart",
+      "request": "launch",
+      "program": "lib/main.dart",
+      "args": [
+        "-d", "chrome",
+        "--web-port", "5000",
+        "--web-browser-flag", "--user-data-dir=${env:LOCALAPPDATA}\\flutter_chrome_dev"
+      ]
+    }
+  ]
+}

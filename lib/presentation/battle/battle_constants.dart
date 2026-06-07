@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../domain/entities/card.dart';
+import '../../domain/entities/meta_progress.dart';
+import '../../domain/map/node_type.dart';
 
 /// 전투 화면 문자열 상수.
 abstract final class BattleStrings {
@@ -59,15 +61,15 @@ abstract final class BattleStrings {
       };
 }
 
-/// SPECS.md: 전투 승리 시 지급되는 XP 보상.
+/// 전투 결과 XP 표시 유틸리티 — 도메인 상수([MetaProgress])를 UI에 연결한다.
 abstract final class BattleXpRewards {
-  static const int stageClear = 30;
-  static const int runClear   = 100;
-
-  /// 스테이지 3(보스)는 런 클리어로 100 XP, 나머지는 30 XP.
-  static int xpForStage(int stage) => stage == 3 ? runClear : stageClear;
+  /// 노드 타입·승패에 따른 획득 XP. [MetaProgress.xpForBattle]로 위임.
+  static int xpFor(NodeType nodeType, {required bool isVictory}) =>
+      MetaProgress.xpForBattle(nodeType, isVictory: isVictory);
 
   static String xpGainedLabel(int xp) => '+$xp XP';
+
+  static String xpLostLabel(int xp) => '+$xp XP (패배 보정)';
 }
 
 /// SPECS.md §6: 전투 승리 시 지급되는 골드 보상.

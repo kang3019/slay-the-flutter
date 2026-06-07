@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:slay_the_flutter/application/meta_progress_provider.dart';
+import 'package:slay_the_flutter/data/local_storage.dart';
 import 'package:slay_the_flutter/main.dart';
 import 'package:slay_the_flutter/presentation/map/map_constants.dart';
 
@@ -12,7 +13,9 @@ void main() {
 
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
+        overrides: [
+          localStorageProvider.overrideWithValue(LocalStorage(prefs)),
+        ],
         child: const App(),
       ),
     );

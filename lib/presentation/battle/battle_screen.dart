@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -6,6 +8,7 @@ import '../../application/meta_progress_provider.dart';
 import '../../application/run_provider.dart';
 import '../../domain/battle_engine.dart';
 import '../../domain/entities/card.dart';
+import '../../domain/entities/meta_progress.dart';
 import '../../domain/entities/relic.dart';
 import '../../domain/map/node_type.dart';
 import 'battle_constants.dart';
@@ -28,6 +31,17 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
   /// 공격 카드를 낼 때마다 값을 증가시켜 캐릭터 애니메이션을 트리거한다.
   final ValueNotifier<int> _attackTrigger = ValueNotifier(0);
 
+  /// XP 계산(async)이 진행 중인 동안 true — 결과 오버레이를 가려 레이스 컨디션을 방지.
+  bool _isProcessingXp = false;
+
+  /// 레벨업 발생 시 보상 카드 선택 오버레이 표시용 상태.
+  LevelUpResult? _pendingLevelUp;
+
+  /// 레벨업 보상 풀에서 무작위로 뽑은 3장.
+  List<GameCard> _levelUpRewardCards = const [];
+
+  final _random = Random();
+
   @override
   void dispose() {
     _attackTrigger.dispose();
@@ -42,21 +56,59 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
     ref.read(battleProvider.notifier).playCard(card);
   }
 
+  NodeType _currentNodeType() =>
+      ref.read(runProvider).currentNode?.type ?? NodeType.monster;
+
   @override
   Widget build(BuildContext context) {
     final state    = ref.watch(battleProvider);
     final runState = ref.watch(runProvider);
 
-    ref.listen<BattleState>(battleProvider, (prev, next) {
-      if (next.isBattleOver &&
-          next.result == BattleResult.playerWon &&
-          (prev == null || !prev.isBattleOver)) {
-        ref.read(metaProgressProvider.notifier)
-            .addXp(BattleXpRewards.xpForStage(next.stage));
+    // ── 전투 종료 감지: XP 지급 + 레벨업 보상 트리거 ──────────────────────
+    ref.listen<BattleState>(battleProvider, (prev, next) async {
+      if (!next.isBattleOver || (prev?.isBattleOver ?? false)) return;
+
+      // XP 처리 시작: 결과 오버레이를 숨겨 조기 탭을 방지한다.
+      if (mounted) setState(() => _isProcessingXp = true);
+
+      try {
+        final nodeType  = _currentNodeType();
+        final isVictory = next.result == BattleResult.playerWon;
+        final xp        = BattleXpRewards.xpFor(nodeType, isVictory: isVictory);
+
+        if (xp > 0) {
+          final levelUpResult =
+              await ref.read(metaProgressProvider.notifier).addXp(xp);
+
+          if (!mounted) return;
+
+          // 일반·엘리트 승리에서 레벨업 시 보상 카드 제공.
+          // 보스 또는 패배 시는 런이 종료 또는 무의미하므로 생략.
+          if (levelUpResult.didLevelUp && isVictory && nodeType != NodeType.boss) {
+            final pool = List<GameCard>.of(
+              MetaProgress.rewardPoolForLevel(levelUpResult.newLevel),
+            )..shuffle(_random);
+            setState(() {
+              _isProcessingXp     = false;
+              _pendingLevelUp     = levelUpResult;
+              _levelUpRewardCards = pool.take(3).toList();
+            });
+            return;
+          }
+        }
+      } catch (_) {
+        // XP 저장 실패 시에도 전투 결과 오버레이는 반드시 표시한다.
       }
+
+      if (mounted) setState(() => _isProcessingXp = false);
     });
 
     final isBossBattle = runState.currentNode?.type == NodeType.boss;
+    final nodeType     = runState.currentNode?.type ?? NodeType.monster;
+    final isVictory    = state.result == BattleResult.playerWon;
+    final xpGained     = state.isBattleOver
+        ? BattleXpRewards.xpFor(nodeType, isVictory: isVictory)
+        : 0;
 
     return Scaffold(
       body: Stack(
@@ -131,10 +183,10 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
               ),
             ),
           ),
-          if (state.isBattleOver)
+          if (state.isBattleOver && !_isProcessingXp && _pendingLevelUp == null)
             _BattleResultOverlay(
               result: state.result!,
-              xpGained: BattleXpRewards.xpForStage(state.stage),
+              xpGained: xpGained,
               goldEarned: BattleGoldRewards.forStage(state.stage),
               isBossBattle: isBossBattle,
               onReturnToMap: () => ref.read(runProvider.notifier).startReward(
@@ -142,6 +194,20 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
                     goldEarned: BattleGoldRewards.forStage(state.stage),
                   ),
               onNewRun: () => ref.read(runProvider.notifier).startNewRun(),
+            ),
+          // ── 레벨업 보상 카드 선택 오버레이 ──────────────────────────────
+          if (_pendingLevelUp != null)
+            _LevelUpRewardOverlay(
+              result: _pendingLevelUp!,
+              rewardCards: _levelUpRewardCards,
+              onCardSelected: (card) {
+                ref.read(runProvider.notifier).addCardToDeck(card);
+                setState(() => _pendingLevelUp = null);
+                // 레벨업 보상 선택 후 일반 결과 오버레이로 이동.
+                // 다음 build()에서 _pendingLevelUp == null 이 되어
+                // _BattleResultOverlay 가 표시된다.
+              },
+              onSkip: () => setState(() => _pendingLevelUp = null),
             ),
         ],
       ),
@@ -501,11 +567,20 @@ class _BattleResultOverlay extends StatelessWidget {
                     letterSpacing: 1,
                   ),
                 ),
-                if (_isVictory) ...[
+                // ── XP 표시 (승리·패배 모두) ──────────────────────────
+                if (xpGained > 0) ...[
                   const SizedBox(height: 8),
                   Text(
-                    BattleXpRewards.xpGainedLabel(xpGained),
-                    style: const TextStyle(color: Color(0xFF66BB6A), fontSize: 16, fontWeight: FontWeight.bold),
+                    _isVictory
+                        ? BattleXpRewards.xpGainedLabel(xpGained)
+                        : BattleXpRewards.xpLostLabel(xpGained),
+                    style: TextStyle(
+                      color: _isVictory
+                          ? const Color(0xFF66BB6A)
+                          : const Color(0xFF90A4AE),
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ],
                 if (_isVictory && !isBossBattle && goldEarned > 0) ...[
@@ -541,6 +616,133 @@ class _BattleResultOverlay extends StatelessWidget {
 
   String get _buttonLabel =>
       _isVictory && !isBossBattle ? BattleStrings.selectReward : BattleStrings.restart;
+}
+
+/// 레벨업 보상 카드 선택 오버레이.
+///
+/// 일반·엘리트 전투 승리 후 레벨업 시 표시되며, 3장 중 1장을 덱에 추가한다.
+class _LevelUpRewardOverlay extends StatelessWidget {
+  final LevelUpResult result;
+  final List<GameCard> rewardCards;
+  final ValueChanged<GameCard> onCardSelected;
+  final VoidCallback onSkip;
+
+  const _LevelUpRewardOverlay({
+    required this.result,
+    required this.rewardCards,
+    required this.onCardSelected,
+    required this.onSkip,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ColoredBox(
+      color: const Color(0xCC000000),
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // ── 레벨업 타이틀 ─────────────────────────────────────
+              const Icon(Icons.star, size: 48, color: Color(0xFFFFD700)),
+              const SizedBox(height: 8),
+              Text(
+                'LEVEL UP!  Lv.${result.previousLevel} → Lv.${result.newLevel}',
+                style: const TextStyle(
+                  color: Color(0xFFFFD700),
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1.2,
+                ),
+              ),
+              const SizedBox(height: 4),
+              const Text(
+                '덱에 추가할 카드를 선택하세요',
+                style: TextStyle(color: Colors.white70, fontSize: 14),
+              ),
+              const SizedBox(height: 24),
+              // ── 카드 3장 ─────────────────────────────────────────
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: rewardCards.map((card) => Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  child: _LevelUpCardItem(
+                    card: card,
+                    onTap: () => onCardSelected(card),
+                  ),
+                )).toList(),
+              ),
+              const SizedBox(height: 20),
+              TextButton(
+                onPressed: onSkip,
+                child: const Text(
+                  '건너뛰기',
+                  style: TextStyle(color: Colors.white38, fontSize: 13),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _LevelUpCardItem extends StatelessWidget {
+  final GameCard card;
+  final VoidCallback onTap;
+  const _LevelUpCardItem({required this.card, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final color  = BattleColors.forCard(card.effectType);
+    final border = BattleColors.borderForCard(card.effectType);
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 90,
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 14),
+        decoration: BoxDecoration(
+          color: const Color(0xFF0D0A07),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: border, width: 1.5),
+          boxShadow: [BoxShadow(color: color.withValues(alpha: 0.4), blurRadius: 10)],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.auto_awesome, color: color, size: 22),
+            const SizedBox(height: 6),
+            Text(
+              card.name,
+              textAlign: TextAlign.center,
+              style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              BattleStrings.cardEffect(card),
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.white70, fontSize: 10),
+            ),
+            const SizedBox(height: 6),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                card.cost < 0 ? 'X' : '${card.cost} EP',
+                style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w600),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 /// 직전 턴 종료 시 발동된 유물 효과를 황금 태그로 나열한다.

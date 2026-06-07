@@ -349,7 +349,7 @@ class _ResultView extends StatelessWidget {
 
 /// 이벤트 결과 화면에서 획득한 카드를 카드 디자인 그대로 보여주는 섹션.
 class _CardAcquiredSection extends StatelessWidget {
-  static const double _scale = 1.35;
+  static const double _scale = 0.82;
 
   final GameCard card;
   const _CardAcquiredSection({required this.card});
@@ -376,18 +376,20 @@ class _CardAcquiredSection extends StatelessWidget {
           ],
         ),
 
-        const SizedBox(height: 16),
+        const SizedBox(height: 12),
 
         // ── 카드 위젯 ─────────────────────────────────────────────────────
-        // SizedBox로 스케일된 크기만큼 레이아웃 공간을 확보한 뒤 Transform.scale로 확대.
-        // canPlay: true로 불투명도를 100%로 유지한다.
         Center(
           child: SizedBox(
             width:  CardWidget.cardWidth  * _scale,
             height: CardWidget.cardHeight * _scale,
-            child: Transform.scale(
-              scale: _scale,
-              child: CardWidget(card: card, canPlay: true),
+            child: FittedBox(
+              fit: BoxFit.contain,
+              child: SizedBox(
+                width:  CardWidget.cardWidth,
+                height: CardWidget.cardHeight,
+                child: CardWidget(card: card, canPlay: true),
+              ),
             ),
           ),
         ),
