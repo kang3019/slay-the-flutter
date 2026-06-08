@@ -763,15 +763,15 @@ class _MonsterBackgroundImage extends StatelessWidget {
 
     final screenH = MediaQuery.of(context).size.height;
     return Positioned(
-      top: screenH * 0.08,
+      bottom: screenH * 0.26,
       left: 0,
       right: 0,
       child: IgnorePointer(
         child: Align(
-          alignment: Alignment.topCenter,
+          alignment: Alignment.bottomCenter,
           child: Image.asset(
             imagePath,
-            height: screenH * 0.42,
+            height: screenH * 0.33,
             fit: BoxFit.contain,
             filterQuality: FilterQuality.medium,
           ),

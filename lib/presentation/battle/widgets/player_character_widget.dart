@@ -72,7 +72,7 @@ class _PlayerCharacterWidgetState extends State<PlayerCharacterWidget>
       child: Image.asset(
         _isAttacking ? PlayerAssets.attack : PlayerAssets.idle,
         width: double.infinity,
-        height: 280,
+        height: 360,
         fit: BoxFit.contain,
         alignment: const Alignment(-0.07, 1.0),
         filterQuality: FilterQuality.medium,
