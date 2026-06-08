@@ -186,6 +186,45 @@ flutter run -d <device-id>
 
 ---
 
+## Web(Chrome) 실행 — 세이브 슬롯 데이터 유지
+
+현재 팀은 **Flutter Web(Chrome)** 환경에서 디버깅 모드(`flutter run`)로 개발합니다.
+
+> ⚠️ **세이브 슬롯 데이터를 유지하려면 디버깅 모드 실행 시 반드시 아래 방법 중 하나를 사용해야 합니다.**
+>
+> `flutter run -d chrome` 기본 명령어는 실행할 때마다 임시 Chrome 프로필을 새로 생성하므로
+> `localStorage`(세이브 슬롯·레벨·XP 데이터)가 매번 초기화됩니다.
+> 배포된 프로덕션 빌드에서는 이 문제가 없습니다.
+
+### 방법 A — VS Code F5 실행 (권장)
+
+`.vscode/launch.json`에 **"Flutter Web (Chrome, 데이터 유지)"** 구성이 등록되어 있습니다.
+VS Code에서 **F5** → 해당 구성 선택.
+
+### 방법 B — PowerShell 스크립트
+
+프로젝트 루트의 `run_web.ps1`을 실행합니다.
+
+```powershell
+.\run_web.ps1
+```
+
+내부적으로 고정 Chrome 프로필 디렉터리(`%LOCALAPPDATA%\flutter_chrome_dev`)를 지정해
+실행 간 `localStorage` 데이터를 유지합니다.
+
+### 방법 C — 직접 명령어 입력
+
+```powershell
+flutter run -d chrome --web-browser-flag "--user-data-dir=$env:LOCALAPPDATA\flutter_chrome_dev" --web-port=5000
+```
+
+> **왜 이렇게 해야 하나?**
+> Flutter Web은 `shared_preferences`를 브라우저 `localStorage`에 저장합니다.
+> `flutter run -d chrome`은 매번 새로운 임시 디렉터리로 Chrome을 열기 때문에
+> `localStorage`가 초기화됩니다. `--user-data-dir`로 고정 경로를 지정하면 해결됩니다.
+
+---
+
 ## 자주 쓰는 명령어
 
 ```bash

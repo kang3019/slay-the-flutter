@@ -527,6 +527,7 @@ void main() {
         const healChoice = EventChoice(
           label: '테스트',
           effectDescription: 'HP +15',
+          resultDescription: '',
           effect: EventEffect(hpDelta: 15),
         );
         container.read(runProvider.notifier).resolveEvent(healChoice);
@@ -540,6 +541,7 @@ void main() {
         const healChoice = EventChoice(
           label: '테스트',
           effectDescription: 'HP +999',
+          resultDescription: '',
           effect: EventEffect(hpDelta: 999),
         );
         container.read(runProvider.notifier).resolveEvent(healChoice);
@@ -551,6 +553,7 @@ void main() {
         const damageChoice = EventChoice(
           label: '테스트',
           effectDescription: 'HP -8',
+          resultDescription: '',
           effect: EventEffect(hpDelta: -8),
         );
         container.read(runProvider.notifier).resolveEvent(damageChoice);
@@ -562,6 +565,7 @@ void main() {
         const damageChoice = EventChoice(
           label: '테스트',
           effectDescription: 'HP -9999',
+          resultDescription: '',
           effect: EventEffect(hpDelta: -9999),
         );
         container.read(runProvider.notifier).resolveEvent(damageChoice);
@@ -573,6 +577,7 @@ void main() {
         const goldChoice = EventChoice(
           label: '테스트',
           effectDescription: '골드 +25',
+          resultDescription: '',
           effect: EventEffect(goldDelta: 25),
         );
         container.read(runProvider.notifier).resolveEvent(goldChoice);
@@ -585,6 +590,7 @@ void main() {
         const cardChoice = EventChoice(
           label: '테스트',
           effectDescription: '카드 획득',
+          resultDescription: '',
           effect: EventEffect(addRandomCard: true),
         );
         container.read(runProvider.notifier).resolveEvent(cardChoice);
@@ -596,6 +602,7 @@ void main() {
         const choice = EventChoice(
           label: '테스트',
           effectDescription: 'HP +15',
+          resultDescription: '',
           effect: EventEffect(hpDelta: 15),
         );
         container.read(runProvider.notifier).resolveEvent(choice);

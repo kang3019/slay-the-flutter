@@ -2,17 +2,21 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:slay_the_flutter/application/meta_progress_provider.dart';
+import 'package:slay_the_flutter/data/local_storage.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
+  late SharedPreferences prefs;
   late ProviderContainer container;
 
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
-    final prefs = await SharedPreferences.getInstance();
+    prefs = await SharedPreferences.getInstance();
     container = ProviderContainer(
-      overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
+      overrides: [
+        localStorageProvider.overrideWithValue(LocalStorage(prefs)),
+      ],
     );
   });
 
@@ -31,16 +35,17 @@ void main() {
     });
 
     test('저장된 값이 있으면 해당 값을 불러온다', () async {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setInt('player_level', 3);
-      await prefs.setInt('player_xp', 300);
-      await prefs.setStringList(
-        'unlocked_cards',
-        ['strike', 'defend', 'bash', 'swiftCut', 'ironWall', 'focus'],
+      await prefs.setInt('meta_level', 3);
+      await prefs.setInt('meta_xp', 300);
+      await prefs.setString(
+        'meta_unlocked_cards',
+        '["strike","defend","rageBurst","quickMend","swiftCut","regroup"]',
       );
 
       final freshContainer = ProviderContainer(
-        overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
+        overrides: [
+          localStorageProvider.overrideWithValue(LocalStorage(prefs)),
+        ],
       );
       addTearDown(freshContainer.dispose);
 
@@ -75,7 +80,7 @@ void main() {
 
       expect(result.didLevelUp, isTrue);
       expect(result.newLevel, equals(2));
-      expect(result.newlyUnlockedCards, containsAll(['bash', 'swiftCut']));
+      expect(result.newlyUnlockedCards, containsAll(['rageBurst', 'quickMend']));
     });
 
     test('레벨업 후 provider 상태가 갱신된다', () async {
@@ -83,31 +88,28 @@ void main() {
 
       final state = container.read(metaProgressProvider);
       expect(state.level, equals(2));
-      expect(state.unlockedCardTypes, containsAll(['bash', 'swiftCut']));
+      expect(state.unlockedCardTypes, containsAll(['rageBurst', 'quickMend']));
     });
   });
 
   group('MetaProgressNotifier — 영속성', () {
-    test('addXp 후 player_xp가 SharedPreferences에 저장된다', () async {
+    test('addXp 후 prefs에 xp가 저장된다', () async {
       await container.read(metaProgressProvider.notifier).addXp(100);
 
-      final prefs = await SharedPreferences.getInstance();
-      expect(prefs.getInt('player_xp'), equals(100));
+      expect(prefs.getInt('meta_xp'), equals(100));
     });
 
-    test('addXp 레벨업 시 player_level이 SharedPreferences에 저장된다', () async {
+    test('addXp 레벨업 시 prefs에 level이 저장된다', () async {
       await container.read(metaProgressProvider.notifier).addXp(100);
 
-      final prefs = await SharedPreferences.getInstance();
-      expect(prefs.getInt('player_level'), equals(2));
+      expect(prefs.getInt('meta_level'), equals(2));
     });
 
-    test('addXp 레벨업 시 unlocked_cards가 SharedPreferences에 저장된다', () async {
+    test('addXp 레벨업 시 prefs에 unlocked_cards가 저장된다', () async {
       await container.read(metaProgressProvider.notifier).addXp(100);
 
-      final prefs = await SharedPreferences.getInstance();
-      final cards = prefs.getStringList('unlocked_cards');
-      expect(cards, containsAll(['bash', 'swiftCut']));
+      final storage = LocalStorage(prefs);
+      expect(storage.unlockedCards, containsAll(['rageBurst', 'quickMend']));
     });
   });
 

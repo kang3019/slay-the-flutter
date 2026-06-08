@@ -3,16 +3,18 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'application/meta_progress_provider.dart';
+import 'data/local_storage.dart';
 import 'presentation/app_router.dart';
 import 'presentation/battle/battle_constants.dart';
 
-void main() async {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final prefs = await SharedPreferences.getInstance();
-
   runApp(
     ProviderScope(
-      overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
+      overrides: [
+        localStorageProvider.overrideWithValue(LocalStorage(prefs)),
+      ],
       child: const App(),
     ),
   );

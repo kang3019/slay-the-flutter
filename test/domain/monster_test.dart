@@ -156,7 +156,9 @@ void main() {
     });
 
     test('4턴: 두 번째 분비로 힘 6 누적', () {
-      for (var i = 0; i < 4; i++) m.executeAction(p);
+      for (var i = 0; i < 4; i++) {
+        m.executeAction(p);
+      }
       expect(m.strength, equals(6));
     });
 
@@ -240,7 +242,9 @@ void main() {
     });
 
     test('4턴: 독침으로 돌아옴 (독기 분출 반복 없음)', () {
-      for (var i = 0; i < 3; i++) m.executeAction(p);
+      for (var i = 0; i < 3; i++) {
+        m.executeAction(p);
+      }
       expect(m.currentIntent.label, equals('독침'));
     });
   });
@@ -342,7 +346,9 @@ void main() {
     });
 
     test('4턴: 다시 장갑 강화로 순환', () {
-      for (var i = 0; i < 3; i++) m.executeAction(p);
+      for (var i = 0; i < 3; i++) {
+        m.executeAction(p);
+      }
       expect(m.currentIntent.intentType, equals(MonsterIntentType.defend));
     });
   });

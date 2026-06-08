@@ -5,26 +5,25 @@ import 'package:slay_the_flutter/data/local_storage.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  setUp(() {
+  late SharedPreferences prefs;
+  late LocalStorage storage;
+
+  setUp(() async {
     SharedPreferences.setMockInitialValues({});
+    prefs = await SharedPreferences.getInstance();
+    storage = LocalStorage(prefs);
   });
 
   group('LocalStorage 기본값 — 저장 데이터 없을 때', () {
-    test('playerLevel 기본값 = 1', () async {
-      final prefs = await SharedPreferences.getInstance();
-      final storage = LocalStorage(prefs);
+    test('playerLevel 기본값 = 1', () {
       expect(storage.playerLevel, equals(1));
     });
 
-    test('playerXp 기본값 = 0', () async {
-      final prefs = await SharedPreferences.getInstance();
-      final storage = LocalStorage(prefs);
+    test('playerXp 기본값 = 0', () {
       expect(storage.playerXp, equals(0));
     });
 
-    test('unlockedCards 기본값 = [strike, defend]', () async {
-      final prefs = await SharedPreferences.getInstance();
-      final storage = LocalStorage(prefs);
+    test('unlockedCards 기본값 = [strike, defend]', () {
       expect(storage.unlockedCards, containsAll(['strike', 'defend']));
       expect(storage.unlockedCards.length, equals(2));
     });
@@ -32,22 +31,16 @@ void main() {
 
   group('LocalStorage 쓰기 후 읽기', () {
     test('setPlayerLevel 후 playerLevel 반영', () async {
-      final prefs = await SharedPreferences.getInstance();
-      final storage = LocalStorage(prefs);
       await storage.setPlayerLevel(3);
       expect(storage.playerLevel, equals(3));
     });
 
     test('setPlayerXp 후 playerXp 반영', () async {
-      final prefs = await SharedPreferences.getInstance();
-      final storage = LocalStorage(prefs);
       await storage.setPlayerXp(250);
       expect(storage.playerXp, equals(250));
     });
 
     test('setUnlockedCards 후 unlockedCards 반영', () async {
-      final prefs = await SharedPreferences.getInstance();
-      final storage = LocalStorage(prefs);
       await storage.setUnlockedCards(['strike', 'defend', 'bash', 'swiftCut']);
       final cards = storage.unlockedCards;
       expect(cards, containsAll(['strike', 'defend', 'bash', 'swiftCut']));
@@ -55,8 +48,6 @@ void main() {
     });
 
     test('여러 값을 동시에 저장하고 올바르게 읽는다', () async {
-      final prefs = await SharedPreferences.getInstance();
-      final storage = LocalStorage(prefs);
       await storage.setPlayerLevel(2);
       await storage.setPlayerXp(150);
       await storage.setUnlockedCards(['strike', 'defend', 'bash', 'swiftCut']);
@@ -69,9 +60,6 @@ void main() {
 
   group('LocalStorage.clear', () {
     test('clear 후 모든 값이 기본값으로 복구된다', () async {
-      final prefs = await SharedPreferences.getInstance();
-      final storage = LocalStorage(prefs);
-
       await storage.setPlayerLevel(4);
       await storage.setPlayerXp(500);
       await storage.setUnlockedCards(
