@@ -12,9 +12,7 @@ Future<void> main() async {
   final prefs = await SharedPreferences.getInstance();
   runApp(
     ProviderScope(
-      overrides: [
-        localStorageProvider.overrideWithValue(LocalStorage(prefs)),
-      ],
+      overrides: [localStorageProvider.overrideWithValue(LocalStorage(prefs))],
       child: const App(),
     ),
   );

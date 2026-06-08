@@ -4,12 +4,13 @@ import '../../../domain/entities/monster.dart';
 import '../../shared/hp_bar_widget.dart';
 import '../battle_constants.dart';
 
-/// 몬스터의 이름·체력·다음 행동 의도·상태 이상을 표시한다.
+/// 몬스터의 이미지·이름·체력·다음 행동 의도·상태 이상을 표시한다.
 class MonsterWidget extends StatelessWidget {
   final int hp;
   final int maxHp;
   final int block;
   final String name;
+  final MonsterType monsterType;
   final MonsterIntentType intentType;
   final String intentLabel;
   final String intentDescription;
@@ -24,6 +25,7 @@ class MonsterWidget extends StatelessWidget {
     required this.maxHp,
     required this.block,
     required this.name,
+    required this.monsterType,
     required this.intentType,
     required this.intentLabel,
     required this.intentDescription,
@@ -49,7 +51,7 @@ class MonsterWidget extends StatelessWidget {
             Row(
               children: [
                 Text(
-                  '👹 $name',
+                  name,
                   style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,

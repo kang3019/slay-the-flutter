@@ -9,6 +9,7 @@ import '../../application/run_provider.dart';
 import '../../domain/battle_engine.dart';
 import '../../domain/entities/card.dart';
 import '../../domain/entities/meta_progress.dart';
+import '../../domain/entities/monster.dart';
 import '../../domain/entities/relic.dart';
 import '../../domain/map/node_type.dart';
 import 'battle_constants.dart';
@@ -27,33 +28,68 @@ class BattleScreen extends ConsumerStatefulWidget {
   ConsumerState<BattleScreen> createState() => _BattleScreenState();
 }
 
-class _BattleScreenState extends ConsumerState<BattleScreen> {
-  /// 공격 카드를 낼 때마다 값을 증가시켜 캐릭터 애니메이션을 트리거한다.
-  final ValueNotifier<int> _attackTrigger = ValueNotifier(0);
+class _BattleScreenState extends ConsumerState<BattleScreen>
+    with SingleTickerProviderStateMixin {
+  final ValueNotifier<int>  _attackTrigger      = ValueNotifier(0);
+  final ValueNotifier<int>  _monsterHitTrigger  = ValueNotifier(0);
+  final ValueNotifier<bool> _monsterDeadTrigger = ValueNotifier(false);
 
-  /// XP 계산(async)이 진행 중인 동안 true — 결과 오버레이를 가려 레이스 컨디션을 방지.
+  late final AnimationController _shakeCtrl;
+  late final Animation<double>   _shakeAnim;
+  bool _showRedBorder      = false;
+  bool _pendingEndTurnShake = false;
+
   bool _isProcessingXp = false;
-
-  /// 레벨업 발생 시 보상 카드 선택 오버레이 표시용 상태.
   LevelUpResult? _pendingLevelUp;
-
-  /// 레벨업 보상 풀에서 무작위로 뽑은 3장.
   List<GameCard> _levelUpRewardCards = const [];
-
   final _random = Random();
+
+  @override
+  void initState() {
+    super.initState();
+    _shakeCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 350),
+    );
+    _shakeAnim = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween(begin: 0.0, end: -10.0), weight: 1),
+      TweenSequenceItem(tween: Tween(begin: -10.0, end: 10.0), weight: 2),
+      TweenSequenceItem(tween: Tween(begin: 10.0, end: -6.0),  weight: 1),
+      TweenSequenceItem(tween: Tween(begin: -6.0, end: 3.0),   weight: 1),
+      TweenSequenceItem(tween: Tween(begin: 3.0, end: 0.0),    weight: 1),
+    ]).animate(_shakeCtrl);
+  }
 
   @override
   void dispose() {
     _attackTrigger.dispose();
+    _monsterHitTrigger.dispose();
+    _monsterDeadTrigger.dispose();
+    _shakeCtrl.dispose();
     super.dispose();
   }
 
-  /// 카드를 사용할 때 공격 카드면 캐릭터 모션을 동시에 실행한다.
   void _handleCardTap(GameCard card) {
     if (card.effectType == CardEffectType.damage) {
       _attackTrigger.value++;
+      _monsterHitTrigger.value++;
     }
     ref.read(battleProvider.notifier).playCard(card);
+  }
+
+  void _handleEndTurn() {
+    _pendingEndTurnShake = true;
+    ref.read(battleProvider.notifier).endTurn();
+  }
+
+  Future<void> _triggerDamageEffect({required bool redBorder}) async {
+    if (!mounted) return;
+    _shakeCtrl.forward(from: 0.0);
+    if (redBorder) {
+      setState(() => _showRedBorder = true);
+      await Future.delayed(const Duration(milliseconds: 500));
+      if (mounted) setState(() => _showRedBorder = false);
+    }
   }
 
   NodeType _currentNodeType() =>
@@ -66,7 +102,27 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
 
     // ── 전투 종료 감지: XP 지급 + 레벨업 보상 트리거 ──────────────────────
     ref.listen<BattleState>(battleProvider, (prev, next) async {
+      // HP 감소 시 빨간 테두리
+      if (prev != null && next.playerHp < prev.playerHp) {
+        _triggerDamageEffect(redBorder: true);
+      }
+
+      // 몬스터 공격 턴: 화면 흔들림 (HP 감소 없이 블록만 깎인 경우 포함)
+      if (_pendingEndTurnShake && prev != null) {
+        _pendingEndTurnShake = false;
+        final wasAttack = prev.monsterIntentType == MonsterIntentType.attack ||
+                          prev.monsterIntentType == MonsterIntentType.attackDebuff;
+        if (wasAttack && next.playerHp >= prev.playerHp) {
+          _triggerDamageEffect(redBorder: false);
+        }
+      }
+
       if (!next.isBattleOver || (prev?.isBattleOver ?? false)) return;
+
+      // 승리 시 몬스터 사망 애니메이션 트리거
+      if (next.result == BattleResult.playerWon) {
+        _monsterDeadTrigger.value = true;
+      }
 
       // XP 처리 시작: 결과 오버레이를 숨겨 조기 탭을 방지한다.
       if (mounted) setState(() => _isProcessingXp = true);
@@ -115,71 +171,112 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
         children: [
           Positioned.fill(child: Image.asset(BattleAssets.background, fit: BoxFit.cover)),
           const Positioned.fill(child: ColoredBox(color: BattleColors.backgroundOverlay)),
-          // ── 플레이어 캐릭터: 카드 패 아래 레이어 ───────────────────────
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: IgnorePointer(
-              child: PlayerCharacterWidget(attackTrigger: _attackTrigger),
-            ),
+          // ── 몬스터: 배경 문 앞에 위치 (자체 흔들림 포함) ──────────────
+          _MonsterBackgroundImage(
+            monsterType: state.monsterType,
+            hitTrigger: _monsterHitTrigger,
+            deadTrigger: _monsterDeadTrigger,
           ),
-          SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+          // ── 플레이어 + UI: 화면 흔들림 적용 ────────────────────────────
+          Positioned.fill(
+            child: AnimatedBuilder(
+              animation: _shakeAnim,
+              child: Stack(
                 children: [
-                  _StageHeader(stage: state.stage),
-                  const SizedBox(height: 8),
-                  if (runState.relics.isNotEmpty) ...[
-                    _RelicRow(relics: runState.relics),
-                    const SizedBox(height: 4),
-                  ],
-                  if (state.lastRelicTriggers.isNotEmpty) ...[
-                    _RelicTriggerRow(triggers: state.lastRelicTriggers),
-                    const SizedBox(height: 4),
-                  ],
-                  // ── 몬스터 영역 ─────────────────────────────────────────
-                  MonsterWidget(
-                    hp: state.monsterHp,
-                    maxHp: state.monsterMaxHp,
-                    block: state.monsterBlock,
-                    name: state.monsterName,
-                    intentType: state.monsterIntentType,
-                    intentLabel: state.monsterIntentLabel,
-                    intentDescription: state.monsterIntentDescription,
-                    attackPower: state.monsterAttackPower,
-                    isVulnerable: state.monsterIsVulnerable,
-                    isWeak: state.monsterIsWeak,
-                    poisonStacks: state.monsterPoisonStacks,
-                  ),
-                  const Spacer(),
-                  // ── 손패 ────────────────────────────────────────────────
-                  Transform.translate(
-                    offset: const Offset(0, 48),
-                    child: HandWidget(
-                      hand: state.hand,
-                      energy: state.energy,
-                      onCardTap: _handleCardTap,
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    child: IgnorePointer(
+                      child: PlayerCharacterWidget(attackTrigger: _attackTrigger),
                     ),
                   ),
-                  // ── 하단 바: HP/에너지(좌) + 턴 종료(우) ────────────────
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8, bottom: 2),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        _PlayerHud(state: state),
-                        const Spacer(),
-                        _EndTurnButton(
-                          isBattleOver: state.isBattleOver,
-                          onPressed: ref.read(battleProvider.notifier).endTurn,
-                        ),
-                      ],
+                  SafeArea(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          _StageHeader(stage: state.stage),
+                          const SizedBox(height: 8),
+                          if (runState.relics.isNotEmpty) ...[
+                            _RelicRow(relics: runState.relics),
+                            const SizedBox(height: 4),
+                          ],
+                          if (state.lastRelicTriggers.isNotEmpty) ...[
+                            _RelicTriggerRow(triggers: state.lastRelicTriggers),
+                            const SizedBox(height: 4),
+                          ],
+                          MonsterWidget(
+                            hp: state.monsterHp,
+                            maxHp: state.monsterMaxHp,
+                            block: state.monsterBlock,
+                            name: state.monsterName,
+                            monsterType: state.monsterType,
+                            intentType: state.monsterIntentType,
+                            intentLabel: state.monsterIntentLabel,
+                            intentDescription: state.monsterIntentDescription,
+                            attackPower: state.monsterAttackPower,
+                            isVulnerable: state.monsterIsVulnerable,
+                            isWeak: state.monsterIsWeak,
+                            poisonStacks: state.monsterPoisonStacks,
+                          ),
+                          const Spacer(),
+                          Transform.translate(
+                            offset: const Offset(0, 48),
+                            child: HandWidget(
+                              hand: state.hand,
+                              energy: state.energy,
+                              onCardTap: _handleCardTap,
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.only(top: 8, bottom: 2),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                _PlayerHud(state: state),
+                                const Spacer(),
+                                _EndTurnButton(
+                                  isBattleOver: state.isBattleOver,
+                                  onPressed: _handleEndTurn,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ],
+              ),
+              builder: (context, child) => Transform.translate(
+                offset: Offset(_shakeAnim.value, 0),
+                child: child,
+              ),
+            ),
+          ),
+          // ── 피해 빨간 그라데이션 오버레이 ───────────────────────────────
+          Positioned.fill(
+            child: IgnorePointer(
+              child: AnimatedOpacity(
+                opacity: _showRedBorder ? 1.0 : 0.0,
+                duration: const Duration(milliseconds: 80),
+                child: Container(
+                  decoration: const BoxDecoration(
+                    gradient: RadialGradient(
+                      center: Alignment.center,
+                      radius: 1.4,
+                      colors: [
+                        Color(0x00FF0000),
+                        Color(0x00FF0000),
+                        Color(0xBBFF0000),
+                        Color(0xEEFF0000),
+                      ],
+                      stops: [0.0, 0.50, 0.78, 1.0],
+                    ),
+                  ),
+                ),
               ),
             ),
           ),
@@ -739,6 +836,113 @@ class _LevelUpCardItem extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// 몬스터 이미지를 배경 문 앞에 배치한다.
+/// 피격 시 좌우 흔들림, 사망 시 위로 드리프트하며 페이드아웃 모션을 재생한다.
+class _MonsterBackgroundImage extends StatefulWidget {
+  final MonsterType monsterType;
+  final ValueNotifier<int>  hitTrigger;
+  final ValueNotifier<bool> deadTrigger;
+  const _MonsterBackgroundImage({
+    required this.monsterType,
+    required this.hitTrigger,
+    required this.deadTrigger,
+  });
+
+  @override
+  State<_MonsterBackgroundImage> createState() => _MonsterBackgroundImageState();
+}
+
+class _MonsterBackgroundImageState extends State<_MonsterBackgroundImage>
+    with TickerProviderStateMixin {
+  // 피격 흔들림
+  late final AnimationController _hitCtrl;
+  late final Animation<double>   _shake;
+
+  // 사망 페이드아웃 + 드리프트
+  late final AnimationController _deathCtrl;
+  late final Animation<double>   _deathOpacity;
+  late final Animation<double>   _deathOffsetY;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _hitCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
+    _shake = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween(begin: 0.0, end: -14.0), weight: 1),
+      TweenSequenceItem(tween: Tween(begin: -14.0, end: 14.0), weight: 2),
+      TweenSequenceItem(tween: Tween(begin: 14.0, end: -8.0),  weight: 1),
+      TweenSequenceItem(tween: Tween(begin: -8.0, end: 4.0),   weight: 1),
+      TweenSequenceItem(tween: Tween(begin: 4.0, end: 0.0),    weight: 1),
+    ]).animate(_hitCtrl);
+
+    _deathCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 650),
+    );
+    _deathOpacity = Tween<double>(begin: 1.0, end: 0.0).animate(
+      CurvedAnimation(parent: _deathCtrl, curve: Curves.easeIn),
+    );
+    _deathOffsetY = Tween<double>(begin: 0.0, end: -40.0).animate(
+      CurvedAnimation(parent: _deathCtrl, curve: Curves.easeOut),
+    );
+
+    widget.hitTrigger.addListener(_onHit);
+    widget.deadTrigger.addListener(_onDead);
+  }
+
+  @override
+  void dispose() {
+    widget.hitTrigger.removeListener(_onHit);
+    widget.deadTrigger.removeListener(_onDead);
+    _hitCtrl.dispose();
+    _deathCtrl.dispose();
+    super.dispose();
+  }
+
+  void _onHit() => _hitCtrl.forward(from: 0.0);
+  void _onDead() {
+    if (widget.deadTrigger.value) _deathCtrl.forward(from: 0.0);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final imagePath = MonsterAssets.forTypeName(widget.monsterType.name);
+    if (imagePath == null) return const SizedBox.shrink();
+
+    final screenH = MediaQuery.of(context).size.height;
+    return Positioned(
+      bottom: screenH * 0.32,
+      left: 0,
+      right: 0,
+      child: IgnorePointer(
+        child: AnimatedBuilder(
+          animation: Listenable.merge([_hitCtrl, _deathCtrl]),
+          child: Align(
+            alignment: Alignment.bottomCenter,
+            child: Image.asset(
+              imagePath,
+              height: screenH * 0.33,
+              fit: BoxFit.contain,
+              filterQuality: FilterQuality.medium,
+            ),
+          ),
+          builder: (context, child) => Transform.translate(
+            offset: Offset(_shake.value, _deathOffsetY.value),
+            child: Opacity(
+              opacity: _deathOpacity.value,
+              child: child,
+            ),
+          ),
         ),
       ),
     );
