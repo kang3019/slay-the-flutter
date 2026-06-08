@@ -146,6 +146,7 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
                     maxHp: state.monsterMaxHp,
                     block: state.monsterBlock,
                     name: state.monsterName,
+                    monsterType: state.monsterType,
                     intentType: state.monsterIntentType,
                     intentLabel: state.monsterIntentLabel,
                     intentDescription: state.monsterIntentDescription,

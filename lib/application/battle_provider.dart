@@ -43,6 +43,7 @@ class BattleState {
   final bool monsterIsWeak;
   final int monsterAttackPower;
   final String monsterName;
+  final MonsterType monsterType;
   final MonsterIntentType monsterIntentType;
   final String monsterIntentLabel;
   final String monsterIntentDescription;
@@ -75,6 +76,7 @@ class BattleState {
     required this.monsterIsWeak,
     required this.monsterAttackPower,
     required this.monsterName,
+    required this.monsterType,
     required this.monsterIntentType,
     required this.monsterIntentLabel,
     required this.monsterIntentDescription,
@@ -150,6 +152,7 @@ class BattleNotifier extends Notifier<BattleState> {
         monsterIsWeak: _engine.monster.isWeak,
         monsterAttackPower: _engine.monster.attackPower,
         monsterName: _engine.monster.name,
+        monsterType: _engine.monster.type,
         monsterIntentType: _engine.monster.currentIntent.intentType,
         monsterIntentLabel: _engine.monster.currentIntent.label,
         monsterIntentDescription: _engine.monster.currentIntent.description,

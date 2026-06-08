@@ -97,6 +97,25 @@ abstract final class PlayerAssets {
   static const attack = 'assets/images/player_attack.png';
 }
 
+/// 몬스터 이미지 경로 상수.
+abstract final class MonsterAssets {
+  static const stickySlime   = 'assets/images/monsters/sticky_slime.png';
+  static const ironScavenger = 'assets/images/monsters/iron_scavenger.png';
+  static const venomSentinel = 'assets/images/monsters/venom_sentinel.png';
+  static const caveGuardian  = 'assets/images/monsters/cave_guardian.png';
+  static const ironGolem     = 'assets/images/monsters/iron_golem.png';
+
+  /// [MonsterType] 이름을 받아 대응하는 에셋 경로를 반환한다. basic은 null.
+  static String? forTypeName(String typeName) => switch (typeName) {
+        'stickySlime'   => stickySlime,
+        'ironScavenger' => ironScavenger,
+        'venomSentinel' => venomSentinel,
+        'caveGuardian'  => caveGuardian,
+        'ironGolem'     => ironGolem,
+        _               => null,
+      };
+}
+
 /// 전투 화면 색상 상수.
 ///
 /// 횃불의 금/주황과 돌 회색으로 구성된 다크 판타지 팔레트.
