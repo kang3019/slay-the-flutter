@@ -9,6 +9,7 @@ import '../../application/run_provider.dart';
 import '../../domain/battle_engine.dart';
 import '../../domain/entities/card.dart';
 import '../../domain/entities/meta_progress.dart';
+import '../../domain/entities/monster.dart';
 import '../../domain/entities/relic.dart';
 import '../../domain/map/node_type.dart';
 import 'battle_constants.dart';
@@ -115,7 +116,9 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
         children: [
           Positioned.fill(child: Image.asset(BattleAssets.background, fit: BoxFit.cover)),
           const Positioned.fill(child: ColoredBox(color: BattleColors.backgroundOverlay)),
-          // ── 플레이어 캐릭터: 카드 패 아래 레이어 ───────────────────────
+          // ── 몬스터: 배경 문 앞에 위치 ───────────────────────────────────
+          _MonsterBackgroundImage(monsterType: state.monsterType),
+          // ── 플레이어 캐릭터: 하단 레이어 ────────────────────────────────
           Positioned(
             left: 0,
             right: 0,
@@ -740,6 +743,38 @@ class _LevelUpCardItem extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// 몬스터 이미지를 배경 문 앞에 배치한다.
+///
+/// 오버레이 위에 그려져 몬스터가 던전 문을 막고 서 있는 것처럼 보인다.
+class _MonsterBackgroundImage extends StatelessWidget {
+  final MonsterType monsterType;
+  const _MonsterBackgroundImage({required this.monsterType});
+
+  @override
+  Widget build(BuildContext context) {
+    final imagePath = MonsterAssets.forTypeName(monsterType.name);
+    if (imagePath == null) return const SizedBox.shrink();
+
+    final screenH = MediaQuery.of(context).size.height;
+    return Positioned(
+      top: screenH * 0.08,
+      left: 0,
+      right: 0,
+      child: IgnorePointer(
+        child: Align(
+          alignment: Alignment.topCenter,
+          child: Image.asset(
+            imagePath,
+            height: screenH * 0.42,
+            fit: BoxFit.contain,
+            filterQuality: FilterQuality.medium,
+          ),
         ),
       ),
     );

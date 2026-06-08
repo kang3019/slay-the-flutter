@@ -37,7 +37,6 @@ class MonsterWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final imagePath = MonsterAssets.forTypeName(monsterType.name);
     return DecoratedBox(
       decoration: BoxDecoration(
         color: BattleColors.panelBg,
@@ -49,12 +48,6 @@ class MonsterWidget extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            if (imagePath != null)
-              SizedBox(
-                height: 160,
-                child: Image.asset(imagePath, fit: BoxFit.contain),
-              ),
-            const SizedBox(height: 8),
             Row(
               children: [
                 Text(
