@@ -265,10 +265,10 @@ class _BattleScreenState extends ConsumerState<BattleScreen>
                       colors: [
                         Colors.transparent,
                         Colors.transparent,
-                        Color(0x66FF0000),
                         Color(0xAAFF0000),
+                        Color(0xDDFF0000),
                       ],
-                      stops: [0.0, 0.76, 0.91, 1.0],
+                      stops: [0.0, 0.60, 0.82, 1.0],
                     ),
                   ),
                   child: SizedBox.expand(),
