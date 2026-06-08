@@ -102,13 +102,18 @@ class _BattleScreenState extends ConsumerState<BattleScreen>
 
     // ── 전투 종료 감지: XP 지급 + 레벨업 보상 트리거 ──────────────────────
     ref.listen<BattleState>(battleProvider, (prev, next) async {
-      // 몬스터 공격 감지: endTurn 직후 이전 의도가 공격이었으면 화면 흔들림.
+      // HP 감소 시 빨간 테두리
+      if (prev != null && next.playerHp < prev.playerHp) {
+        _triggerDamageEffect(redBorder: true);
+      }
+
+      // 몬스터 공격 턴: 화면 흔들림 (HP 감소 없이 블록만 깎인 경우 포함)
       if (_pendingEndTurnShake && prev != null) {
         _pendingEndTurnShake = false;
         final wasAttack = prev.monsterIntentType == MonsterIntentType.attack ||
                           prev.monsterIntentType == MonsterIntentType.attackDebuff;
-        if (wasAttack) {
-          _triggerDamageEffect(redBorder: next.playerHp < prev.playerHp);
+        if (wasAttack && next.playerHp >= prev.playerHp) {
+          _triggerDamageEffect(redBorder: false);
         }
       }
 
@@ -257,21 +262,20 @@ class _BattleScreenState extends ConsumerState<BattleScreen>
               child: AnimatedOpacity(
                 opacity: _showRedBorder ? 1.0 : 0.0,
                 duration: const Duration(milliseconds: 80),
-                child: const DecoratedBox(
-                  decoration: BoxDecoration(
+                child: Container(
+                  decoration: const BoxDecoration(
                     gradient: RadialGradient(
                       center: Alignment.center,
-                      radius: 1.5,
+                      radius: 1.4,
                       colors: [
-                        Colors.transparent,
-                        Colors.transparent,
-                        Color(0xAAFF0000),
-                        Color(0xDDFF0000),
+                        Color(0x00FF0000),
+                        Color(0x00FF0000),
+                        Color(0xBBFF0000),
+                        Color(0xEEFF0000),
                       ],
-                      stops: [0.0, 0.60, 0.82, 1.0],
+                      stops: [0.0, 0.50, 0.78, 1.0],
                     ),
                   ),
-                  child: SizedBox.expand(),
                 ),
               ),
             ),
