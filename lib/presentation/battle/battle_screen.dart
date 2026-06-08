@@ -261,14 +261,14 @@ class _BattleScreenState extends ConsumerState<BattleScreen>
                   decoration: BoxDecoration(
                     gradient: RadialGradient(
                       center: Alignment.center,
-                      radius: 1.0,
+                      radius: 1.5,
                       colors: [
                         Colors.transparent,
                         Colors.transparent,
-                        Color(0x88FF0000),
-                        Color(0xCCFF0000),
+                        Color(0x66FF0000),
+                        Color(0xAAFF0000),
                       ],
-                      stops: [0.0, 0.55, 0.82, 1.0],
+                      stops: [0.0, 0.76, 0.91, 1.0],
                     ),
                   ),
                   child: SizedBox.expand(),
