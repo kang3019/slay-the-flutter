@@ -30,8 +30,9 @@ class BattleScreen extends ConsumerStatefulWidget {
 
 class _BattleScreenState extends ConsumerState<BattleScreen>
     with SingleTickerProviderStateMixin {
-  final ValueNotifier<int> _attackTrigger     = ValueNotifier(0);
-  final ValueNotifier<int> _monsterHitTrigger = ValueNotifier(0);
+  final ValueNotifier<int>  _attackTrigger      = ValueNotifier(0);
+  final ValueNotifier<int>  _monsterHitTrigger  = ValueNotifier(0);
+  final ValueNotifier<bool> _monsterDeadTrigger = ValueNotifier(false);
 
   late final AnimationController _shakeCtrl;
   late final Animation<double>   _shakeAnim;
@@ -63,6 +64,7 @@ class _BattleScreenState extends ConsumerState<BattleScreen>
   void dispose() {
     _attackTrigger.dispose();
     _monsterHitTrigger.dispose();
+    _monsterDeadTrigger.dispose();
     _shakeCtrl.dispose();
     super.dispose();
   }
@@ -111,6 +113,11 @@ class _BattleScreenState extends ConsumerState<BattleScreen>
       }
 
       if (!next.isBattleOver || (prev?.isBattleOver ?? false)) return;
+
+      // 승리 시 몬스터 사망 애니메이션 트리거
+      if (next.result == BattleResult.playerWon) {
+        _monsterDeadTrigger.value = true;
+      }
 
       // XP 처리 시작: 결과 오버레이를 숨겨 조기 탭을 방지한다.
       if (mounted) setState(() => _isProcessingXp = true);
@@ -163,6 +170,7 @@ class _BattleScreenState extends ConsumerState<BattleScreen>
           _MonsterBackgroundImage(
             monsterType: state.monsterType,
             hitTrigger: _monsterHitTrigger,
+            deadTrigger: _monsterDeadTrigger,
           ),
           // ── 플레이어 + UI: 화면 흔들림 적용 ────────────────────────────
           Positioned.fill(
@@ -243,7 +251,7 @@ class _BattleScreenState extends ConsumerState<BattleScreen>
               ),
             ),
           ),
-          // ── 피해 빨간 테두리 오버레이 ────────────────────────────────────
+          // ── 피해 빨간 그라데이션 오버레이 ───────────────────────────────
           Positioned.fill(
             child: IgnorePointer(
               child: AnimatedOpacity(
@@ -251,8 +259,16 @@ class _BattleScreenState extends ConsumerState<BattleScreen>
                 duration: const Duration(milliseconds: 80),
                 child: const DecoratedBox(
                   decoration: BoxDecoration(
-                    border: Border.fromBorderSide(
-                      BorderSide(color: Color(0xCCFF1111), width: 14),
+                    gradient: RadialGradient(
+                      center: Alignment.center,
+                      radius: 1.0,
+                      colors: [
+                        Colors.transparent,
+                        Colors.transparent,
+                        Color(0x88FF0000),
+                        Color(0xCCFF0000),
+                      ],
+                      stops: [0.0, 0.55, 0.82, 1.0],
                     ),
                   ),
                   child: SizedBox.expand(),
@@ -822,13 +838,16 @@ class _LevelUpCardItem extends StatelessWidget {
   }
 }
 
-/// 몬스터 이미지를 배경 문 앞에 배치한다. 피격 시 좌우 흔들림 모션을 재생한다.
+/// 몬스터 이미지를 배경 문 앞에 배치한다.
+/// 피격 시 좌우 흔들림, 사망 시 위로 드리프트하며 페이드아웃 모션을 재생한다.
 class _MonsterBackgroundImage extends StatefulWidget {
   final MonsterType monsterType;
-  final ValueNotifier<int> hitTrigger;
+  final ValueNotifier<int>  hitTrigger;
+  final ValueNotifier<bool> deadTrigger;
   const _MonsterBackgroundImage({
     required this.monsterType,
     required this.hitTrigger,
+    required this.deadTrigger,
   });
 
   @override
@@ -836,14 +855,21 @@ class _MonsterBackgroundImage extends StatefulWidget {
 }
 
 class _MonsterBackgroundImageState extends State<_MonsterBackgroundImage>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _ctrl;
-  late final Animation<double> _shake;
+    with TickerProviderStateMixin {
+  // 피격 흔들림
+  late final AnimationController _hitCtrl;
+  late final Animation<double>   _shake;
+
+  // 사망 페이드아웃 + 드리프트
+  late final AnimationController _deathCtrl;
+  late final Animation<double>   _deathOpacity;
+  late final Animation<double>   _deathOffsetY;
 
   @override
   void initState() {
     super.initState();
-    _ctrl = AnimationController(
+
+    _hitCtrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 300),
     );
@@ -853,18 +879,36 @@ class _MonsterBackgroundImageState extends State<_MonsterBackgroundImage>
       TweenSequenceItem(tween: Tween(begin: 14.0, end: -8.0),  weight: 1),
       TweenSequenceItem(tween: Tween(begin: -8.0, end: 4.0),   weight: 1),
       TweenSequenceItem(tween: Tween(begin: 4.0, end: 0.0),    weight: 1),
-    ]).animate(_ctrl);
+    ]).animate(_hitCtrl);
+
+    _deathCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 650),
+    );
+    _deathOpacity = Tween<double>(begin: 1.0, end: 0.0).animate(
+      CurvedAnimation(parent: _deathCtrl, curve: Curves.easeIn),
+    );
+    _deathOffsetY = Tween<double>(begin: 0.0, end: -40.0).animate(
+      CurvedAnimation(parent: _deathCtrl, curve: Curves.easeOut),
+    );
+
     widget.hitTrigger.addListener(_onHit);
+    widget.deadTrigger.addListener(_onDead);
   }
 
   @override
   void dispose() {
     widget.hitTrigger.removeListener(_onHit);
-    _ctrl.dispose();
+    widget.deadTrigger.removeListener(_onDead);
+    _hitCtrl.dispose();
+    _deathCtrl.dispose();
     super.dispose();
   }
 
-  void _onHit() => _ctrl.forward(from: 0.0);
+  void _onHit() => _hitCtrl.forward(from: 0.0);
+  void _onDead() {
+    if (widget.deadTrigger.value) _deathCtrl.forward(from: 0.0);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -878,7 +922,7 @@ class _MonsterBackgroundImageState extends State<_MonsterBackgroundImage>
       right: 0,
       child: IgnorePointer(
         child: AnimatedBuilder(
-          animation: _shake,
+          animation: Listenable.merge([_hitCtrl, _deathCtrl]),
           child: Align(
             alignment: Alignment.bottomCenter,
             child: Image.asset(
@@ -889,8 +933,11 @@ class _MonsterBackgroundImageState extends State<_MonsterBackgroundImage>
             ),
           ),
           builder: (context, child) => Transform.translate(
-            offset: Offset(_shake.value, 0),
-            child: child,
+            offset: Offset(_shake.value, _deathOffsetY.value),
+            child: Opacity(
+              opacity: _deathOpacity.value,
+              child: child,
+            ),
           ),
         ),
       ),
