@@ -10,6 +10,7 @@ import 'map/map_screen.dart';
 import 'rest/rest_screen.dart';
 import 'reward/reward_screen.dart';
 import 'run_end/run_end_screen.dart';
+import 'shared/run_bottom_hud.dart';
 import 'shared/top_bar_widget.dart';
 import 'shop/shop_screen.dart';
 import 'treasure/treasure_screen.dart';
@@ -53,8 +54,19 @@ class AppRouter extends ConsumerWidget {
     // (Battle은 HUD에 골드가 포함되고, Map은 자체 상태표시가 있음)
     if (phase == RunPhase.map ||
         phase == RunPhase.battle ||
-        phase == RunPhase.runEnd) {
+        phase == RunPhase.runEnd ||
+        phase == RunPhase.shop) {
       return screen;
+    }
+
+    // 이벤트·강화 화면은 TopBar 대신 하단 HUD로 HP·골드 표시 및 지도 접근 제공.
+    if (phase == RunPhase.event || phase == RunPhase.rest) {
+      return Column(
+        children: [
+          Expanded(child: screen),
+          const RunBottomHud(),
+        ],
+      );
     }
 
     return Stack(
