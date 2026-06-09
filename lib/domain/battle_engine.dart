@@ -61,6 +61,9 @@ class BattleEngine {
   /// 무기 연마([CardType.sharpen])로 이번 턴 공격 카드에 더해지는 추가 데미지.
   int _sharpenBonus;
 
+  /// 폭격 태세([CardType.doubleTap])로 남은 추가 발동 횟수.
+  int _doubleTapCount;
+
   /// 직전 [endPlayerTurn]에서 발동된 턴 종료 유물 메시지.
   /// [endPlayerTurn] 시작 시 초기화, [_applyTurnEndRelics]에서 채워진다.
   final List<String> lastRelicTriggers = [];
@@ -80,6 +83,7 @@ class BattleEngine {
         _hasBlockedThisCombat = false,
         _lizardTailAvailable = false,
         _sharpenBonus = 0,
+        _doubleTapCount = 0,
         _combatStartExtraDraw = relics.fold<int>(0, (sum, r) {
           if (r.effect == RelicEffect.extraDrawOnCombatStart) return sum + r.value;
           if (r.effect == RelicEffect.blockAndExtraDrawOnCombatStart) return sum + 1;
@@ -128,17 +132,13 @@ class BattleEngine {
     return _normalMonsterType(stage, rng);
   }
 
-  /// 엘리트 노드 몬스터: 해당 스테이지의 일반 몬스터보다 강한 풀에서 선택.
-  static MonsterType _eliteMonsterType(int stage, Random rng) => switch (stage) {
-        1 => rng.nextBool() ? MonsterType.venomSentinel : MonsterType.caveGuardian,
-        _ => MonsterType.caveGuardian,
-      };
+  /// 엘리트 노드 몬스터: 스테이지 무관하게 독파수꾼 또는 석굴 수호자.
+  static MonsterType _eliteMonsterType(int stage, Random rng) =>
+      rng.nextBool() ? MonsterType.venomSentinel : MonsterType.caveGuardian;
 
-  /// 일반 노드 몬스터: 스테이지별 표준 풀에서 선택. ironGolem은 포함하지 않는다.
-  static MonsterType _normalMonsterType(int stage, Random rng) => switch (stage) {
-        1 => rng.nextBool() ? MonsterType.stickySlime : MonsterType.ironScavenger,
-        _ => rng.nextBool() ? MonsterType.venomSentinel : MonsterType.caveGuardian,
-      };
+  /// 일반 노드 몬스터: 스테이지 무관하게 끈적 슬라임 또는 고철수집가.
+  static MonsterType _normalMonsterType(int stage, Random rng) =>
+      rng.nextBool() ? MonsterType.stickySlime : MonsterType.ironScavenger;
 
   /// 스테이지에 맞는 몬스터 타입을 무작위로 반환한다.
   static MonsterType _randomMonsterType(int stage) =>
@@ -151,6 +151,7 @@ class BattleEngine {
   void startPlayerTurn() {
     energy = energyPerTurn;
     _sharpenBonus = 0;
+    _doubleTapCount = 0;
 
     for (final relic in relics) {
       if (relic.effect == RelicEffect.healOnTurnStart) {
@@ -207,6 +208,13 @@ class BattleEngine {
 
     deck.playCard(card);
     _applyCardEffect(card, xValue: xValue);
+
+    // 폭격 태세: 공격 카드는 데미지만 한 번 더 적용한다.
+    if (_doubleTapCount > 0 && card.effectType == CardEffectType.damage) {
+      _doubleTapCount--;
+      monster.takeDamage(_computeRawDamage(card, xValue: xValue));
+    }
+
     _checkBattleOver();
     return true;
   }
@@ -415,7 +423,38 @@ class BattleEngine {
         monster.applyStatusEffect(
           StatusEffect(type: StatusEffectType.poison, duration: card.isUpgraded ? 5 : 3),
         );
+      case CardType.limitBreak:
+        player.strength *= 2;
+        if (card.isUpgraded) deck.exhaustLastPlayed();
+      case CardType.impervious:
+        player.gainBlock(_applyFirstBlockBonus(value));
+        deck.exhaustLastPlayed();
+      case CardType.doubleTap:
+        _doubleTapCount += card.value;
+      case CardType.fiendFire:
+        final handCount = deck.hand.length;
+        deck.discardHand();
+        monster.takeDamage(_weakAdjusted(handCount * value));
+        deck.exhaustLastPlayed();
     }
+  }
+
+  /// 폭격 태세의 추가 발동에 사용되는 순수 데미지 계산. side-effect 없음.
+  int _computeRawDamage(GameCard card, {int xValue = 0}) {
+    return switch (card.type) {
+      CardType.blockStrike => _weakAdjusted(
+          card.isUpgraded ? (player.block * 1.5).floor() : player.block,
+        ),
+      CardType.bloodRush   => _weakAdjusted(xValue * card.value),
+      CardType.comboStrike => _weakAdjusted(
+          deck.hand.where((c) => c.effectType == CardEffectType.damage).length *
+              card.value,
+        ),
+      CardType.fiendFire   => _weakAdjusted(deck.hand.length * card.value),
+      _                    => _weakAdjusted(
+          card.value + player.strength + _sharpenBonus,
+        ),
+    };
   }
 
   /// 첫 번째 블록 카드 사용 시 [firstBlockBonus] 유물 보너스를 반영한 값을 반환한다.

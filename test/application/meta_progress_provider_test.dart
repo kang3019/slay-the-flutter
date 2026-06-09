@@ -52,7 +52,7 @@ void main() {
       final state = freshContainer.read(metaProgressProvider);
       expect(state.level, equals(3));
       expect(state.xp, equals(300));
-      expect(state.unlockedCardTypes.length, equals(6));
+      expect(state.unlockedCardTypes.length, equals(14));
     });
   });
 
@@ -80,7 +80,8 @@ void main() {
 
       expect(result.didLevelUp, isTrue);
       expect(result.newLevel, equals(2));
-      expect(result.newlyUnlockedCards, containsAll(['rageBurst', 'quickMend']));
+      expect(result.newlyUnlockedCards,
+          containsAll(['tripleSlash', 'toxicJab', 'comboStrike']));
     });
 
     test('레벨업 후 provider 상태가 갱신된다', () async {
@@ -88,7 +89,8 @@ void main() {
 
       final state = container.read(metaProgressProvider);
       expect(state.level, equals(2));
-      expect(state.unlockedCardTypes, containsAll(['rageBurst', 'quickMend']));
+      expect(state.unlockedCardTypes,
+          containsAll(['tripleSlash', 'toxicJab', 'comboStrike']));
     });
   });
 
@@ -129,7 +131,7 @@ void main() {
 
       final state = container.read(metaProgressProvider);
       expect(state.unlockedCardTypes, containsAll(['strike', 'defend']));
-      expect(state.unlockedCardTypes.length, equals(2));
+      expect(state.unlockedCardTypes.length, equals(9));
     });
   });
 }

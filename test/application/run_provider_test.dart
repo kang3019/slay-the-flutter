@@ -1,7 +1,13 @@
+import 'dart:convert';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:slay_the_flutter/application/meta_progress_provider.dart';
 import 'package:slay_the_flutter/application/run_provider.dart';
+import 'package:slay_the_flutter/data/local_storage.dart';
 import 'package:slay_the_flutter/domain/entities/card.dart';
+import 'package:slay_the_flutter/domain/entities/meta_progress.dart';
 import 'package:slay_the_flutter/domain/entities/player.dart';
 import 'package:slay_the_flutter/domain/events/game_event.dart';
 import 'package:slay_the_flutter/domain/map/map_node.dart';
@@ -33,18 +39,31 @@ const _testMapNodes = <MapNode>[
   MapNode(id: 'f4n0', type: NodeType.boss,     floor: 4, connectedNodeIds: []),
 ];
 
-/// 고정 테스트 맵을 주입한 [ProviderContainer]를 반환한다.
-ProviderContainer _makeContainer() => ProviderContainer(
-  overrides: [
-    mapNodesProvider.overrideWith((_) => _testMapNodes),
-  ],
-);
+/// 고정 테스트 맵과 LocalStorage를 주입한 [ProviderContainer]를 반환한다.
+///
+/// 보상 풀은 MetaProgress.unlockedCardTypes로 필터링되므로,
+/// 모든 카드가 해금된 레벨 10 상태를 prefs에 주입해 기존 테스트가 통과하도록 한다.
+Future<ProviderContainer> _makeContainer() async {
+  final allUnlocked = MetaProgress.computeUnlockedCards(10);
+  SharedPreferences.setMockInitialValues({
+    'meta_level': 10,
+    'meta_xp': MetaProgress.xpThresholds.last,
+    'meta_unlocked_cards': jsonEncode(allUnlocked),
+  });
+  final prefs = await SharedPreferences.getInstance();
+  return ProviderContainer(
+    overrides: [
+      mapNodesProvider.overrideWith((_) => _testMapNodes),
+      localStorageProvider.overrideWithValue(LocalStorage(prefs)),
+    ],
+  );
+}
 
 void main() {
   group('RunNotifier', () {
     late ProviderContainer container;
 
-    setUp(() => container = _makeContainer());
+    setUp(() async => container = await _makeContainer());
     tearDown(() => container.dispose());
 
     // ──────────────────────────────────────────────

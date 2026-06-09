@@ -26,40 +26,40 @@ void main() {
   });
 
   group('MetaProgress.computeUnlockedCards', () {
-    test('레벨 1: strike, defend (2종)', () {
+    test('레벨 1: 기본 해금 7종 + 스타터 2종 = 9종', () {
       final cards = MetaProgress.computeUnlockedCards(1);
       expect(cards, containsAll(['strike', 'defend']));
-      expect(cards.length, equals(2));
+      expect(cards.length, equals(9));
     });
 
-    test('레벨 2: rageBurst, quickMend 추가 해금 (4종)', () {
+    test('레벨 2: level2 카드 3종 추가 → 12종', () {
       final cards = MetaProgress.computeUnlockedCards(2);
       expect(cards, containsAll(['strike', 'defend', 'rageBurst', 'quickMend']));
-      expect(cards.length, equals(4));
+      expect(cards.length, equals(12));
     });
 
-    test('레벨 3: swiftCut, regroup 추가 해금 (6종)', () {
+    test('레벨 3: bash, ironWall 추가 → 14종', () {
       final cards = MetaProgress.computeUnlockedCards(3);
-      expect(cards, containsAll(['swiftCut', 'regroup']));
-      expect(cards.length, equals(6));
+      expect(cards, containsAll(['bash', 'ironWall']));
+      expect(cards.length, equals(14));
     });
 
-    test('레벨 5: swiftGuard, comboStrike, sharpen 추가 해금 (11종)', () {
+    test('레벨 5: level5 카드 3종 추가 → 20종', () {
       final cards = MetaProgress.computeUnlockedCards(5);
       expect(cards, containsAll(['swiftGuard', 'comboStrike', 'sharpen']));
-      expect(cards.length, equals(11));
+      expect(cards.length, equals(20));
     });
 
-    test('레벨 6: bash, ironWall 추가 해금 (13종)', () {
+    test('레벨 6: poisonDart, battleCry 추가 → 22종', () {
       final cards = MetaProgress.computeUnlockedCards(6);
-      expect(cards, containsAll(['bash', 'ironWall']));
-      expect(cards.length, equals(13));
+      expect(cards, containsAll(['bash', 'ironWall', 'poisonDart', 'battleCry']));
+      expect(cards.length, equals(22));
     });
 
-    test('레벨 10: 전체 26종 해금', () {
+    test('레벨 10: 전체 30종 해금', () {
       final cards = MetaProgress.computeUnlockedCards(10);
-      expect(cards, containsAll(['devilsDeal', 'gamble']));
-      expect(cards.length, equals(26));
+      expect(cards, containsAll(['devilsDeal', 'gamble', 'limitBreak', 'fiendFire', 'doubleTap', 'impervious']));
+      expect(cards.length, equals(30));
     });
   });
 
@@ -70,10 +70,11 @@ void main() {
       expect(p.xp, equals(0));
     });
 
-    test('초기 해금 카드: strike, defend', () {
+    test('초기 해금 카드: 기본 7종 + 스타터 2종 = 9종', () {
       final p = MetaProgress.initial();
       expect(p.unlockedCardTypes, containsAll(['strike', 'defend']));
-      expect(p.unlockedCardTypes.length, equals(2));
+      expect(p.unlockedCardTypes, containsAll(MetaProgress.baseUnlockedCards));
+      expect(p.unlockedCardTypes.length, equals(9));
     });
 
     test('초기 상태에서 isMaxLevel = false', () {
@@ -119,7 +120,7 @@ void main() {
   });
 
   group('MetaProgress.addXp — 레벨업', () {
-    test('레벨 1 → 2: rageBurst, quickMend 신규 해금', () {
+    test('레벨 1 → 2: tripleSlash, toxicJab, comboStrike 신규 해금', () {
       final p = MetaProgress.initial();
       final (updated, result) = p.addXp(100);
 
@@ -127,21 +128,23 @@ void main() {
       expect(result.didLevelUp, isTrue);
       expect(result.previousLevel, equals(1));
       expect(result.newLevel, equals(2));
-      expect(result.newlyUnlockedCards, containsAll(['rageBurst', 'quickMend']));
-      expect(result.newlyUnlockedCards.length, equals(2));
+      expect(result.newlyUnlockedCards,
+          containsAll(['tripleSlash', 'toxicJab', 'comboStrike']));
+      expect(result.newlyUnlockedCards.length, equals(3));
     });
 
-    test('레벨 2 → 3: swiftCut, regroup 신규 해금', () {
-      const p = MetaProgress(
+    test('레벨 2 → 3: bash, ironWall 신규 해금', () {
+      final p = MetaProgress(
         level: 2,
         xp: 200,
-        unlockedCardTypes: ['strike', 'defend', 'rageBurst', 'quickMend'],
+        unlockedCardTypes: MetaProgress.computeUnlockedCards(2),
       );
       final (updated, result) = p.addXp(50); // 200 + 50 = 250
 
       expect(updated.level, equals(3));
       expect(result.didLevelUp, isTrue);
-      expect(result.newlyUnlockedCards, containsAll(['swiftCut', 'regroup']));
+      expect(result.newlyUnlockedCards, containsAll(['bash', 'ironWall']));
+      expect(result.newlyUnlockedCards.length, equals(2));
     });
 
     test('XP가 여러 레벨을 한 번에 초과 → 올바른 레벨·신규 해금 반환', () {
@@ -150,9 +153,10 @@ void main() {
 
       expect(updated.level, equals(3));
       expect(result.didLevelUp, isTrue);
-      expect(result.newlyUnlockedCards,
-          containsAll(['rageBurst', 'quickMend', 'swiftCut', 'regroup']));
-      expect(result.newlyUnlockedCards.length, equals(4));
+      expect(result.newlyUnlockedCards, containsAll([
+        'tripleSlash', 'toxicJab', 'comboStrike', 'bash', 'ironWall',
+      ]));
+      expect(result.newlyUnlockedCards.length, equals(5));
     });
 
     test('최대 레벨(10)에서 XP 추가 → 레벨 변동 없음', () {
@@ -232,43 +236,33 @@ void main() {
     });
   });
 
-  group('MetaProgress.rewardPoolForLevel — 레벨업 보상 풀', () {
-    test('레벨 2~5는 tier1RewardPool 반환', () {
-      for (final level in [2, 3, 4, 5]) {
-        expect(
-          MetaProgress.rewardPoolForLevel(level),
-          same(MetaProgress.tier1RewardPool),
-        );
-      }
+  group('MetaProgress.levelUnlocks — 레벨별 카드 해금', () {
+    test('레벨 1은 기본 카드 2종을 해금한다', () {
+      expect(MetaProgress.levelUnlocks[1], containsAll(['strike', 'defend']));
     });
 
-    test('레벨 6~8은 tier2RewardPool 반환', () {
-      for (final level in [6, 7, 8]) {
-        expect(
-          MetaProgress.rewardPoolForLevel(level),
-          same(MetaProgress.tier2RewardPool),
-        );
-      }
+    test('레벨 2 이상은 비기본 카드를 해금한다', () {
+      final level2Cards = MetaProgress.levelUnlocks[2]!;
+      expect(level2Cards.contains('strike'), isFalse);
+      expect(level2Cards.contains('defend'), isFalse);
+      expect(level2Cards, isNotEmpty);
     });
 
-    test('레벨 9~10은 tier3RewardPool 반환', () {
-      for (final level in [9, 10]) {
-        expect(
-          MetaProgress.rewardPoolForLevel(level),
-          same(MetaProgress.tier3RewardPool),
-        );
-      }
+    test('computeUnlockedCards: 레벨이 높을수록 해금 카드가 많아진다', () {
+      final lv2 = MetaProgress.computeUnlockedCards(2);
+      final lv5 = MetaProgress.computeUnlockedCards(5);
+      expect(lv5.length, greaterThan(lv2.length));
     });
 
-    test('tier1Pool은 비어있지 않다', () {
-      expect(MetaProgress.tier1RewardPool, isNotEmpty);
-    });
-
-    test('tier3Pool은 tier1Pool보다 카드 수가 적다 (희귀 카드)', () {
-      expect(
-        MetaProgress.tier3RewardPool.length,
-        lessThan(MetaProgress.tier1RewardPool.length),
-      );
+    test('computeUnlockedCards: 레벨 10에서 모든 카드가 해금된다', () {
+      final all = MetaProgress.computeUnlockedCards(10);
+      expect(all, isNotEmpty);
+      // baseUnlockedCards + 레벨 1~10 levelUnlocks 총합과 일치해야 한다.
+      final expected = [
+        ...MetaProgress.baseUnlockedCards,
+        ...MetaProgress.levelUnlocks.values.expand((v) => v),
+      ];
+      expect(all.toSet(), equals(expected.toSet()));
     });
   });
 }

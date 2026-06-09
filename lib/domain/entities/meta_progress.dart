@@ -1,5 +1,4 @@
 import '../map/node_type.dart';
-import 'card.dart';
 
 /// 런 종료 후 영구 유지되는 메타 진행 상태.
 ///
@@ -22,21 +21,36 @@ class MetaProgress {
     2700,  // 레벨 10
   ];
 
-  // ── 레벨별 카드 해금 ──────────────────────────────────────────────────────
+  // ── 카드 해금 ──────────────────────────────────────────────────────────────
 
-  /// SPECS.md: 레벨 달성 시 런 보상 풀에 추가되는 카드 타입 문자열 목록.
-  /// 티어 구조: T1(1~5), T2(6~8), T3(9~10).
+  /// 레벨·진행도와 무관하게 항상 보상 풀에 등장하는 기본 해금 카드 (7종).
+  ///
+  /// 신규 플레이어도 전투 보상·이벤트·상점에서 이 카드들을 바로 만날 수 있다.
+  static const List<String> baseUnlockedCards = [
+    'swiftCut',   // 빠른 이중 공격 — 기초 공격 옵션
+    'rageBurst',  // 고데미지 + 복사 — 리스크 있는 화력
+    'quickMend',  // 즉시 회복 — 생존 수단
+    'regroup',    // 카드 3장 드로우 — 핸드 보충
+    'swiftGuard', // 방어 + 드로우 — 범용 방어
+    'sharpen',    // 이번 턴 공격 전체 강화 — 시너지 진입
+    'fury',       // 힘 +1 영구 — 누적 성장
+  ];
+
+  /// 레벨 달성 시 추가로 해금되는 카드 목록.
+  ///
+  /// - 레벨 1: 스타터 덱 카드 (보상 풀 제외, 시작 덱 추적용)
+  /// - 레벨 2~8: 단계별로 강력·복잡한 카드 해금
   static const Map<int, List<String>> levelUnlocks = {
-    1:  ['strike', 'defend'],
-    2:  ['rageBurst', 'quickMend'],
-    3:  ['swiftCut', 'regroup'],
-    4:  ['tripleSlash', 'toxicJab'],
-    5:  ['swiftGuard', 'comboStrike', 'sharpen'],
-    6:  ['bash', 'ironWall'],
-    7:  ['focus', 'recover', 'indomitable'],
-    8:  ['fury', 'exploitWeakness', 'blockStrike', 'weakSlash', 'poisonDart'],
-    9:  ['crushingBlow', 'bloodRush', 'battleCry'],
-    10: ['devilsDeal', 'gamble'],
+    1: ['strike', 'defend'],                            // 스타터 덱 전용
+    2: ['tripleSlash', 'toxicJab', 'comboStrike'],      // 중급 공격·상태이상
+    3: ['bash', 'ironWall'],                            // 취약 부여·중방어
+    4: ['focus', 'recover', 'indomitable'],             // 카드 강화·회복·힘+방어
+    5: ['exploitWeakness', 'weakSlash', 'blockStrike'], // 시너지 특화 카드
+    6: ['poisonDart', 'battleCry'],                     // 독·전열 강화
+    7: ['crushingBlow', 'bloodRush'],                   // 소모·에너지 기반 피해
+    8: ['devilsDeal', 'gamble'],                        // 고위험·고수익 엔드게임
+    9: ['limitBreak', 'fiendFire'],                     // 힘 폭발·손패 소멸 피해
+    10: ['doubleTap', 'impervious'],                    // 이중 발동·고방어 소멸
   };
 
   // ── 전투 XP 상수 ──────────────────────────────────────────────────────────
@@ -59,30 +73,6 @@ class MetaProgress {
   /// 보스 전투 XP (패배).
   static const int bossLoseXp    = 20;
 
-  // ── 레벨업 보상 카드 풀 ───────────────────────────────────────────────────
-
-  /// Tier 1 레벨업 보상 풀 — 레벨 2~5 달성 시 제공.
-  /// 저비용 안정형 카드로 구성.
-  static const List<GameCard> tier1RewardPool = [
-    Cards.rageBurst, Cards.quickMend, Cards.swiftCut, Cards.regroup,
-    Cards.tripleSlash, Cards.toxicJab, Cards.swiftGuard,
-    Cards.comboStrike, Cards.sharpen, Cards.indomitable,
-  ];
-
-  /// Tier 2 레벨업 보상 풀 — 레벨 6~8 달성 시 제공.
-  /// 전략적 중간급 카드로 구성.
-  static const List<GameCard> tier2RewardPool = [
-    Cards.bash, Cards.ironWall, Cards.focus, Cards.recover, Cards.fury,
-    Cards.exploitWeakness, Cards.blockStrike, Cards.weakSlash, Cards.poisonDart,
-  ];
-
-  /// Tier 3 레벨업 보상 풀 — 레벨 9~10 달성 시 제공.
-  /// 고위험·고수익 카드로 구성.
-  static const List<GameCard> tier3RewardPool = [
-    Cards.crushingBlow, Cards.bloodRush, Cards.battleCry,
-    Cards.devilsDeal, Cards.gamble,
-  ];
-
   // ── 필드 ──────────────────────────────────────────────────────────────────
 
   final int level;
@@ -90,7 +80,7 @@ class MetaProgress {
   /// 누적 XP 총합.
   final int xp;
 
-  /// 현재까지 해금된 카드 타입 문자열 목록.
+  /// 현재까지 해금된 카드 타입 문자열 목록 (기본 해금 + 레벨별 해금).
   final List<String> unlockedCardTypes;
 
   const MetaProgress({
@@ -101,11 +91,11 @@ class MetaProgress {
 
   // ── 팩토리 ────────────────────────────────────────────────────────────────
 
-  /// 게임 최초 시작 상태 — 레벨 1, XP 0, 기본 카드 2종 해금.
-  factory MetaProgress.initial() => const MetaProgress(
+  /// 게임 최초 시작 상태 — 레벨 1, XP 0, 기본 해금 카드 + 스타터 덱 카드.
+  factory MetaProgress.initial() => MetaProgress(
         level: 1,
         xp: 0,
-        unlockedCardTypes: ['strike', 'defend'],
+        unlockedCardTypes: computeUnlockedCards(1),
       );
 
   // ── static 계산 메서드 ────────────────────────────────────────────────────
@@ -119,8 +109,11 @@ class MetaProgress {
   }
 
   /// 지정 레벨까지 해금된 모든 카드 타입을 반환한다.
+  ///
+  /// [baseUnlockedCards]는 레벨에 무관하게 항상 포함된다.
+  /// [levelUnlocks]는 레벨 1부터 지정 레벨까지 누적해 추가된다.
   static List<String> computeUnlockedCards(int level) {
-    final cards = <String>[];
+    final cards = <String>[...baseUnlockedCards];
     for (int l = 1; l <= level && levelUnlocks.containsKey(l); l++) {
       cards.addAll(levelUnlocks[l]!);
     }
@@ -136,12 +129,21 @@ class MetaProgress {
         _                => 0,
       };
 
-  /// 해당 레벨 달성 시 제공할 보상 카드 풀을 반환한다.
-  static List<GameCard> rewardPoolForLevel(int level) {
-    if (level <= 5) return tier1RewardPool;
-    if (level <= 8) return tier2RewardPool;
-    return tier3RewardPool;
-  }
+  // ── 직렬화 ────────────────────────────────────────────────────────────────
+
+  /// 세이브 슬롯 저장을 위한 JSON 직렬화.
+  Map<String, dynamic> toJson() => {
+    'level': level,
+    'xp': xp,
+    'unlockedCardTypes': unlockedCardTypes,
+  };
+
+  /// JSON에서 [MetaProgress]를 복원한다.
+  static MetaProgress fromJson(Map<String, dynamic> json) => MetaProgress(
+    level: json['level'] as int,
+    xp: json['xp'] as int,
+    unlockedCardTypes: (json['unlockedCardTypes'] as List).cast<String>(),
+  );
 
   // ── 게터 ──────────────────────────────────────────────────────────────────
 
@@ -157,7 +159,7 @@ class MetaProgress {
 
   /// [amount]만큼 XP를 추가하고, 갱신된 상태와 레벨업 결과를 함께 반환한다.
   (MetaProgress, LevelUpResult) addXp(int amount) {
-    final newXp = xp + amount;
+    final newXp    = xp + amount;
     final newLevel = computeLevel(newXp);
     final newCards = computeUnlockedCards(newLevel);
     final newlyUnlocked =

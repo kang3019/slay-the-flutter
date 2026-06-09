@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../application/run_provider.dart';
 import '../../application/save_slot_provider.dart';
 import '../../domain/entities/save_slot.dart';
 
 /// 세이브 슬롯 선택 화면 — 슬롯 3개를 카드 형태로 나열한다.
 ///
-/// [onSlotLoaded]: 슬롯 로드 완료 후 호출되는 콜백 (맵 화면으로 이동 등).
+/// [onSlotLoaded]: 슬롯 로드·저장·새 게임 시작 후 호출되는 콜백.
 class SaveSlotScreen extends ConsumerWidget {
   final VoidCallback? onSlotLoaded;
 
@@ -44,14 +43,17 @@ class SaveSlotScreen extends ConsumerWidget {
                   onSlotLoaded?.call();
                 },
                 onNewGame: () async {
-                  ref.read(runProvider.notifier).startNewRun();
+                  await ref
+                      .read(saveSlotProvider.notifier)
+                      .newGameInSlot(i + 1);
+                  onSlotLoaded?.call();
+                },
+                onSave: () async {
                   await ref
                       .read(saveSlotProvider.notifier)
                       .saveToSlot(i + 1);
                   onSlotLoaded?.call();
                 },
-                onSave: () =>
-                    ref.read(saveSlotProvider.notifier).saveToSlot(i + 1),
                 onDelete: () =>
                     ref.read(saveSlotProvider.notifier).deleteSlot(i + 1),
               ),
@@ -64,6 +66,9 @@ class SaveSlotScreen extends ConsumerWidget {
 }
 
 /// 슬롯 1개를 표현하는 카드 위젯.
+///
+/// 저장·이어하기·새게임·삭제 버튼을 항상 2×2 그리드로 표시한다.
+/// 슬롯이 비어 있으면 이어하기·삭제 버튼은 비활성화된다.
 class _SlotCard extends StatelessWidget {
   final int slotId;
   final SaveSlot? slot;
@@ -143,6 +148,14 @@ class _SlotCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 3),
                       Text(
+                        'Lv.${slot!.metaProgress.level}  •  XP ${slot!.metaProgress.xp}',
+                        style: const TextStyle(
+                          color: Color(0xFFFFD700),
+                          fontSize: 12,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
                         'HP ${slot!.runState.playerHp}  •  골드 ${slot!.runState.gold}',
                         style: const TextStyle(
                           color: Colors.white54,
@@ -161,47 +174,57 @@ class _SlotCard extends StatelessWidget {
                   ),
           ),
           const SizedBox(width: 8),
-          // ── 버튼 영역 ─────────────────────────────────────────────
-          if (_isEmpty)
-            _ActionButton(
-              label: '새 게임',
-              color: const Color(0xFF4CAF50),
-              onPressed: onNewGame,
-            )
-          else
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                _ActionButton(
-                  label: '이어하기',
-                  color: const Color(0xFFF59E0B),
-                  onPressed: onLoad,
-                ),
-                const SizedBox(height: 6),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    _ActionButton(
-                      label: '덮어쓰기',
-                      color: const Color(0xFF64B5F6),
-                      onPressed: () =>
-                          _confirmOverwrite(context),
-                      small: true,
-                    ),
-                    const SizedBox(width: 6),
-                    _ActionButton(
-                      label: '삭제',
-                      color: const Color(0xFFEF5350),
-                      onPressed: () => _confirmDelete(context),
-                      small: true,
-                    ),
-                  ],
-                ),
-              ],
-            ),
+          // ── 버튼 2×2 그리드 ──────────────────────────────────────
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _ActionButton(
+                    label: '저장',
+                    color: const Color(0xFF4CAF50),
+                    onPressed: () => _handleSave(context),
+                  ),
+                  const SizedBox(width: 6),
+                  _ActionButton(
+                    label: '이어하기',
+                    color: const Color(0xFFF59E0B),
+                    onPressed: _isEmpty ? null : onLoad,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _ActionButton(
+                    label: '새게임',
+                    color: const Color(0xFF64B5F6),
+                    onPressed: () => _confirmNewGame(context),
+                  ),
+                  const SizedBox(width: 6),
+                  _ActionButton(
+                    label: '삭제',
+                    color: const Color(0xFFEF5350),
+                    onPressed: _isEmpty ? null : () => _confirmDelete(context),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ],
       ),
     );
+  }
+
+  /// 저장: 슬롯에 데이터가 있으면 덮어쓰기 확인 후 저장한다.
+  void _handleSave(BuildContext context) {
+    if (!_isEmpty) {
+      _confirmOverwrite(context);
+    } else {
+      onSave();
+    }
   }
 
   void _confirmOverwrite(BuildContext context) {
@@ -228,9 +251,47 @@ class _SlotCard extends StatelessWidget {
               onSave();
             },
             child: const Text(
-              '덮어쓰기',
+              '저장',
               style: TextStyle(
-                  color: Color(0xFF64B5F6), fontWeight: FontWeight.bold),
+                color: Color(0xFF4CAF50),
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _confirmNewGame(BuildContext context) {
+    showDialog<void>(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: const Color(0xFF16213E),
+        title: const Text(
+          '새 게임 시작',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+        content: const Text(
+          '현재 진행 중인 게임이 사라집니다.\n이 슬롯에서 새 게임을 시작하시겠습니까?',
+          style: TextStyle(color: Colors.white70, height: 1.6),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('취소', style: TextStyle(color: Colors.white54)),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              onNewGame();
+            },
+            child: const Text(
+              '새 게임',
+              style: TextStyle(
+                color: Color(0xFF64B5F6),
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
         ],
@@ -264,7 +325,9 @@ class _SlotCard extends StatelessWidget {
             child: const Text(
               '삭제',
               style: TextStyle(
-                  color: Color(0xFFEF5350), fontWeight: FontWeight.bold),
+                color: Color(0xFFEF5350),
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
         ],
@@ -276,28 +339,29 @@ class _SlotCard extends StatelessWidget {
 class _ActionButton extends StatelessWidget {
   final String label;
   final Color color;
-  final VoidCallback onPressed;
-  final bool small;
+  /// null 이면 버튼이 비활성화된다.
+  final VoidCallback? onPressed;
 
   const _ActionButton({
     required this.label,
     required this.color,
     required this.onPressed,
-    this.small = false,
   });
 
   @override
   Widget build(BuildContext context) {
+    final isDisabled = onPressed == null;
+    final effectiveColor = isDisabled ? Colors.white24 : color;
+
     return ElevatedButton(
       onPressed: onPressed,
       style: ElevatedButton.styleFrom(
-        backgroundColor: color.withValues(alpha: 0.15),
-        foregroundColor: color,
-        side: BorderSide(color: color, width: 1),
-        padding: small
-            ? const EdgeInsets.symmetric(horizontal: 10, vertical: 6)
-            : const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-        minimumSize: Size.zero,
+        backgroundColor: effectiveColor.withValues(alpha: 0.15),
+        foregroundColor: effectiveColor,
+        side: BorderSide(color: effectiveColor, width: 1),
+        // 4개 버튼 모두 동일한 크기 — "이어하기"(4자) 기준으로 너비 고정
+        fixedSize: const Size(72, 30),
+        padding: EdgeInsets.zero,
         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(8),
@@ -306,8 +370,8 @@ class _ActionButton extends StatelessWidget {
       ),
       child: Text(
         label,
-        style: TextStyle(
-          fontSize: small ? 11 : 13,
+        style: const TextStyle(
+          fontSize: 11,
           fontWeight: FontWeight.w600,
         ),
       ),

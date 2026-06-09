@@ -173,6 +173,10 @@ class _CardArt extends StatelessWidget {
         CardType.comboStrike     => Icons.repeat,
         CardType.gamble          => Icons.casino,
         CardType.poisonDart      => Icons.pest_control,
+        CardType.limitBreak      => Icons.keyboard_double_arrow_up,
+        CardType.impervious      => Icons.shield_moon,
+        CardType.doubleTap       => Icons.control_point_duplicate,
+        CardType.fiendFire       => Icons.whatshot,
       };
 }
 
