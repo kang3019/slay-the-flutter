@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../application/run_provider.dart';
+import '../domain/entities/meta_progress.dart';
 import '../domain/entities/save_slot.dart';
 
 /// 유효한 슬롯 ID 범위 (1~3).
@@ -63,11 +64,16 @@ class LocalStorage {
     }
   }
 
-  /// 현재 [runState]를 [slotId] 슬롯에 저장한다.
-  Future<void> saveSaveSlot(int slotId, RunState runState) async {
+  /// 현재 [runState]와 [metaProgress]를 [slotId] 슬롯에 저장한다.
+  Future<void> saveSaveSlot(
+    int slotId,
+    RunState runState,
+    MetaProgress metaProgress,
+  ) async {
     final slot = SaveSlot(
       slotId: slotId,
       runState: runState,
+      metaProgress: metaProgress,
       savedAt: DateTime.now(),
     );
     await _prefs.setString(_slotKey(slotId), jsonEncode(slot.toJson()));

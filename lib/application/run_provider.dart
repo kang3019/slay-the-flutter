@@ -10,6 +10,7 @@ import '../domain/events/game_event.dart';
 import '../domain/map/map_generator.dart';
 import '../domain/map/map_node.dart';
 import '../domain/map/node_type.dart';
+import 'meta_progress_provider.dart';
 
 // ──────────────────────────────────────────────────────────────────────────
 // RunPhase — 런 진행 단계
@@ -237,6 +238,10 @@ class RunState {
     CardType.comboStrike     => Cards.comboStrike,
     CardType.gamble          => Cards.gamble,
     CardType.poisonDart      => Cards.poisonDart,
+    CardType.limitBreak      => Cards.limitBreak,
+    CardType.impervious      => Cards.impervious,
+    CardType.doubleTap       => Cards.doubleTap,
+    CardType.fiendFire       => Cards.fiendFire,
   };
 
   // ── 파생 값 (getter) ───────────────────────────────────────────────────
@@ -352,8 +357,9 @@ class RunNotifier extends Notifier<RunState> {
   static const int _defaultStrikeCount = 5;
   static const int _defaultDefendCount = 5;
 
-  /// 전투 보상으로 제시할 수 있는 카드 풀 (기본 덱 카드 제외).
-  static const List<GameCard> _rewardPool = [
+  /// 전투·이벤트 보상으로 제시 가능한 전체 카드 목록 (기본 덱 카드 제외).
+  /// 실제 보상 풀은 [_unlockedRewardPool]에서 MetaProgress 해금 목록으로 필터링된다.
+  static const List<GameCard> _allRewardCards = [
     Cards.bash,
     Cards.swiftCut,
     Cards.ironWall,
@@ -379,6 +385,12 @@ class RunNotifier extends Notifier<RunState> {
     Cards.gamble,
     Cards.poisonDart,
   ];
+
+  /// MetaProgress에서 해금된 카드만 필터링한 보상 풀을 반환한다.
+  List<GameCard> _unlockedRewardPool() {
+    final unlocked = ref.read(metaProgressProvider).unlockedCardTypes.toSet();
+    return _allRewardCards.where((c) => unlocked.contains(c.type.name)).toList();
+  }
 
   final _random = Random();
 
@@ -632,15 +644,17 @@ class RunNotifier extends Notifier<RunState> {
   /// 1. HP 변화 (clamp: 1 ~ [Player.maxHp])
   /// 2. 골드 변화 (clamp: 0 이상)
   /// 3. 카드 추가 ([EventEffect.addRandomCard]가 true면 보상 풀에서 1장)
-  /// 이벤트 결과 화면용 카드를 미리 뽑아 반환한다.
-  /// 반환된 카드를 [resolveEvent]의 [prePickedCard]로 전달해야 실제로 덱에 추가된다.
-  GameCard pickPreviewCard() {
-    final shuffled = List.of(_rewardPool)..shuffle(_random);
+  /// 이벤트 카드 보상 미리보기용으로 해금 풀에서 카드 1장을 뽑아 반환한다.
+  /// 해금된 카드가 없으면 null을 반환한다.
+  GameCard? pickPreviewCard() {
+    final pool = _unlockedRewardPool();
+    if (pool.isEmpty) return null;
+    final shuffled = List.of(pool)..shuffle(_random);
     return shuffled.first;
   }
 
   /// [prePickedCard]가 있으면 해당 카드를 덱에 추가한다.
-  /// 없으면 풀에서 새로 뽑는다.
+  /// 없으면 해금 풀에서 새로 뽑는다. 풀이 비어 있으면 카드 추가를 건너뛴다.
   void resolveEvent(EventChoice choice, {GameCard? prePickedCard}) {
     if (state.phase != RunPhase.event) return;
 
@@ -651,7 +665,9 @@ class RunNotifier extends Notifier<RunState> {
     var newDeck = state.deck;
     if (effect.addRandomCard) {
       final card = prePickedCard ?? pickPreviewCard();
-      newDeck = List.unmodifiable([...state.deck, card]);
+      if (card != null) {
+        newDeck = List.unmodifiable([...state.deck, card]);
+      }
     }
 
     state = state.copyWith(
@@ -710,9 +726,11 @@ class RunNotifier extends Notifier<RunState> {
     }
   }
 
-  /// 보상 풀에서 무작위로 3장을 뽑는다.
+  /// 해금된 카드 중 무작위로 최대 3장을 뽑는다. 해금 카드가 없으면 빈 리스트를 반환한다.
   List<GameCard> _generateRewardCards() {
-    final shuffled = List.of(_rewardPool)..shuffle(_random);
+    final pool = _unlockedRewardPool();
+    if (pool.isEmpty) return const [];
+    final shuffled = List.of(pool)..shuffle(_random);
     return List.unmodifiable(shuffled.take(3).toList());
   }
 }

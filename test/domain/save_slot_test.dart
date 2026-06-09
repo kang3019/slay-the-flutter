@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:slay_the_flutter/application/run_provider.dart';
 import 'package:slay_the_flutter/domain/entities/card.dart';
+import 'package:slay_the_flutter/domain/entities/meta_progress.dart';
 import 'package:slay_the_flutter/domain/entities/player.dart';
 import 'package:slay_the_flutter/domain/entities/save_slot.dart';
 import 'package:slay_the_flutter/domain/map/map_generator.dart';
@@ -23,7 +24,12 @@ void main() {
     test('slotId 1~3 유효', () {
       final state = _makeMinimalRunState();
       final savedAt = DateTime(2026, 6, 7, 12);
-      final slot = SaveSlot(slotId: 1, runState: state, savedAt: savedAt);
+      final slot = SaveSlot(
+        slotId: 1,
+        runState: state,
+        metaProgress: MetaProgress.initial(),
+        savedAt: savedAt,
+      );
 
       expect(slot.slotId, equals(1));
       expect(slot.runState.floor, equals(1));
@@ -36,6 +42,7 @@ void main() {
       final slot = SaveSlot(
         slotId: 2,
         runState: _makeMinimalRunState(),
+        metaProgress: MetaProgress.initial(),
         savedAt: DateTime(2026, 6, 7),
       );
 
@@ -48,6 +55,7 @@ void main() {
       final slot = SaveSlot(
         slotId: 1,
         runState: _makeMinimalRunState(),
+        metaProgress: MetaProgress.initial(),
         savedAt: savedAt,
       );
 
@@ -60,6 +68,7 @@ void main() {
       final slot  = SaveSlot(
         slotId: 3,
         runState: state,
+        metaProgress: MetaProgress.initial(),
         savedAt: DateTime.now(),
       );
 
@@ -71,6 +80,7 @@ void main() {
       final slot = SaveSlot(
         slotId: 1,
         runState: _makeMinimalRunState(),
+        metaProgress: MetaProgress.initial(),
         savedAt: DateTime.now(),
       );
 
@@ -82,6 +92,7 @@ void main() {
       final slot = SaveSlot(
         slotId: 1,
         runState: _makeMinimalRunState(),
+        metaProgress: MetaProgress.initial(),
         savedAt: DateTime.now(),
       );
 
@@ -93,12 +104,42 @@ void main() {
       final slot = SaveSlot(
         slotId: 1,
         runState: _makeMinimalRunState(),
+        metaProgress: MetaProgress.initial(),
         savedAt: DateTime.now(),
       );
 
       final restored = SaveSlot.fromJson(slot.toJson());
       expect(restored.runState.deck.length, equals(2));
       expect(restored.runState.deck.first.type, equals(CardType.strike));
+    });
+
+    test('toJson/fromJson 왕복 — metaProgress 보존', () {
+      const meta = MetaProgress(level: 3, xp: 300, unlockedCardTypes: ['strike', 'defend', 'swiftCut']);
+      final slot = SaveSlot(
+        slotId: 1,
+        runState: _makeMinimalRunState(),
+        metaProgress: meta,
+        savedAt: DateTime.now(),
+      );
+
+      final restored = SaveSlot.fromJson(slot.toJson());
+      expect(restored.metaProgress.level, equals(3));
+      expect(restored.metaProgress.xp, equals(300));
+      expect(restored.metaProgress.unlockedCardTypes, contains('swiftCut'));
+    });
+
+    test('metaProgress 키 없는 구버전 JSON은 초기값으로 복원된다', () {
+      final slot = SaveSlot(
+        slotId: 1,
+        runState: _makeMinimalRunState(),
+        metaProgress: MetaProgress.initial(),
+        savedAt: DateTime.now(),
+      );
+      final json = slot.toJson()..remove('metaProgress');
+
+      final restored = SaveSlot.fromJson(json);
+      expect(restored.metaProgress.level, equals(1));
+      expect(restored.metaProgress.xp, equals(0));
     });
   });
 
@@ -107,6 +148,7 @@ void main() {
       final slot = SaveSlot(
         slotId: 1,
         runState: _makeMinimalRunState(),
+        metaProgress: MetaProgress.initial(),
         savedAt: DateTime(2026, 6, 7, 14, 30),
       );
       expect(slot.savedAtLabel, isA<String>());
@@ -117,6 +159,7 @@ void main() {
       final slot = SaveSlot(
         slotId: 1,
         runState: _makeMinimalRunState(), // floor: 1 → "Floor 2"
+        metaProgress: MetaProgress.initial(),
         savedAt: DateTime.now(),
       );
       expect(slot.stageLabel, contains('Floor'));

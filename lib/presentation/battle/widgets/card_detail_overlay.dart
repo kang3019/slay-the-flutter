@@ -160,6 +160,10 @@ class _BigArt extends StatelessWidget {
         CardType.comboStrike     => Icons.repeat,
         CardType.gamble          => Icons.casino,
         CardType.poisonDart      => Icons.pest_control,
+        CardType.limitBreak      => Icons.keyboard_double_arrow_up,
+        CardType.impervious      => Icons.shield_moon,
+        CardType.doubleTap       => Icons.control_point_duplicate,
+        CardType.fiendFire       => Icons.whatshot,
       };
 }
 
@@ -204,10 +208,10 @@ class _BigFooter extends StatelessWidget {
         CardType.rageBurst       => '적에게 ${card.value}의 피해를 입힙니다.\n사용 후 복사본이 버리는 더미에 추가됩니다.',
         CardType.toxicJab        => '${card.value} 데미지 + 취약 ${card.isUpgraded ? 3 : 2}턴',
         CardType.regroup         => '카드 ${card.value}장 드로우',
-        CardType.crushingBlow    => '적에게 ${card.value}의 피해를 입힙니다.\n사용 후 이 카드는 덱에서 영구 제거됩니다.',
+        CardType.crushingBlow    => '적에게 ${card.value}의 피해를 입힙니다.\n이번 전투에서 소멸됩니다.',
         CardType.fury            => '힘을 ${card.value} 올립니다. (전투 내내 지속)',
         CardType.tripleSlash     => '적에게 ${card.value}의 피해를\n3회 연속으로 입힙니다.',
-        CardType.quickMend       => 'HP를 ${card.value} 회복합니다.\n사용 후 이 카드는 덱에서 영구 제거됩니다.',
+        CardType.quickMend       => 'HP를 ${card.value} 회복합니다.\n이번 전투에서 소멸됩니다.',
         CardType.swiftGuard      => '방어도를 ${card.value} 획득하고\n카드를 1장 드로우합니다.',
         CardType.exploitWeakness => '적에게 ${card.value}의 피해를 입힙니다.\n적이 취약 상태면 +${card.isUpgraded ? 9 : 6} 추가 피해.',
         CardType.sharpen         => '이번 턴에 사용하는\n공격 카드 전부에 +${card.value} 데미지.',
@@ -217,10 +221,16 @@ class _BigFooter extends StatelessWidget {
             : '현재 방어도만큼 데미지를 입힙니다.',
         CardType.bloodRush       => '남은 에너지를 모두 소모해\nX×${card.value}의 피해를 입힙니다.',
         CardType.devilsDeal      => 'HP를 ${card.value} 잃고\n카드를 3장 드로우합니다.',
-        CardType.battleCry       => '카드 2장 드로우 + 힘 +${card.isUpgraded ? 2 : 1}.\n사용 후 이 카드는 덱에서 영구 제거됩니다.',
+        CardType.battleCry       => '카드 2장 드로우 + 힘 +${card.isUpgraded ? 2 : 1}.\n이번 전투에서 소멸됩니다.',
         CardType.indomitable     => '방어도를 (${card.value} + 현재 힘) 획득합니다.',
         CardType.comboStrike     => '현재 손패의 공격 카드 수 × ${card.value}의\n피해를 입힙니다.',
         CardType.gamble          => 'HP를 ${card.value} 잃고 에너지를 2 획득합니다.',
         CardType.poisonDart      => '적에게 ${card.value}의 피해를 입히고\n독 ${card.isUpgraded ? 5 : 3}스택을 부여합니다.',
+        CardType.limitBreak      => card.isUpgraded
+            ? '현재 힘을 2배로 증가시킵니다.\n이번 전투에서 소멸됩니다.'
+            : '현재 힘을 2배로 증가시킵니다.',
+        CardType.impervious      => '방어도를 ${card.value} 획득합니다.\n이번 전투에서 소멸됩니다.',
+        CardType.doubleTap       => '이번 턴, 다음 공격 카드 ${card.value}장을\n각각 2번 발동합니다.',
+        CardType.fiendFire       => '손패의 카드를 모두 버리고\n버린 카드 1장당 ${card.value}의 피해를 입힙니다.\n이번 전투에서 소멸됩니다.',
       };
 }

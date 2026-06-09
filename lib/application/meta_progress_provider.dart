@@ -24,10 +24,11 @@ class MetaProgressNotifier extends Notifier<MetaProgress> {
   @override
   MetaProgress build() {
     final storage = ref.watch(localStorageProvider);
+    final level = storage.playerLevel;
     return MetaProgress(
-      level: storage.playerLevel,
+      level: level,
       xp: storage.playerXp,
-      unlockedCardTypes: storage.unlockedCards,
+      unlockedCardTypes: MetaProgress.computeUnlockedCards(level),
     );
   }
 
@@ -42,6 +43,15 @@ class MetaProgressNotifier extends Notifier<MetaProgress> {
 
     state = updated;
     return result;
+  }
+
+  /// 슬롯 로드 시 저장된 스냅샷으로 상태를 복원한다.
+  Future<void> restoreFromSnapshot(MetaProgress snapshot) async {
+    final storage = ref.read(localStorageProvider);
+    await storage.setPlayerLevel(snapshot.level);
+    await storage.setPlayerXp(snapshot.xp);
+    await storage.setUnlockedCards(snapshot.unlockedCardTypes);
+    state = snapshot;
   }
 
   /// 메타 진행 상태를 초기값으로 리셋한다.

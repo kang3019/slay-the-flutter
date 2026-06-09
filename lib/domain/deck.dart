@@ -94,4 +94,5 @@ class Deck {
       _exhaustPile.add(_discardPile.removeLast());
     }
   }
+
 }

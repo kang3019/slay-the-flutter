@@ -8,6 +8,7 @@ enum CardType {
   tripleSlash, quickMend, swiftGuard, exploitWeakness, sharpen,
   weakSlash, blockStrike, bloodRush, devilsDeal,
   battleCry, indomitable, comboStrike, gamble, poisonDart,
+  limitBreak, impervious, doubleTap, fiendFire,
 }
 
 /// 불변 카드 정의. 비용·효과 분류·수치를 보유한다.
@@ -530,6 +531,118 @@ class Cards {
     isUpgraded: true,
   );
 
+  /// 현재 힘을 2배로 증가시킨다. [value]는 사용하지 않는다.
+  /// 강화 시 이번 전투에서 소멸된다.
+  static const limitBreak = GameCard(
+    type: CardType.limitBreak,
+    name: '극한 각성',
+    cost: 1,
+    effectType: CardEffectType.strength,
+    value: 0,
+  );
+
+  /// 극한 각성 강화: 힘 2배, 소멸.
+  static const limitBreakUpgraded = GameCard(
+    type: CardType.limitBreak,
+    name: '극한 각성+',
+    cost: 1,
+    effectType: CardEffectType.strength,
+    value: 0,
+    isUpgraded: true,
+  );
+
+  /// 방어도 [value] 획득. 사용 후 소멸.
+  static const impervious = GameCard(
+    type: CardType.impervious,
+    name: '철옹성',
+    cost: 2,
+    effectType: CardEffectType.block,
+    value: 30,
+  );
+
+  /// 철옹성 강화: 방어도 40, 소멸.
+  static const imperviousUpgraded = GameCard(
+    type: CardType.impervious,
+    name: '철옹성+',
+    cost: 2,
+    effectType: CardEffectType.block,
+    value: 40,
+    isUpgraded: true,
+  );
+
+  /// 이번 턴, 다음 공격 카드를 [value]번 추가로 발동한다.
+  static const doubleTap = GameCard(
+    type: CardType.doubleTap,
+    name: '폭격 태세',
+    cost: 1,
+    effectType: CardEffectType.buff,
+    value: 1,
+  );
+
+  /// 폭격 태세 강화: 다음 2장의 공격 카드를 각각 2번 발동.
+  static const doubleTapUpgraded = GameCard(
+    type: CardType.doubleTap,
+    name: '폭격 태세+',
+    cost: 1,
+    effectType: CardEffectType.buff,
+    value: 2,
+    isUpgraded: true,
+  );
+
+  /// 손패의 카드를 모두 소멸시키고 소멸된 카드당 [value] 데미지. 사용 후 소멸.
+  static const fiendFire = GameCard(
+    type: CardType.fiendFire,
+    name: '업화',
+    cost: 2,
+    effectType: CardEffectType.damage,
+    value: 7,
+  );
+
+  /// 업화 강화: 카드당 10 데미지, 소멸.
+  static const fiendFireUpgraded = GameCard(
+    type: CardType.fiendFire,
+    name: '업화+',
+    cost: 2,
+    effectType: CardEffectType.damage,
+    value: 10,
+    isUpgraded: true,
+  );
+
+  /// 카드 타입 문자열로 기본(비강화) 카드 인스턴스를 반환한다. 알 수 없는 타입은 null.
+  static GameCard? byTypeName(String typeName) => switch (typeName) {
+    'strike'          => strike,
+    'defend'          => defend,
+    'swiftCut'        => swiftCut,
+    'rageBurst'       => rageBurst,
+    'quickMend'       => quickMend,
+    'regroup'         => regroup,
+    'swiftGuard'      => swiftGuard,
+    'sharpen'         => sharpen,
+    'fury'            => fury,
+    'tripleSlash'     => tripleSlash,
+    'toxicJab'        => toxicJab,
+    'comboStrike'     => comboStrike,
+    'bash'            => bash,
+    'ironWall'        => ironWall,
+    'focus'           => focus,
+    'recover'         => recover,
+    'indomitable'     => indomitable,
+    'exploitWeakness' => exploitWeakness,
+    'weakSlash'       => weakSlash,
+    'blockStrike'     => blockStrike,
+    'poisonDart'      => poisonDart,
+    'battleCry'       => battleCry,
+    'crushingBlow'    => crushingBlow,
+    'bloodRush'       => bloodRush,
+    'devilsDeal'      => devilsDeal,
+    'gamble'          => gamble,
+    'limitBreak'      => limitBreak,
+    'impervious'      => impervious,
+    'doubleTap'       => doubleTap,
+    'fiendFire'       => fiendFire,
+    _                 => null,
+  };
+
   /// [card]의 강화 버전을 반환한다.
   ///
   /// 이미 강화된 카드([isUpgraded] == true)이면 원본을 그대로 반환한다.
@@ -562,6 +675,10 @@ class Cards {
       CardType.comboStrike     => comboStrikeUpgraded,
       CardType.gamble          => gambleUpgraded,
       CardType.poisonDart      => poisonDartUpgraded,
+      CardType.limitBreak      => limitBreakUpgraded,
+      CardType.impervious      => imperviousUpgraded,
+      CardType.doubleTap       => doubleTapUpgraded,
+      CardType.fiendFire       => fiendFireUpgraded,
     };
   }
 }

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../application/meta_progress_provider.dart';
 import '../../application/run_provider.dart';
+import 'level_progress_dialog.dart';
 
 /// 게임 설정 화면 — 메타 진행 초기화 기능을 제공한다.
 class SettingsScreen extends ConsumerWidget {
@@ -36,6 +37,14 @@ class SettingsScreen extends ConsumerWidget {
               xpForNext: progress.xpForNextLevel,
               isMaxLevel: progress.isMaxLevel,
               unlockedCount: progress.unlockedCardTypes.length,
+              onTap: () => showDialog<void>(
+                context: context,
+                builder: (_) =>
+                    LevelProgressDialog(
+                      currentLevel: progress.level,
+                      currentXp: progress.xp,
+                    ),
+              ),
             ),
             const SizedBox(height: 32),
             // ── 진행 초기화 ────────────────────────────────────────
@@ -78,6 +87,7 @@ class _ProgressCard extends StatelessWidget {
   final int xpForNext;
   final bool isMaxLevel;
   final int unlockedCount;
+  final VoidCallback? onTap;
 
   const _ProgressCard({
     required this.level,
@@ -85,58 +95,86 @@ class _ProgressCard extends StatelessWidget {
     required this.xpForNext,
     required this.isMaxLevel,
     required this.unlockedCount,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFF16213E),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFF3D3020)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: const Color(0xFF16213E),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xFF3D3020)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Icon(Icons.star, color: Color(0xFFFFD700), size: 20),
-              const SizedBox(width: 8),
-              Text(
-                'Lv.$level',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
+              Row(
+                children: [
+                  const Icon(Icons.star, color: Color(0xFFFFD700), size: 20),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Lv.$level',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const Spacer(),
+                  Text(
+                    isMaxLevel ? 'MAX' : '$xp / $xpForNext XP',
+                    style:
+                        const TextStyle(color: Colors.white54, fontSize: 13),
+                  ),
+                  const SizedBox(width: 4),
+                  const Icon(
+                    Icons.chevron_right,
+                    color: Colors.white38,
+                    size: 18,
+                  ),
+                ],
               ),
-              const Spacer(),
-              Text(
-                isMaxLevel ? 'MAX' : '$xp / $xpForNext XP',
-                style: const TextStyle(color: Colors.white54, fontSize: 13),
+              if (!isMaxLevel) ...[
+                const SizedBox(height: 8),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: LinearProgressIndicator(
+                    value: (xp / xpForNext).clamp(0.0, 1.0),
+                    minHeight: 8,
+                    backgroundColor: const Color(0xFF333333),
+                    valueColor: const AlwaysStoppedAnimation<Color>(
+                        Color(0xFFFFD700)),
+                  ),
+                ),
+              ],
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Text(
+                    '해금된 카드: $unlockedCount종',
+                    style:
+                        const TextStyle(color: Colors.white70, fontSize: 13),
+                  ),
+                  const SizedBox(width: 8),
+                  const Text(
+                    '진행도 보기 →',
+                    style: TextStyle(
+                      color: Color(0xFFF59E0B),
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
-          if (!isMaxLevel) ...[
-            const SizedBox(height: 8),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(4),
-              child: LinearProgressIndicator(
-                value: (xp / xpForNext).clamp(0.0, 1.0),
-                minHeight: 8,
-                backgroundColor: const Color(0xFF333333),
-                valueColor:
-                    const AlwaysStoppedAnimation<Color>(Color(0xFFFFD700)),
-              ),
-            ),
-          ],
-          const SizedBox(height: 10),
-          Text(
-            '해금된 카드: $unlockedCount종',
-            style: const TextStyle(color: Colors.white70, fontSize: 13),
-          ),
-        ],
+        ),
       ),
     );
   }

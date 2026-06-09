@@ -1,4 +1,5 @@
 import '../../application/run_provider.dart';
+import 'meta_progress.dart';
 
 /// 세이브 슬롯 하나의 데이터 — 런 상태 스냅샷과 저장 메타 정보.
 ///
@@ -10,12 +11,16 @@ class SaveSlot {
   /// 저장된 런 상태 스냅샷.
   final RunState runState;
 
+  /// 슬롯 저장 시점의 레벨·XP·해금 카드 스냅샷.
+  final MetaProgress metaProgress;
+
   /// 슬롯에 저장된 시각.
   final DateTime savedAt;
 
   const SaveSlot({
     required this.slotId,
     required this.runState,
+    required this.metaProgress,
     required this.savedAt,
   });
 
@@ -42,15 +47,21 @@ class SaveSlot {
 
   /// SharedPreferences 저장을 위한 JSON 직렬화.
   Map<String, dynamic> toJson() => {
-    'slotId':   slotId,
-    'savedAt':  savedAt.toIso8601String(),
-    'runState': runState.toJson(),
+    'slotId':       slotId,
+    'savedAt':      savedAt.toIso8601String(),
+    'runState':     runState.toJson(),
+    'metaProgress': metaProgress.toJson(),
   };
 
   /// JSON에서 [SaveSlot]을 복원한다.
+  ///
+  /// `metaProgress` 키가 없는 구버전 저장 파일은 초기값으로 대체한다.
   static SaveSlot fromJson(Map<String, dynamic> json) => SaveSlot(
-    slotId:   json['slotId']  as int,
-    savedAt:  DateTime.parse(json['savedAt'] as String),
-    runState: RunState.fromJson(json['runState'] as Map<String, dynamic>),
+    slotId:       json['slotId']  as int,
+    savedAt:      DateTime.parse(json['savedAt'] as String),
+    runState:     RunState.fromJson(json['runState'] as Map<String, dynamic>),
+    metaProgress: json['metaProgress'] != null
+        ? MetaProgress.fromJson(json['metaProgress'] as Map<String, dynamic>)
+        : MetaProgress.initial(),
   );
 }

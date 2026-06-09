@@ -1,15 +1,13 @@
-import 'dart:math';
-
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../application/battle_provider.dart';
+import '../../application/level_up_pending_provider.dart';
 import '../../application/meta_progress_provider.dart';
 import '../../application/run_provider.dart';
 import '../../domain/battle_engine.dart';
 import '../../domain/entities/card.dart';
-import '../../domain/entities/meta_progress.dart';
 import '../../domain/entities/monster.dart';
 import '../../domain/entities/relic.dart';
 import '../../domain/map/map_node.dart';
@@ -19,6 +17,7 @@ import '../map/widgets/map_painter.dart';
 import 'battle_constants.dart';
 import 'particles/iron_golem_particle_game.dart';
 import 'widgets/hand_widget.dart';
+import 'widgets/looping_video_bg.dart';
 import 'widgets/monster_widget.dart';
 import 'widgets/player_character_widget.dart';
 
@@ -48,9 +47,7 @@ class _BattleScreenState extends ConsumerState<BattleScreen>
   bool _pendingEndTurnShake = false;
 
   bool _isProcessingXp = false;
-  LevelUpResult? _pendingLevelUp;
-  List<GameCard> _levelUpRewardCards = const [];
-  final _random = Random();
+  String? _levelUpBanner;
 
   @override
   void initState() {
@@ -158,18 +155,17 @@ class _BattleScreenState extends ConsumerState<BattleScreen>
 
           if (!mounted) return;
 
-          // 일반·엘리트 승리에서 레벨업 시 보상 카드 제공.
-          // 보스 또는 패배 시는 런이 종료 또는 무의미하므로 생략.
-          if (levelUpResult.didLevelUp && isVictory && nodeType != NodeType.boss) {
-            final pool = List<GameCard>.of(
-              MetaProgress.rewardPoolForLevel(levelUpResult.newLevel),
-            )..shuffle(_random);
+          // 레벨업 시 배너를 2초간 표시한다. 카드 선택 없이 해금만 적용된다.
+          if (levelUpResult.didLevelUp) {
+            // 맵 화면 다이얼로그를 위해 결과를 보관한다.
+            ref.read(levelUpPendingProvider.notifier).state = levelUpResult;
+
             setState(() {
-              _isProcessingXp     = false;
-              _pendingLevelUp     = levelUpResult;
-              _levelUpRewardCards = pool.take(3).toList();
+              _levelUpBanner = 'LEVEL UP!  Lv.${levelUpResult.newLevel}';
             });
-            return;
+            Future.delayed(const Duration(seconds: 2), () {
+              if (mounted) setState(() => _levelUpBanner = null);
+            });
           }
         }
       } catch (_) {
@@ -200,11 +196,16 @@ class _BattleScreenState extends ConsumerState<BattleScreen>
                   if (currentChild != null) currentChild,
                 ],
               ),
-              child: Image.asset(
-                BattleAssets.backgroundForMonster(state.monsterType.name),
-                key: ValueKey(state.monsterType.name),
-                fit: BoxFit.cover,
-              ),
+              child: state.monsterType == MonsterType.ironGolem
+                  ? Image.asset(
+                      BattleAssets.ironGolemBg,
+                      key: const ValueKey('ironGolem'),
+                      fit: BoxFit.cover,
+                    )
+                  : const LoopingVideoBg(
+                      key: ValueKey('video_bg'),
+                      assetPath: BattleAssets.backgroundVideo,
+                    ),
             ),
           ),
           // ── 철갑골렘 전용 파티클 오버레이 (보석 반짝임 + 검 이글거림) ───
@@ -331,7 +332,7 @@ class _BattleScreenState extends ConsumerState<BattleScreen>
               ),
             ),
           ),
-          if (state.isBattleOver && !_isProcessingXp && _pendingLevelUp == null)
+          if (state.isBattleOver && !_isProcessingXp)
             _BattleResultOverlay(
               result: state.result!,
               xpGained: xpGained,
@@ -346,19 +347,35 @@ class _BattleScreenState extends ConsumerState<BattleScreen>
                     goldEarned: BattleGoldRewards.forStage(state.stage),
                   ),
             ),
-          // ── 레벨업 보상 카드 선택 오버레이 ──────────────────────────────
-          if (_pendingLevelUp != null)
-            _LevelUpRewardOverlay(
-              result: _pendingLevelUp!,
-              rewardCards: _levelUpRewardCards,
-              onCardSelected: (card) {
-                ref.read(runProvider.notifier).addCardToDeck(card);
-                setState(() => _pendingLevelUp = null);
-                // 레벨업 보상 선택 후 일반 결과 오버레이로 이동.
-                // 다음 build()에서 _pendingLevelUp == null 이 되어
-                // _BattleResultOverlay 가 표시된다.
-              },
-              onSkip: () => setState(() => _pendingLevelUp = null),
+          // ── 레벨업 배너 (2초간 표시 후 자동 소멸) ───────────────────────
+          if (_levelUpBanner != null)
+            IgnorePointer(
+              child: Center(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xCC000000),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: Color(0xFFFFD700), width: 1.5),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.star, color: Color(0xFFFFD700), size: 20),
+                      const SizedBox(width: 8),
+                      Text(
+                        _levelUpBanner!,
+                        style: const TextStyle(
+                          color: Color(0xFFFFD700),
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 1.2,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ),
         ],
       ),
@@ -825,132 +842,6 @@ class _BattleResultOverlay extends StatelessWidget {
   }
 }
 
-/// 레벨업 보상 카드 선택 오버레이.
-///
-/// 일반·엘리트 전투 승리 후 레벨업 시 표시되며, 3장 중 1장을 덱에 추가한다.
-class _LevelUpRewardOverlay extends StatelessWidget {
-  final LevelUpResult result;
-  final List<GameCard> rewardCards;
-  final ValueChanged<GameCard> onCardSelected;
-  final VoidCallback onSkip;
-
-  const _LevelUpRewardOverlay({
-    required this.result,
-    required this.rewardCards,
-    required this.onCardSelected,
-    required this.onSkip,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return ColoredBox(
-      color: const Color(0xCC000000),
-      child: Center(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // ── 레벨업 타이틀 ─────────────────────────────────────
-              const Icon(Icons.star, size: 48, color: Color(0xFFFFD700)),
-              const SizedBox(height: 8),
-              Text(
-                'LEVEL UP!  Lv.${result.previousLevel} → Lv.${result.newLevel}',
-                style: const TextStyle(
-                  color: Color(0xFFFFD700),
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 1.2,
-                ),
-              ),
-              const SizedBox(height: 4),
-              const Text(
-                '덱에 추가할 카드를 선택하세요',
-                style: TextStyle(color: Colors.white70, fontSize: 14),
-              ),
-              const SizedBox(height: 24),
-              // ── 카드 3장 ─────────────────────────────────────────
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: rewardCards.map((card) => Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  child: _LevelUpCardItem(
-                    card: card,
-                    onTap: () => onCardSelected(card),
-                  ),
-                )).toList(),
-              ),
-              const SizedBox(height: 20),
-              TextButton(
-                onPressed: onSkip,
-                child: const Text(
-                  '건너뛰기',
-                  style: TextStyle(color: Colors.white38, fontSize: 13),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _LevelUpCardItem extends StatelessWidget {
-  final GameCard card;
-  final VoidCallback onTap;
-  const _LevelUpCardItem({required this.card, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    final color  = BattleColors.forCard(card.effectType);
-    final border = BattleColors.borderForCard(card.effectType);
-
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 90,
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 14),
-        decoration: BoxDecoration(
-          color: const Color(0xFF0D0A07),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: border, width: 1.5),
-          boxShadow: [BoxShadow(color: color.withValues(alpha: 0.4), blurRadius: 10)],
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.auto_awesome, color: color, size: 22),
-            const SizedBox(height: 6),
-            Text(
-              card.name,
-              textAlign: TextAlign.center,
-              style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              BattleStrings.cardEffect(card),
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.white70, fontSize: 10),
-            ),
-            const SizedBox(height: 6),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.2),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                card.cost < 0 ? 'X' : '${card.cost} EP',
-                style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w600),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
 
 /// 몬스터 이미지를 배경 문 앞에 배치한다.
 /// 피격 시 좌우 흔들림, 사망 시 위로 드리프트하며 페이드아웃 모션을 재생한다.
