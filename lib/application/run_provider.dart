@@ -97,6 +97,27 @@ class RunState {
   /// 획득하거나 건너뛰면 null로 초기화된다.
   final Relic? currentTreasureRelic;
 
+  /// 상점에서 판매 중인 카드 목록. [RunPhase.shop]일 때만 채워진다.
+  final List<GameCard> shopCards;
+
+  /// 상점 카드 가격 목록. [shopCards]와 1:1 대응.
+  final List<int> shopCardPrices;
+
+  /// 상점 카드 구매 여부. [shopCards]와 1:1 대응.
+  final List<bool> shopCardSold;
+
+  /// 상점에서 판매 중인 유물 목록. [RunPhase.shop]일 때만 채워진다.
+  final List<Relic> shopRelics;
+
+  /// 상점 유물 가격 목록. [shopRelics]와 1:1 대응.
+  final List<int> shopRelicPrices;
+
+  /// 상점 유물 구매 여부. [shopRelics]와 1:1 대응.
+  final List<bool> shopRelicSold;
+
+  /// 이번 상점 방문에서 카드 제거 서비스를 이미 사용했으면 true.
+  final bool shopCardRemovalDone;
+
   const RunState({
     required this.phase,
     required this.floor,
@@ -111,6 +132,13 @@ class RunState {
     this.relics = const [],
     this.currentEvent,
     this.currentTreasureRelic,
+    this.shopCards = const [],
+    this.shopCardPrices = const [],
+    this.shopCardSold = const [],
+    this.shopRelics = const [],
+    this.shopRelicPrices = const [],
+    this.shopRelicSold = const [],
+    this.shopCardRemovalDone = false,
   });
 
   // ── 직렬화 ────────────────────────────────────────────────────────────
@@ -130,6 +158,13 @@ class RunState {
     'relics': relics.map((r) => r.id).toList(),
     'currentEvent': currentEvent?.id,
     'currentTreasureRelic': currentTreasureRelic?.id,
+    'shopCards': shopCards.map(_cardToJson).toList(),
+    'shopCardPrices': shopCardPrices,
+    'shopCardSold': shopCardSold,
+    'shopRelics': shopRelics.map((r) => r.id).toList(),
+    'shopRelicPrices': shopRelicPrices,
+    'shopRelicSold': shopRelicSold,
+    'shopCardRemovalDone': shopCardRemovalDone,
   };
 
   static Map<String, dynamic> _cardToJson(GameCard c) => {
@@ -183,9 +218,19 @@ class RunState {
       catch (_) {}
     }
 
-    final rawDeck   = (json['deck']        as List?)?.cast<Map<String, dynamic>>() ?? [];
-    final rawNodes  = (json['mapNodes']    as List?)?.cast<Map<String, dynamic>>() ?? [];
-    final rawReward = (json['rewardCards'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+    final rawDeck      = (json['deck']        as List?)?.cast<Map<String, dynamic>>() ?? [];
+    final rawNodes     = (json['mapNodes']    as List?)?.cast<Map<String, dynamic>>() ?? [];
+    final rawReward    = (json['rewardCards'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+    final rawShopCards = (json['shopCards']   as List?)?.cast<Map<String, dynamic>>() ?? [];
+    final shopCardPrices  = (json['shopCardPrices'] as List?)?.map((e) => e as int).toList()  ?? const <int>[];
+    final shopCardSold    = (json['shopCardSold']   as List?)?.map((e) => e as bool).toList() ?? const <bool>[];
+    final shopRelicIds    = List<String>.from(json['shopRelics'] as List? ?? []);
+    final shopRelics      = shopRelicIds.map((id) {
+          try { return GameRelics.all.firstWhere((r) => r.id == id); }
+          catch (_) { return null; }
+        }).whereType<Relic>().toList();
+    final shopRelicPrices = (json['shopRelicPrices'] as List?)?.map((e) => e as int).toList()  ?? const <int>[];
+    final shopRelicSold   = (json['shopRelicSold']   as List?)?.map((e) => e as bool).toList() ?? const <bool>[];
 
     return RunState(
       phase:              RunPhase.values.byName(json['phase'] as String? ?? 'map'),
@@ -201,6 +246,13 @@ class RunState {
       relics:             relics,
       currentEvent:       event,
       currentTreasureRelic: treasure,
+      shopCards:          rawShopCards.map(cardFromJson).toList(),
+      shopCardPrices:     shopCardPrices,
+      shopCardSold:       shopCardSold,
+      shopRelics:         shopRelics,
+      shopRelicPrices:    shopRelicPrices,
+      shopRelicSold:      shopRelicSold,
+      shopCardRemovalDone: json['shopCardRemovalDone'] as bool? ?? false,
     );
   }
 
@@ -293,6 +345,13 @@ class RunState {
     Object? currentEvent = _kClearEvent,
     // Relic?을 null로 되돌리려면 currentTreasureRelic: null을 전달한다.
     Object? currentTreasureRelic = _kClearTreasure,
+    List<GameCard>? shopCards,
+    List<int>? shopCardPrices,
+    List<bool>? shopCardSold,
+    List<Relic>? shopRelics,
+    List<int>? shopRelicPrices,
+    List<bool>? shopRelicSold,
+    bool? shopCardRemovalDone,
   }) =>
       RunState(
         phase: phase ?? this.phase,
@@ -312,6 +371,13 @@ class RunState {
         currentTreasureRelic: identical(currentTreasureRelic, _kClearTreasure)
             ? this.currentTreasureRelic
             : currentTreasureRelic as Relic?,
+        shopCards:           shopCards           ?? this.shopCards,
+        shopCardPrices:      shopCardPrices      ?? this.shopCardPrices,
+        shopCardSold:        shopCardSold        ?? this.shopCardSold,
+        shopRelics:          shopRelics          ?? this.shopRelics,
+        shopRelicPrices:     shopRelicPrices     ?? this.shopRelicPrices,
+        shopRelicSold:       shopRelicSold       ?? this.shopRelicSold,
+        shopCardRemovalDone: shopCardRemovalDone ?? this.shopCardRemovalDone,
       );
 }
 
@@ -401,7 +467,7 @@ class RunNotifier extends Notifier<RunState> {
         phase: RunPhase.map,
         floor: -1,
         playerHp: Player.maxHp,
-        gold: 0,
+        gold: 75,
         deck: [
           ...List.generate(_defaultStrikeCount, (_) => Cards.strike),
           ...List.generate(_defaultDefendCount, (_) => Cards.defend),
@@ -451,6 +517,22 @@ class RunNotifier extends Notifier<RunState> {
         ? _pickTreasureRelic()
         : null;
 
+    List<GameCard>? shopCards;
+    List<int>? shopCardPrices;
+    List<bool>? shopCardSold;
+    List<Relic>? shopRelics;
+    List<int>? shopRelicPrices;
+    List<bool>? shopRelicSold;
+    if (target.type == NodeType.shop) {
+      final inv   = _generateShopInventory();
+      shopCards      = inv.cards;
+      shopCardPrices = inv.cardPrices;
+      shopCardSold   = List.unmodifiable(List.filled(inv.cards.length, false));
+      shopRelics      = inv.relics;
+      shopRelicPrices = inv.relicPrices;
+      shopRelicSold   = List.unmodifiable(List.filled(inv.relics.length, false));
+    }
+
     state = state.copyWith(
       floor: target.floor,
       currentNodeId: nodeId,
@@ -458,6 +540,13 @@ class RunNotifier extends Notifier<RunState> {
       phase: nextPhase,
       currentEvent: nextEvent,
       currentTreasureRelic: nextTreasure,
+      shopCards:          shopCards      ?? const [],
+      shopCardPrices:     shopCardPrices ?? const [],
+      shopCardSold:       shopCardSold   ?? const [],
+      shopRelics:          shopRelics      ?? const [],
+      shopRelicPrices:     shopRelicPrices ?? const [],
+      shopRelicSold:       shopRelicSold   ?? const [],
+      shopCardRemovalDone: false,
     );
   }
 
@@ -619,7 +708,72 @@ class RunNotifier extends Notifier<RunState> {
   /// 상점 화면을 닫고 맵으로 돌아간다.
   void exitShop() {
     if (state.phase != RunPhase.shop) return;
-    state = state.copyWith(phase: RunPhase.map);
+    state = state.copyWith(
+      phase: RunPhase.map,
+      shopCards: const [],
+      shopCardPrices: const [],
+      shopCardSold: const [],
+      shopRelics: const [],
+      shopRelicPrices: const [],
+      shopRelicSold: const [],
+      shopCardRemovalDone: false,
+    );
+  }
+
+  /// 상점에서 [index]번 카드를 구매한다.
+  ///
+  /// 골드 부족 또는 이미 구매한 경우 무시한다.
+  void buyShopCard(int index) {
+    if (state.phase != RunPhase.shop) return;
+    if (index < 0 || index >= state.shopCards.length) return;
+    if (state.shopCardSold[index]) return;
+    final price = state.shopCardPrices[index];
+    if (state.gold < price) return;
+    final newSold = List<bool>.of(state.shopCardSold)..[index] = true;
+    state = state.copyWith(
+      gold: state.gold - price,
+      deck: List.unmodifiable([...state.deck, state.shopCards[index]]),
+      shopCardSold: List.unmodifiable(newSold),
+    );
+  }
+
+  /// 상점에서 [index]번 유물을 구매한다.
+  ///
+  /// 골드 부족 또는 이미 구매한 경우 무시한다.
+  void buyShopRelic(int index) {
+    if (state.phase != RunPhase.shop) return;
+    if (index < 0 || index >= state.shopRelics.length) return;
+    if (state.shopRelicSold[index]) return;
+    final price = state.shopRelicPrices[index];
+    if (state.gold < price) return;
+    final relic = state.shopRelics[index];
+    if (state.relics.any((r) => r.id == relic.id)) return;
+    final newSold = List<bool>.of(state.shopRelicSold)..[index] = true;
+    state = state.copyWith(
+      gold: state.gold - price,
+      relics: List.unmodifiable([...state.relics, relic]),
+      shopRelicSold: List.unmodifiable(newSold),
+    );
+  }
+
+  /// 카드 제거 서비스 비용 (고정 30G).
+  static const int shopRemovalCost = 30;
+
+  /// 상점 카드 제거 서비스로 [card]를 덱에서 제거하고 골드를 소비한다.
+  ///
+  /// 이번 방문에서 이미 사용했거나 골드가 부족하면 무시한다.
+  void removeCardInShop(GameCard card) {
+    if (state.phase != RunPhase.shop) return;
+    if (state.shopCardRemovalDone) return;
+    if (state.gold < shopRemovalCost) return;
+    final idx = state.deck.indexOf(card);
+    if (idx < 0) return;
+    final newDeck = List<GameCard>.of(state.deck)..removeAt(idx);
+    state = state.copyWith(
+      gold: state.gold - shopRemovalCost,
+      deck: List.unmodifiable(newDeck),
+      shopCardRemovalDone: true,
+    );
   }
 
   // ── 런 리셋 ────────────────────────────────────────────────────────────
@@ -686,6 +840,32 @@ class RunNotifier extends Notifier<RunState> {
     final available = GameRelics.all.where((r) => !owned.contains(r.id)).toList();
     if (available.isEmpty) return GameRelics.all[_random.nextInt(GameRelics.all.length)];
     return available[_random.nextInt(available.length)];
+  }
+
+  /// 상점 입장 시 판매 카드 3장과 유물 2개를 무작위로 결정한다.
+  ({
+    List<GameCard> cards,
+    List<int> cardPrices,
+    List<Relic> relics,
+    List<int> relicPrices,
+  }) _generateShopInventory() {
+    final pool     = _unlockedRewardPool();
+    final shuffled = List.of(pool)..shuffle(_random);
+    final cards      = shuffled.take(3).toList();
+    final cardPrices = List.generate(cards.length, (_) => 30 + _random.nextInt(16));
+
+    final owned     = state.relics.map((r) => r.id).toSet();
+    final available = GameRelics.all.where((r) => !owned.contains(r.id)).toList()
+      ..shuffle(_random);
+    final relics      = available.take(2).toList();
+    final relicPrices = List.generate(relics.length, (_) => 80 + _random.nextInt(31));
+
+    return (
+      cards:       List.unmodifiable(cards),
+      cardPrices:  List.unmodifiable(cardPrices),
+      relics:      List.unmodifiable(relics),
+      relicPrices: List.unmodifiable(relicPrices),
+    );
   }
 
   /// 유물 보관소에서 유물을 획득하고 맵으로 돌아간다.

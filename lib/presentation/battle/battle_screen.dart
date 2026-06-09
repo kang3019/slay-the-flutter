@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -202,13 +204,19 @@ class _BattleScreenState extends ConsumerState<BattleScreen>
                       key: const ValueKey('ironGolem'),
                       fit: BoxFit.cover,
                     )
-                  : const LoopingVideoBg(
-                      key: ValueKey('video_bg'),
-                      assetPath: BattleAssets.backgroundVideo,
+                  // 저해상도 MP4의 픽셀 거칠음을 σ=1.5 블러로 완화
+                  : ImageFiltered(
+                      key: const ValueKey('video_bg'),
+                      imageFilter: ImageFilter.blur(sigmaX: 1.5, sigmaY: 1.5),
+                      child: const LoopingVideoBg(
+                        assetPath: BattleAssets.backgroundVideo,
+                      ),
                     ),
             ),
           ),
-          // ── 철갑골렘 전용 파티클 오버레이 (보석 반짝임 + 검 이글거림) ───
+          // 배경 오버레이를 파티클보다 먼저 적용해 파티클이 어둡게 묻히지 않도록 한다
+          const Positioned.fill(child: ColoredBox(color: BattleColors.backgroundOverlay)),
+          // ── 철갑골렘 전용 파티클 오버레이 (안개 + 보석 글로우 + 검 불꽃) ─
           if (state.monsterType == MonsterType.ironGolem)
             Positioned.fill(
               child: IgnorePointer(
@@ -217,7 +225,8 @@ class _BattleScreenState extends ConsumerState<BattleScreen>
                 ),
               ),
             ),
-          const Positioned.fill(child: ColoredBox(color: BattleColors.backgroundOverlay)),
+          // ── 몬스터 발 아래 바닥 그림자 — 몬스터를 씬에 붙이는 효과 ──────
+          _MonsterGroundShadow(monsterType: state.monsterType),
           // ── 몬스터: 배경 문 앞에 위치 (자체 흔들림 포함) ──────────────
           _MonsterBackgroundImage(
             monsterType: state.monsterType,
@@ -861,6 +870,21 @@ class _MonsterBackgroundImage extends StatefulWidget {
 
 class _MonsterBackgroundImageState extends State<_MonsterBackgroundImage>
     with TickerProviderStateMixin {
+  // 일반 배경 (따뜻한 횃불 분위기): R 살짝 올리고, B 낮추고, G 중립
+  static const _kWarmLight = ColorFilter.matrix(<double>[
+    1.05, 0.06, 0.00, 0,  6,
+    0.02, 0.96, 0.00, 0,  2,
+    0.00, 0.02, 0.87, 0,  0,
+    0,    0,    0,    1,  0,
+  ]);
+
+  // 철갑골렘 배경 (으스스한 녹색 마법 조명): G 올리고, R·B 낮춤
+  static const _kGreenLight = ColorFilter.matrix(<double>[
+    0.85, 0.05, 0.02, 0,  0,
+    0.03, 0.98, 0.03, 0, 14,
+    0.02, 0.10, 0.85, 0,  0,
+    0,    0,    0,    1,  0,
+  ]);
   // 피격 흔들림
   late final AnimationController _hitCtrl;
   late final Animation<double>   _shake;
@@ -934,11 +958,14 @@ class _MonsterBackgroundImageState extends State<_MonsterBackgroundImage>
           animation: Listenable.merge([_hitCtrl, _deathCtrl]),
           child: Align(
             alignment: isBoss ? const Alignment(-0.15, 1.0) : Alignment.bottomCenter,
-            child: Image.asset(
-              imagePath,
-              height: imageHeight,
-              fit: BoxFit.contain,
-              filterQuality: FilterQuality.medium,
+            child: ColorFiltered(
+              colorFilter: isBoss ? _kGreenLight : _kWarmLight,
+              child: Image.asset(
+                imagePath,
+                height: imageHeight,
+                fit: BoxFit.contain,
+                filterQuality: FilterQuality.medium,
+              ),
             ),
           ),
           builder: (context, child) => Transform.translate(
@@ -952,6 +979,69 @@ class _MonsterBackgroundImageState extends State<_MonsterBackgroundImage>
       ),
     );
   }
+}
+
+/// 몬스터 발 아래에 어두운 타원 그림자를 그려 씬에 자연스럽게 붙이는 위젯.
+class _MonsterGroundShadow extends StatelessWidget {
+  final MonsterType monsterType;
+  const _MonsterGroundShadow({required this.monsterType});
+
+  @override
+  Widget build(BuildContext context) {
+    final size   = MediaQuery.sizeOf(context);
+    final isBoss = monsterType == MonsterType.ironGolem;
+
+    // 몬스터 bottomOffset 값과 맞춤 (battle_screen 내 _MonsterBackgroundImage 참조)
+    final bottom      = size.height * (isBoss ? 0.13 : 0.29);
+    final centerX     = size.width  * (isBoss ? 0.425 : 0.50);
+    final shadowWidth = size.width  * (isBoss ? 0.46  : 0.36);
+
+    return Positioned(
+      bottom: bottom,
+      left: 0,
+      right: 0,
+      height: 52,
+      child: IgnorePointer(
+        child: CustomPaint(
+          painter: _GroundShadowPainter(
+            centerX:     centerX,
+            shadowWidth: shadowWidth,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _GroundShadowPainter extends CustomPainter {
+  final double centerX;
+  final double shadowWidth;
+  const _GroundShadowPainter({required this.centerX, required this.shadowWidth});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Rect.fromCenter(
+      center: Offset(centerX, size.height * 0.58),
+      width:  shadowWidth,
+      height: size.height * 0.78,
+    );
+    canvas.drawOval(
+      rect,
+      Paint()
+        ..shader = RadialGradient(
+          colors: const [
+            Color(0x50000000),
+            Color(0x20000000),
+            Color(0x00000000),
+          ],
+          stops: const [0.0, 0.5, 1.0],
+        ).createShader(rect),
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _GroundShadowPainter old) =>
+      old.centerX != centerX || old.shadowWidth != shadowWidth;
 }
 
 /// 전투 중 맵을 읽기 전용으로 엿볼 수 있는 다이얼로그.
