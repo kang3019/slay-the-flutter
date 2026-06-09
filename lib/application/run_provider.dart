@@ -36,6 +36,12 @@ enum RunPhase {
 
   /// 휴식처 화면 — HP 회복 또는 카드 강화를 선택하는 단계.
   rest,
+
+  /// 상점 화면 — 골드로 카드 구매·제거·유물 구매를 하는 단계.
+  shop,
+
+  /// 런 종료 화면 — 보스 처치 또는 플레이어 사망 후 결과를 보여주는 단계.
+  runEnd,
 }
 
 // ──────────────────────────────────────────────────────────────────────────
@@ -583,6 +589,27 @@ class RunNotifier extends Notifier<RunState> {
     );
   }
 
+  // ── 런 종료 ────────────────────────────────────────────────────────────
+
+  /// 보스 처치 또는 플레이어 사망 후 [RunPhase.runEnd]로 전환한다.
+  ///
+  /// [RunEndScreen]에서 결과를 표시하고 "새 런 시작"으로 [startNewRun]을 호출한다.
+  void endRun({required int remainingHp, required int goldEarned}) {
+    state = state.copyWith(
+      phase: RunPhase.runEnd,
+      playerHp: remainingHp.clamp(0, Player.maxHp),
+      gold: state.gold + goldEarned,
+      isRunOver: true,
+      rewardCards: const [],
+    );
+  }
+
+  /// 상점 화면을 닫고 맵으로 돌아간다.
+  void exitShop() {
+    if (state.phase != RunPhase.shop) return;
+    state = state.copyWith(phase: RunPhase.map);
+  }
+
   // ── 런 리셋 ────────────────────────────────────────────────────────────
 
   /// 현재 런을 종료하고 초기 상태(새 런)로 리셋한다.
@@ -672,7 +699,7 @@ class RunNotifier extends Notifier<RunState> {
         NodeType.event    => RunPhase.event,
         NodeType.treasure => RunPhase.treasure,
         NodeType.rest     => RunPhase.rest,
-        _                 => RunPhase.map,
+        NodeType.shop     => RunPhase.shop,
       };
 
   MapNode? _findNode(String nodeId) {

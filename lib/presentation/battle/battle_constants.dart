@@ -17,8 +17,10 @@ abstract final class BattleStrings {
   static const runClear          = '런 클리어!';
   static const defeat            = '패배...';
   static const restart           = '새 런 시작';
+  static const viewResult        = '결과 보기';
   static const selectReward      = '보상 카드 선택';
   static const returnToMap       = '맵으로 이동';
+  static const peekMap           = '지도 보기';
   static const vulnerable            = '취약';
   static const vulnerableDescription = '받는 피해가 50% 증가한다. (×1.5)';
   static const weak                  = '약화';
@@ -88,7 +90,13 @@ abstract final class BattleGoldRewards {
 
 /// 전투 화면 에셋 경로 상수.
 abstract final class BattleAssets {
-  static const background = 'assets/images/battle_bg.png';
+  static const background        = 'assets/images/battle_bg.png';
+  static const ironGolemBg       = 'assets/images/backgrounds/iron_golem_bg.jpg';
+
+  /// 몬스터 타입 이름에 맞는 전용 배경 경로를 반환한다.
+  /// 전용 배경이 없으면 기본 [background]를 반환한다.
+  static String backgroundForMonster(String monsterTypeName) =>
+      monsterTypeName == 'ironGolem' ? ironGolemBg : background;
 }
 
 /// 플레이어 캐릭터 이미지 경로 상수.

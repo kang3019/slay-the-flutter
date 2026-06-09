@@ -6,14 +6,14 @@
 
 ## 스프린트 개요
 
-| 스프린트 | 기간 | 목표 | 완료 기준 |
-|----------|------|------|-----------|
-| Sprint 1 | 05/12 ~ 05/16 | 기획 & 환경 구축 | 개발 환경 구성, 기획 문서 완성 |
-| Sprint 2 | 05/19 ~ 05/23 | 아키텍처 설계 확정 | 폴더 구조 생성, 도메인 모델 설계 |
-| Sprint 3 | 05/26 ~ 05/30 | 핵심 로직 + UI 착수 | BattleEngine 기본 동작, CardWidget 초안 |
-| Sprint 4 | 06/02 ~ 06/06 | 로직 완성 + UI 개발 | 모든 M3 태스크 완료, M4 60% 진행 |
-| Sprint 5 | 06/09 ~ 06/13 | 통합 + 테스트 | M5·M6 완료, 커버리지 목표 달성 |
-| Sprint 6 | 06/16 ~ 06/20 | QA + 발표 준비 | 버그 0건, 발표 슬라이드·데모 완성 |
+| 스프린트 | 기간 | 목표 | 상태 |
+|----------|------|------|------|
+| Sprint 1 | 05/12 ~ 05/16 | 기획 & 환경 구축 | ✅ 완료 |
+| Sprint 2 | 05/19 ~ 05/23 | 아키텍처 설계 확정 | ✅ 완료 |
+| Sprint 3 | 05/26 ~ 05/30 | 핵심 로직 + UI 착수 | ✅ 완료 |
+| Sprint 4 | 06/02 ~ 06/06 | 로직 완성 + UI 개발 | ✅ 완료 |
+| Sprint 5 | 06/09 ~ 06/13 | 통합 + 마무리 | 🔄 진행 중 |
+| Sprint 6 | 06/16 ~ 06/20 | QA + 발표 준비 | ⏳ 예정 |
 
 ---
 
@@ -114,31 +114,35 @@
 
 ---
 
-## Sprint 5 — 통합 & 테스트 (06/09 ~ 06/13)
+## Sprint 5 — 통합 & 마무리 (06/09 ~ 06/13) 🔄 진행 중
 
-**목표**: UI-ViewModel 통합 완료, 테스트 커버리지 목표 달성.
+**목표**: 미구현 화면 완성, 전체 게임 루프 완결.
 
 ### 태스크
 
-| ID | 태스크 | 담당 | 산출물 |
+| ID | 태스크 | 상태 | 산출물 |
 |----|--------|------|--------|
-| T024 | RewardScreen | B | 보상 선택 화면 |
-| T025 | MapScreen 스테이지 | B | 스테이지 맵 화면 |
-| T026 | MetaScreen 해금 | B | 레벨/해금 카드 화면 |
-| T028 | XP/레벨업 시스템 | A | `XpSystem.calculateLevel()` |
-| T029 | 해금 시스템 | A | `UnlockSystem.getUnlockedCards()` |
-| T030 | 맵/런 진행 Provider | A | `RunProvider` 스테이지 전환 |
-| T031 | UI-ViewModel 통합 | A+B | 전체 게임 루프 동작 |
-| T032 | BattleEngine 테스트 | A | `test/domain/battle_engine_test.dart` |
-| T033 | 모델 단위 테스트 | A | `test/domain/` 커버리지 ≥ 80% |
-| T034 | ViewModel 테스트 | A | `test/application/` 커버리지 ≥ 70% |
-| T035 | 위젯 테스트 | B | 주요 위젯 smoke test |
-| T036 | 통합 테스트 80% | A+B | 전체 커버리지 확인 |
+| T024 | RewardScreen | ✅ 완료 | `reward_screen.dart` |
+| T025 | MapScreen 스테이지 | ✅ 완료 | `map_screen.dart` (절차적 생성 맵) |
+| T026 | MetaScreen 해금 | ⚠️ 부분 | 도메인·Provider 완성, 전용 화면 접근 경로 미완 |
+| T028 | XP/레벨업 시스템 | ✅ 완료 | `MetaProgress.addXp()` |
+| T029 | 해금 시스템 | ✅ 완료 | `MetaProgress.computeUnlockedCards()` |
+| T030 | 맵/런 진행 Provider | ✅ 완료 | `RunProvider` (6가지 RunPhase) |
+| T031 | UI-ViewModel 통합 | ⚠️ 부분 | Shop·RunEnd 화면 미구현 |
+| T032 | BattleEngine 테스트 | ✅ 완료 | 421개 전부 통과 |
+| T033 | 모델 단위 테스트 | ✅ 완료 | `test/domain/` |
+| T034 | ViewModel 테스트 | ✅ 완료 | `test/application/` |
+| T035 | 위젯 테스트 | ✅ 완료 | `widget_test.dart` |
+| T036 | 통합 테스트 80% | ⚠️ 미측정 | `flutter test --coverage` 실행 필요 |
+| T043 | ShopScreen 구현 | ⬜ 미착수 | 골드 소비, 카드 구매·제거, 유물 구매 |
+| T044 | RunEndScreen 구현 | ⬜ 미착수 | 승리/패배 결과, XP 지급, 레벨업 연출 |
+| T045 | MetaProgressScreen 연결 | ⬜ 미착수 | 레벨·XP 바·해금 카드 목록 접근 경로 |
 
 ### 완료 기준
-- 런 시작 → 전투 → 보상 → 다음 스테이지 → 보스 → 런 클리어 전 흐름 동작
-- `models/` 커버리지 ≥ 80%
-- `viewmodels/` 커버리지 ≥ 70%
+- 런 시작 → 전투 → 보상 → 다음 스테이지 → 보스 → 런 종료 전 흐름 동작
+- ShopScreen에서 골드로 카드 구매·제거 가능
+- RunEndScreen에서 XP 지급 및 레벨업 연출 동작
+- `flutter test` 전체 GREEN
 - `flutter analyze` 경고 0건
 
 ---

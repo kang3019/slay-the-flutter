@@ -24,6 +24,9 @@ dependencies:
   # 로컬 영속성 — XP, 레벨, 해금 목록을 앱 재시작 후에도 유지
   shared_preferences: ^2.3.0
 
+  # 게임 엔진 — 철갑골렘 보스 배경 파티클 효과(보석 반짝임·검 이글거림)에 사용
+  flame: ^1.18.0
+
 # ──────────────────────────────────────────────
 # Dev / test dependencies  (프로덕션 빌드에 포함되지 않음)
 # ──────────────────────────────────────────────
@@ -45,3 +48,4 @@ flutter:
   assets:
     - assets/images/
     - assets/images/monsters/
+    - assets/images/backgrounds/
