@@ -101,8 +101,10 @@ class _HandWidgetState extends State<HandWidget> {
       final (left, angle) = _cardLayout(i, n, stackWidth);
       final bool isPastThreshold = isDragging && _dragDy <= _kPlayThreshold;
 
-      return Positioned(
+      return AnimatedPositioned(
         key: ValueKey(i),
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOut,
         bottom: 0,
         left: left,
         child: GestureDetector(

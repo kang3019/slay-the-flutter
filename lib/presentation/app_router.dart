@@ -7,28 +7,18 @@ import '../domain/map/node_type.dart';
 import 'battle/battle_screen.dart';
 import 'event/event_screen.dart';
 import 'map/map_screen.dart';
-import 'reward/reward_screen.dart';
 import 'rest/rest_screen.dart';
+import 'reward/reward_screen.dart';
+import 'run_end/run_end_screen.dart';
+import 'shared/top_bar_widget.dart';
+import 'shop/shop_screen.dart';
 import 'treasure/treasure_screen.dart';
 
-/// 런(Run) 단계([RunPhase])에 따라 [MapScreen]과 [BattleScreen]을 교체하는
-/// 최상위 라우터 위젯.
+/// 런(Run) 단계([RunPhase])에 따라 화면을 교체하는 최상위 라우터 위젯.
 ///
-/// **화면 전환 흐름:**
-/// ```
-/// 지도에서 전투 노드 탭
-///   → RunNotifier.moveToNode() → RunPhase.battle
-///   → AppRouter 감지 → BattleScreen 표시
-///                     + BattleNotifier.startBattle(stage) 자동 호출
-///
-/// 전투 승리 후 "맵으로 이동" 탭
-///   → RunNotifier.exitBattleToMap() → RunPhase.map
-///   → AppRouter 감지 → MapScreen 복귀
-/// ```
-///
-/// Navigator를 사용하지 않고 [RunPhase] 값만으로 화면을 결정하는 이유:
-/// - 런 전체가 단일 '상태 머신'이므로 뒤로가기(Back) 개념이 없다.
-/// - 화면 전환 로직이 Application 계층([RunNotifier])에 집중되어 테스트 가능하다.
+/// [RunPhase.runEnd]를 제외한 모든 단계에서 [TopBarWidget]이 상단에 고정된다.
+/// [TopBarWidget]은 Stack 최상단에 [SafeArea]로 감싸 올려 놓아, 각 화면의
+/// 레이아웃을 수정하지 않고 글로벌 HUD를 제공한다.
 class AppRouter extends ConsumerWidget {
   const AppRouter({super.key});
 
@@ -36,15 +26,8 @@ class AppRouter extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final phase = ref.watch(runProvider.select((s) => s.phase));
 
-    // ── 단계 전환 감지: map → battle ──────────────────────────────────────
-    // RunPhase가 battle로 바뀌는 순간 BattleNotifier에 올바른 스테이지로
-    // 새 전투를 시작하도록 지시한다.
-    //
-    // ref.listen은 build() 안에서 호출하는 것이 Riverpod 2.x 공식 패턴이다.
-    // 콜백은 상태가 바뀔 때마다 한 번만 실행되며, build를 다시 트리거하지 않는다.
     ref.listen<RunState>(runProvider, (prev, next) {
       if (prev?.phase != RunPhase.battle && next.phase == RunPhase.battle) {
-        // 새 전투 시작 — 유물 목록을 함께 전달해 전투 시작 시 유물 효과를 적용한다.
         ref.read(battleProvider.notifier).startBattle(
               next.currentStage,
               relics: next.relics,
@@ -55,14 +38,36 @@ class AppRouter extends ConsumerWidget {
       }
     });
 
-    // ── 단계에 따른 화면 결정 ─────────────────────────────────────────────
-    return switch (phase) {
+    final screen = switch (phase) {
       RunPhase.map      => const MapScreen(),
       RunPhase.battle   => const BattleScreen(),
       RunPhase.reward   => const RewardScreen(),
       RunPhase.event    => const EventScreen(),
       RunPhase.treasure => const TreasureScreen(),
       RunPhase.rest     => const RestScreen(),
+      RunPhase.shop     => const ShopScreen(),
+      RunPhase.runEnd   => const RunEndScreen(),
     };
+
+    // Map·Battle·RunEnd는 TopBar 불필요.
+    // (Battle은 HUD에 골드가 포함되고, Map은 자체 상태표시가 있음)
+    if (phase == RunPhase.map ||
+        phase == RunPhase.battle ||
+        phase == RunPhase.runEnd) {
+      return screen;
+    }
+
+    return Stack(
+      children: [
+        screen,
+        Positioned(
+          top: 0, left: 0, right: 0,
+          child: SafeArea(
+            bottom: false,
+            child: const TopBarWidget(),
+          ),
+        ),
+      ],
+    );
   }
 }

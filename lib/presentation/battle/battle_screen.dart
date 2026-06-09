@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -11,8 +12,12 @@ import '../../domain/entities/card.dart';
 import '../../domain/entities/meta_progress.dart';
 import '../../domain/entities/monster.dart';
 import '../../domain/entities/relic.dart';
+import '../../domain/map/map_node.dart';
 import '../../domain/map/node_type.dart';
+import '../map/map_constants.dart';
+import '../map/widgets/map_painter.dart';
 import 'battle_constants.dart';
+import 'particles/iron_golem_particle_game.dart';
 import 'widgets/hand_widget.dart';
 import 'widgets/monster_widget.dart';
 import 'widgets/player_character_widget.dart';
@@ -33,6 +38,9 @@ class _BattleScreenState extends ConsumerState<BattleScreen>
   final ValueNotifier<int>  _attackTrigger      = ValueNotifier(0);
   final ValueNotifier<int>  _monsterHitTrigger  = ValueNotifier(0);
   final ValueNotifier<bool> _monsterDeadTrigger = ValueNotifier(false);
+
+  /// 철갑골렘 전용 파티클 게임 인스턴스 — 리빌드마다 재생성되지 않도록 late final로 보관.
+  late final IronGolemParticleGame _particleGame = IronGolemParticleGame();
 
   late final AnimationController _shakeCtrl;
   late final Animation<double>   _shakeAnim;
@@ -94,6 +102,18 @@ class _BattleScreenState extends ConsumerState<BattleScreen>
 
   NodeType _currentNodeType() =>
       ref.read(runProvider).currentNode?.type ?? NodeType.monster;
+
+  void _showMapPeek(BuildContext context) {
+    final run = ref.read(runProvider);
+    showDialog<void>(
+      context: context,
+      builder: (_) => _MapPeekDialog(
+        mapNodes: run.mapNodes,
+        currentNodeId: run.currentNodeId,
+        visitedNodeIds: run.visitedNodeIds,
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -169,7 +189,33 @@ class _BattleScreenState extends ConsumerState<BattleScreen>
     return Scaffold(
       body: Stack(
         children: [
-          Positioned.fill(child: Image.asset(BattleAssets.background, fit: BoxFit.cover)),
+          Positioned.fill(
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 600),
+              // StackFit.expand으로 resize 시 자식에 tight 제약 전달
+              layoutBuilder: (currentChild, previousChildren) => Stack(
+                fit: StackFit.expand,
+                children: [
+                  ...previousChildren,
+                  if (currentChild != null) currentChild,
+                ],
+              ),
+              child: Image.asset(
+                BattleAssets.backgroundForMonster(state.monsterType.name),
+                key: ValueKey(state.monsterType.name),
+                fit: BoxFit.cover,
+              ),
+            ),
+          ),
+          // ── 철갑골렘 전용 파티클 오버레이 (보석 반짝임 + 검 이글거림) ───
+          if (state.monsterType == MonsterType.ironGolem)
+            Positioned.fill(
+              child: IgnorePointer(
+                child: GameWidget<IronGolemParticleGame>(
+                  game: _particleGame,
+                ),
+              ),
+            ),
           const Positioned.fill(child: ColoredBox(color: BattleColors.backgroundOverlay)),
           // ── 몬스터: 배경 문 앞에 위치 (자체 흔들림 포함) ──────────────
           _MonsterBackgroundImage(
@@ -197,7 +243,10 @@ class _BattleScreenState extends ConsumerState<BattleScreen>
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          _StageHeader(stage: state.stage),
+                          _StageHeader(
+                            stage: state.stage,
+                            onMapPeek: () => _showMapPeek(context),
+                          ),
                           const SizedBox(height: 8),
                           if (runState.relics.isNotEmpty) ...[
                             _RelicRow(relics: runState.relics),
@@ -236,6 +285,8 @@ class _BattleScreenState extends ConsumerState<BattleScreen>
                               crossAxisAlignment: CrossAxisAlignment.end,
                               children: [
                                 _PlayerHud(state: state),
+                                const SizedBox(width: 8),
+                                _GoldChip(gold: runState.gold),
                                 const Spacer(),
                                 _EndTurnButton(
                                   isBattleOver: state.isBattleOver,
@@ -290,7 +341,10 @@ class _BattleScreenState extends ConsumerState<BattleScreen>
                     remainingHp: state.playerHp,
                     goldEarned: BattleGoldRewards.forStage(state.stage),
                   ),
-              onNewRun: () => ref.read(runProvider.notifier).startNewRun(),
+              onEndRun: () => ref.read(runProvider.notifier).endRun(
+                    remainingHp: state.playerHp,
+                    goldEarned: BattleGoldRewards.forStage(state.stage),
+                  ),
             ),
           // ── 레벨업 보상 카드 선택 오버레이 ──────────────────────────────
           if (_pendingLevelUp != null)
@@ -316,7 +370,8 @@ class _BattleScreenState extends ConsumerState<BattleScreen>
 
 class _StageHeader extends StatelessWidget {
   final int stage;
-  const _StageHeader({required this.stage});
+  final VoidCallback onMapPeek;
+  const _StageHeader({required this.stage, required this.onMapPeek});
 
   @override
   Widget build(BuildContext context) {
@@ -334,6 +389,24 @@ class _StageHeader extends StatelessWidget {
           ),
         ),
         const Spacer(),
+        GestureDetector(
+          onTap: onMapPeek,
+          child: const Row(
+            children: [
+              Icon(Icons.map_outlined, size: 13, color: BattleColors.torchGold),
+              SizedBox(width: 3),
+              Text(
+                BattleStrings.peekMap,
+                style: TextStyle(
+                  color: BattleColors.torchGold,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 8),
         const Icon(Icons.local_fire_department, size: 13, color: BattleColors.torchOrange),
       ],
     );
@@ -520,6 +593,41 @@ class _PlayerHud extends StatelessWidget {
   }
 }
 
+/// HP 패널 우측에 나란히 표시되는 골드 표시 칩.
+class _GoldChip extends StatelessWidget {
+  final int gold;
+  const _GoldChip({required this.gold});
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: BattleColors.panelBg,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: BattleColors.panelBorder),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.monetization_on, size: 14, color: BattleColors.torchGold),
+            const SizedBox(width: 5),
+            Text(
+              '$gold G',
+              style: const TextStyle(
+                color: BattleColors.torchGold,
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _SmallChip extends StatelessWidget {
   final String label;
   final String description;
@@ -610,7 +718,7 @@ class _BattleResultOverlay extends StatelessWidget {
   final int goldEarned;
   final bool isBossBattle;
   final VoidCallback onReturnToMap;
-  final VoidCallback onNewRun;
+  final VoidCallback onEndRun;
 
   const _BattleResultOverlay({
     required this.result,
@@ -618,7 +726,7 @@ class _BattleResultOverlay extends StatelessWidget {
     required this.goldEarned,
     required this.isBossBattle,
     required this.onReturnToMap,
-    required this.onNewRun,
+    required this.onEndRun,
   });
 
   bool get _isVictory => result == BattleResult.playerWon;
@@ -689,7 +797,7 @@ class _BattleResultOverlay extends StatelessWidget {
                 ],
                 const SizedBox(height: 28),
                 ElevatedButton(
-                  onPressed: _isVictory && !isBossBattle ? onReturnToMap : onNewRun,
+                  onPressed: _isVictory && !isBossBattle ? onReturnToMap : onEndRun,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: _isVictory ? BattleColors.torchOrange : const Color(0xFF455A64),
                     padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
@@ -711,8 +819,10 @@ class _BattleResultOverlay extends StatelessWidget {
     return BattleStrings.victory;
   }
 
-  String get _buttonLabel =>
-      _isVictory && !isBossBattle ? BattleStrings.selectReward : BattleStrings.restart;
+  String get _buttonLabel {
+    if (_isVictory && !isBossBattle) return BattleStrings.selectReward;
+    return BattleStrings.viewResult;
+  }
 }
 
 /// 레벨업 보상 카드 선택 오버레이.
@@ -920,18 +1030,22 @@ class _MonsterBackgroundImageState extends State<_MonsterBackgroundImage>
     if (imagePath == null) return const SizedBox.shrink();
 
     final screenH = MediaQuery.of(context).size.height;
+    final isBoss  = widget.monsterType == MonsterType.ironGolem;
+    final bottomOffset = isBoss ? screenH * 0.16 : screenH * 0.32;
+    final imageHeight  = isBoss ? screenH * 0.50 : screenH * 0.33;
+
     return Positioned(
-      bottom: screenH * 0.32,
+      bottom: bottomOffset,
       left: 0,
       right: 0,
       child: IgnorePointer(
         child: AnimatedBuilder(
           animation: Listenable.merge([_hitCtrl, _deathCtrl]),
           child: Align(
-            alignment: Alignment.bottomCenter,
+            alignment: isBoss ? const Alignment(-0.15, 1.0) : Alignment.bottomCenter,
             child: Image.asset(
               imagePath,
-              height: screenH * 0.33,
+              height: imageHeight,
               fit: BoxFit.contain,
               filterQuality: FilterQuality.medium,
             ),
@@ -944,6 +1058,74 @@ class _MonsterBackgroundImageState extends State<_MonsterBackgroundImage>
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// 전투 중 맵을 읽기 전용으로 엿볼 수 있는 다이얼로그.
+class _MapPeekDialog extends StatelessWidget {
+  final List<MapNode> mapNodes;
+  final String? currentNodeId;
+  final List<String> visitedNodeIds;
+
+  const _MapPeekDialog({
+    required this.mapNodes,
+    required this.currentNodeId,
+    required this.visitedNodeIds,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      backgroundColor: MapColors.background,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 40),
+      child: Column(
+        children: [
+          // ── 타이틀 바 ─────────────────────────────────────────────────
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Row(
+              children: [
+                const Icon(Icons.map_outlined, color: Color(0xFFB8860B), size: 18),
+                const SizedBox(width: 8),
+                const Text(
+                  '현재 지도',
+                  style: TextStyle(
+                    color: Color(0xFFB8860B),
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+                const Spacer(),
+                GestureDetector(
+                  onTap: () => Navigator.of(context).pop(),
+                  child: const Icon(Icons.close, color: Colors.white54, size: 20),
+                ),
+              ],
+            ),
+          ),
+          const Divider(color: Color(0xFF3D3020), height: 1),
+          // ── 맵 캔버스 (읽기 전용) ────────────────────────────────────
+          Expanded(
+            child: LayoutBuilder(
+              builder: (ctx, constraints) {
+                final size = computeCanvasSize(mapNodes, constraints.maxWidth);
+                return SingleChildScrollView(
+                  reverse: true,
+                  child: CustomPaint(
+                    size: size,
+                    painter: MapPainter(
+                      nodes: mapNodes,
+                      currentNodeId: currentNodeId,
+                      visitedNodeIds: visitedNodeIds,
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -93,25 +93,26 @@
 ## 개발 단계 로드맵
 
 ```
-Phase 1 — 기반 (완료)
+Phase 1 — 기반 (완료 ✅)
   ├─ 프로젝트 스캐폴딩 및 문서화
   └─ Layered Architecture 폴더 구조 세팅
 
-Phase 2 — 게임 코어
+Phase 2 — 게임 코어 (완료 ✅)
   ├─ 카드/캐릭터/몬스터 Model 구현
-  ├─ 전투 로직 ViewModel 구현
-  ├─ XP 및 레벨업 시스템 구현
-  └─ 단위 테스트 작성
+  ├─ 전투 로직 ViewModel 구현 (BattleEngine, BattleProvider)
+  ├─ XP 및 레벨업 시스템 구현 (MetaProgress, MetaProgressProvider)
+  └─ 단위 테스트 작성 (421개 전부 통과)
 
-Phase 3 — UI 구현
-  ├─ 전투 화면 (Battle View)
-  ├─ 보상 선택 화면 (Reward View)
-  ├─ 메타 진행 화면 (Level / Unlock View)
-  └─ 런 시작 화면 (Run Start View)
+Phase 3 — UI 구현 (완료 ✅)
+  ├─ 전투 화면 (BattleScreen) — 애니메이션, 유물 효과 포함
+  ├─ 보상 선택 화면 (RewardScreen)
+  ├─ 맵 화면 (MapScreen) — 절차적 생성 맵
+  ├─ 이벤트/보물/휴식 화면 (EventScreen, TreasureScreen, RestScreen)
+  └─ 세이브 슬롯 화면 (SaveSlotScreen)
 
-Phase 4 — 완성
-  ├─ 데이터 영속성 (경험치, 레벨, 해금 목록 저장)
-  ├─ 카드/유물 풀 확장
-  ├─ 애니메이션 및 피드백
-  └─ 통합 테스트
+Phase 4 — 완성 (진행 중 🔄)
+  ├─ 상점 화면 (ShopScreen) — 골드 소비·카드 구매·제거
+  ├─ 런 종료 화면 (RunEndScreen) — 결과·XP 지급·레벨업 연출
+  ├─ 메타 진행 화면 (MetaProgressScreen) — 레벨·해금 카드 목록
+  └─ QA 및 발표 준비
 ```
