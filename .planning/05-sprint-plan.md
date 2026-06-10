@@ -12,7 +12,7 @@
 | Sprint 2 | 05/19 ~ 05/23 | 아키텍처 설계 확정 | ✅ 완료 |
 | Sprint 3 | 05/26 ~ 05/30 | 핵심 로직 + UI 착수 | ✅ 완료 |
 | Sprint 4 | 06/02 ~ 06/06 | 로직 완성 + UI 개발 | ✅ 완료 |
-| Sprint 5 | 06/09 ~ 06/13 | 통합 + 마무리 | 🔄 진행 중 |
+| Sprint 5 | 06/09 ~ 06/13 | 통합 + 마무리 | ✅ 완료 |
 | Sprint 6 | 06/16 ~ 06/20 | QA + 발표 준비 | ⏳ 예정 |
 
 ---
@@ -27,7 +27,7 @@
 |----|--------|------|--------|
 | T001 | 비전 문서 작성 | A | `.planning/00-vision.md` |
 | T002 | MoSCoW 요구사항 | B | `.planning/01-requirements.md` |
-| T003 | WBS 일정 수립 | A | `.planning/02-wbs.json` |
+| T003 | WBS 일정 수립 | A | `docs/wbs.json` |
 | T004 | 팀 역할 분담 | A+B | 역할 정의 완료 |
 | T005 | 개발 환경 구성 | A | Flutter SDK, 에뮬레이터 정상 동작 |
 | T006 | GitHub 레포 설정 | A | main 브랜치, CI 워크플로 |
@@ -114,7 +114,7 @@
 
 ---
 
-## Sprint 5 — 통합 & 마무리 (06/09 ~ 06/13) 🔄 진행 중
+## Sprint 5 — 통합 & 마무리 (06/09 ~ 06/13) ✅ 완료
 
 **목표**: 미구현 화면 완성, 전체 게임 루프 완결.
 
@@ -124,19 +124,19 @@
 |----|--------|------|--------|
 | T024 | RewardScreen | ✅ 완료 | `reward_screen.dart` |
 | T025 | MapScreen 스테이지 | ✅ 완료 | `map_screen.dart` (절차적 생성 맵) |
-| T026 | MetaScreen 해금 | ⚠️ 부분 | 도메인·Provider 완성, 전용 화면 접근 경로 미완 |
+| T026 | MetaScreen 해금 | ✅ 완료 | `SettingsScreen` + `LevelProgressDialog` |
 | T028 | XP/레벨업 시스템 | ✅ 완료 | `MetaProgress.addXp()` |
 | T029 | 해금 시스템 | ✅ 완료 | `MetaProgress.computeUnlockedCards()` |
-| T030 | 맵/런 진행 Provider | ✅ 완료 | `RunProvider` (6가지 RunPhase) |
-| T031 | UI-ViewModel 통합 | ⚠️ 부분 | Shop·RunEnd 화면 미구현 |
-| T032 | BattleEngine 테스트 | ✅ 완료 | 421개 전부 통과 |
+| T030 | 맵/런 진행 Provider | ✅ 완료 | `RunProvider` (8가지 RunPhase) |
+| T031 | UI-ViewModel 통합 | ✅ 완료 | 전체 화면 AppRouter 연결 완료 |
+| T032 | BattleEngine 테스트 | ✅ 완료 | 431개 전부 통과 |
 | T033 | 모델 단위 테스트 | ✅ 완료 | `test/domain/` |
 | T034 | ViewModel 테스트 | ✅ 완료 | `test/application/` |
 | T035 | 위젯 테스트 | ✅ 완료 | `widget_test.dart` |
 | T036 | 통합 테스트 80% | ⚠️ 미측정 | `flutter test --coverage` 실행 필요 |
-| T043 | ShopScreen 구현 | ⬜ 미착수 | 골드 소비, 카드 구매·제거, 유물 구매 |
-| T044 | RunEndScreen 구현 | ⬜ 미착수 | 승리/패배 결과, XP 지급, 레벨업 연출 |
-| T045 | MetaProgressScreen 연결 | ⬜ 미착수 | 레벨·XP 바·해금 카드 목록 접근 경로 |
+| T043 | ShopScreen 구현 | ✅ 완료 | `shop_screen.dart` — 골드 소비, 카드 구매·제거, 유물 구매 |
+| T044 | RunEndScreen 구현 | ✅ 완료 | `run_end_screen.dart` — 승리/패배 결과, XP 지급, 레벨업 연출 |
+| T045 | MetaProgressScreen 연결 | ✅ 완료 | `SettingsScreen` 레벨·XP 바 + `LevelProgressDialog` 해금 카드 목록 |
 
 ### 완료 기준
 - 런 시작 → 전투 → 보상 → 다음 스테이지 → 보스 → 런 종료 전 흐름 동작

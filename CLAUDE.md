@@ -56,7 +56,7 @@ lib/
 
 ## Test Structure
 
-`test/` mirrors the Domain and Application layers of `lib/`:
+`test/` mirrors the Domain, Application, and Data layers of `lib/`:
 
 ```
 test/
@@ -64,10 +64,21 @@ test/
 │   ├── card_test.dart
 │   ├── player_test.dart
 │   ├── monster_test.dart
-│   └── battle_engine_test.dart
-└── application/
-    ├── battle_provider_test.dart
-    └── run_provider_test.dart
+│   ├── deck_test.dart
+│   ├── battle_engine_test.dart
+│   ├── event_test.dart
+│   ├── map_generator_test.dart
+│   ├── relic_test.dart
+│   ├── meta_progress_test.dart
+│   └── save_slot_test.dart
+├── application/
+│   ├── battle_provider_test.dart
+│   ├── run_provider_test.dart
+│   ├── meta_progress_provider_test.dart
+│   └── save_slot_provider_test.dart
+├── data/
+│   └── local_storage_test.dart
+└── widget_test.dart
 ```
 
 Application layer tests use `ProviderContainer` directly — no widget tree needed:
@@ -86,7 +97,7 @@ For all game logic (damage calculation, status effects, card effects, deck mecha
 ## Key Game Formulas (SPECS.md)
 
 ```
-Monster HP         = 20 + (stage × 10)
+Monster HP         = 16 + (stage × 8)
 Monster attack     = 8 + (stage × 2)
 Vulnerable damage  = base × 1.5   (received damage multiplier)
 Weak damage        = base × 0.75  (dealt damage multiplier, floor the result)
@@ -109,7 +120,7 @@ Energy per turn    = 3  |  Draw per turn = 5
 |------|----------|
 | `.planning/00-vision.md` | Game vision and phase roadmap |
 | `.planning/01-requirements.md` | MoSCoW feature requirements |
-| `.planning/02-wbs.json` | WBS task data (edit to update progress) |
+| `docs/wbs.json` | WBS task data (edit to update progress) |
 | `.planning/04-schedule.md` | WBS update guide and weekly review checklist |
 | `SPECS.md` | Complete game rules, card stats, map structure |
 | `docs/index.html` | Gantt chart viewer (requires local HTTP server) |
