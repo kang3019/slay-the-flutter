@@ -131,6 +131,11 @@ class RunState {
   /// [RunEndScreen]에 표시된다.
   final List<String> newlyUnlockedCardsThisRun;
 
+  /// 엘리트 처치([RunPhase.reward]) 또는 보스 승리([RunPhase.runEnd]) 시
+  /// 자동으로 지급된 유물. 이미 [relics]에 추가된 상태이며, 결과 화면에
+  /// 표시할 용도로만 보류된다. 다음 화면 전환 시 null로 초기화된다.
+  final Relic? pendingRelicReward;
+
   const RunState({
     required this.phase,
     required this.floor,
@@ -156,6 +161,7 @@ class RunState {
     this.goldClaimed = false,
     this.xpGainedThisRun = 0,
     this.newlyUnlockedCardsThisRun = const [],
+    this.pendingRelicReward,
   });
 
   // ── 직렬화 ────────────────────────────────────────────────────────────
@@ -186,6 +192,7 @@ class RunState {
     'goldClaimed': goldClaimed,
     'xpGainedThisRun': xpGainedThisRun,
     'newlyUnlockedCardsThisRun': newlyUnlockedCardsThisRun,
+    'pendingRelicReward': pendingRelicReward?.id,
   };
 
   static Map<String, dynamic> _cardToJson(GameCard c) => {
@@ -239,6 +246,13 @@ class RunState {
       catch (_) {}
     }
 
+    final pendingRelicRewardId = json['pendingRelicReward'] as String?;
+    Relic? pendingRelicReward;
+    if (pendingRelicRewardId != null) {
+      try { pendingRelicReward = GameRelics.all.firstWhere((r) => r.id == pendingRelicRewardId); }
+      catch (_) {}
+    }
+
     final rawDeck      = (json['deck']        as List?)?.cast<Map<String, dynamic>>() ?? [];
     final rawNodes     = (json['mapNodes']    as List?)?.cast<Map<String, dynamic>>() ?? [];
     final rawReward    = (json['rewardCards'] as List?)?.cast<Map<String, dynamic>>() ?? [];
@@ -279,6 +293,7 @@ class RunState {
       xpGainedThisRun:    json['xpGainedThisRun'] as int? ?? 0,
       newlyUnlockedCardsThisRun:
           List<String>.from(json['newlyUnlockedCardsThisRun'] as List? ?? []),
+      pendingRelicReward: pendingRelicReward,
     );
   }
 
@@ -354,6 +369,7 @@ class RunState {
   /// [RunNotifier.startNewRun]처럼 [RunState]를 통째로 교체한다.
   static const _kClearEvent = Object();
   static const _kClearTreasure = Object();
+  static const _kClearRelicReward = Object();
 
   RunState copyWith({
     RunPhase? phase,
@@ -382,6 +398,8 @@ class RunState {
     bool? goldClaimed,
     int? xpGainedThisRun,
     List<String>? newlyUnlockedCardsThisRun,
+    // Relic?을 null로 되돌리려면 pendingRelicReward: null을 전달한다.
+    Object? pendingRelicReward = _kClearRelicReward,
   }) =>
       RunState(
         phase: phase ?? this.phase,
@@ -413,6 +431,9 @@ class RunState {
         xpGainedThisRun:     xpGainedThisRun     ?? this.xpGainedThisRun,
         newlyUnlockedCardsThisRun:
             newlyUnlockedCardsThisRun ?? this.newlyUnlockedCardsThisRun,
+        pendingRelicReward: identical(pendingRelicReward, _kClearRelicReward)
+            ? this.pendingRelicReward
+            : pendingRelicReward as Relic?,
       );
 }
 
@@ -595,12 +616,19 @@ class RunNotifier extends Notifier<RunState> {
   /// 전풀에서 무작위로 고른 카드 3장이 [RunState.rewardCards]에 담긴다.
   void startReward({required int remainingHp, required int goldEarned}) {
     final clampedHp = remainingHp.clamp(0, Player.maxHp);
+    final isElite = state.currentNode?.type == NodeType.elite;
+    final relicReward = isElite ? _pickBonusRelic() : null;
+
     state = state.copyWith(
       phase: RunPhase.reward,
       playerHp: clampedHp,
       pendingGoldReward: goldEarned,
       goldClaimed: false,
       rewardCards: _generateRewardCards(),
+      relics: relicReward != null
+          ? List.unmodifiable([...state.relics, relicReward])
+          : state.relics,
+      pendingRelicReward: relicReward,
     );
   }
 
@@ -630,6 +658,7 @@ class RunNotifier extends Notifier<RunState> {
       rewardCards: const [],
       pendingGoldReward: 0,
       goldClaimed: false,
+      pendingRelicReward: null,
     );
   }
 
@@ -645,6 +674,7 @@ class RunNotifier extends Notifier<RunState> {
       rewardCards: const [],
       pendingGoldReward: 0,
       goldClaimed: false,
+      pendingRelicReward: null,
     );
   }
 
@@ -772,13 +802,23 @@ class RunNotifier extends Notifier<RunState> {
   /// 보스 처치 또는 플레이어 사망 후 [RunPhase.runEnd]로 전환한다.
   ///
   /// [RunEndScreen]에서 결과를 표시하고 "새 런 시작"으로 [startNewRun]을 호출한다.
+  /// 보스를 처치(승리)했다면 보유하지 않은 유물 1개를 추가로 지급한다.
   void endRun({required int remainingHp, required int goldEarned}) {
+    final clampedHp = remainingHp.clamp(0, Player.maxHp);
+    final isBossVictory =
+        clampedHp > 0 && state.currentNode?.type == NodeType.boss;
+    final relicReward = isBossVictory ? _pickBonusRelic() : null;
+
     state = state.copyWith(
       phase: RunPhase.runEnd,
-      playerHp: remainingHp.clamp(0, Player.maxHp),
+      playerHp: clampedHp,
       gold: state.gold + goldEarned,
       isRunOver: true,
       rewardCards: const [],
+      relics: relicReward != null
+          ? List.unmodifiable([...state.relics, relicReward])
+          : state.relics,
+      pendingRelicReward: relicReward,
     );
   }
 
@@ -916,6 +956,17 @@ class RunNotifier extends Notifier<RunState> {
     final owned = state.relics.map((r) => r.id).toSet();
     final available = GameRelics.all.where((r) => !owned.contains(r.id)).toList();
     if (available.isEmpty) return GameRelics.all[_random.nextInt(GameRelics.all.length)];
+    return available[_random.nextInt(available.length)];
+  }
+
+  /// 엘리트 처치·보스 승리 보상으로 지급할 유물을 결정한다.
+  ///
+  /// 아직 보유하지 않은 유물 중 무작위로 1개를 고른다.
+  /// 모든 유물을 이미 보유했다면 중복 지급하지 않고 null을 반환한다.
+  Relic? _pickBonusRelic() {
+    final owned = state.relics.map((r) => r.id).toSet();
+    final available = GameRelics.all.where((r) => !owned.contains(r.id)).toList();
+    if (available.isEmpty) return null;
     return available[_random.nextInt(available.length)];
   }
 

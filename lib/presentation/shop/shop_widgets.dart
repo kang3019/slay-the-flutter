@@ -248,6 +248,7 @@ class ShopCardTile extends StatelessWidget {
     return Opacity(
       opacity: sold ? 0.45 : 1.0,
       child: Container(
+        height: ShopSizes.cardTileHeight,
         padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
         decoration: BoxDecoration(
           color: ShopColors.cardSurface,
@@ -258,6 +259,7 @@ class ShopCardTile extends StatelessWidget {
           ),
         ),
         child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
               width: 28,
@@ -359,6 +361,7 @@ class ShopRelicTile extends StatelessWidget {
     return Opacity(
       opacity: sold ? 0.45 : 1.0,
       child: Container(
+        height: ShopSizes.relicTileHeight,
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
           color: ShopColors.cardSurface,
@@ -372,6 +375,7 @@ class ShopRelicTile extends StatelessWidget {
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Row(
               children: [

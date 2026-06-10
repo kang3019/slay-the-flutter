@@ -6,11 +6,13 @@ import '../../application/run_provider.dart';
 import '../../domain/entities/card.dart';
 import '../../domain/entities/player.dart';
 import '../battle/battle_constants.dart';
+import '../shared/relic_reward_badge.dart';
 import 'widgets/unlocked_cards_grid.dart';
 
 /// 보스 처치(런 클리어) 또는 플레이어 사망 후 표시되는 런 종료 결과 팝업.
 ///
-/// 반투명 어두운 오버레이 위에 중간 크기 카드를 띄운다.
+/// [AppRouter]가 전투 화면 위에 겹쳐 그리므로, 어두운 스크림으로 그
+/// 아래 전투 장면을 가린 채 중간 크기 카드를 띄운다.
 /// [RunState.playerHp] > 0 이면 승리, 0 이면 패배로 판단한다.
 class RunEndScreen extends ConsumerWidget {
   const RunEndScreen({super.key});
@@ -25,20 +27,9 @@ class RunEndScreen extends ConsumerWidget {
       backgroundColor: Colors.transparent,
       body: Stack(
         children: [
-          // ── 반투명 어두운 배경 ───────────────────────────────────────
-          Positioned.fill(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    const Color(0xFF0D0A07).withValues(alpha: 0.92),
-                    const Color(0xFF000000).withValues(alpha: 0.85),
-                  ],
-                ),
-              ),
-            ),
+          // ── 전투 화면을 어둡게 덮는 스크림 ─────────────────────────────
+          const Positioned.fill(
+            child: ColoredBox(color: BattleColors.popupScrim),
           ),
           // ── 중앙 팝업 카드 ───────────────────────────────────────────
           Center(
@@ -196,6 +187,14 @@ class _RunEndContent extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           UnlockedCardsGrid(cards: newlyUnlockedCards),
+        ],
+
+        // ── 신규 획득 유물 (보스 처치) ─────────────────────────────────────
+        if (run.pendingRelicReward != null) ...[
+          const SizedBox(height: 12),
+          _Divider(color: titleColor.withValues(alpha: 0.3)),
+          const SizedBox(height: 12),
+          RelicRewardBadge(relic: run.pendingRelicReward!),
         ],
         const SizedBox(height: 24),
 

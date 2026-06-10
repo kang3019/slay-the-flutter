@@ -1,6 +1,9 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 
 import '../../domain/entities/card.dart';
+import '../../domain/entities/gold_rewards.dart';
 import '../../domain/entities/meta_progress.dart';
 import '../../domain/map/node_type.dart';
 
@@ -75,18 +78,11 @@ abstract final class BattleXpRewards {
   static String xpLostLabel(int xp) => '+$xp XP (패배 보정)';
 }
 
-/// SPECS.md §6: 전투 승리 시 지급되는 골드 보상.
+/// 전투 승리 시 지급되는 골드 보상 표시 유틸리티 — 도메인 공식([GoldRewards])을 UI에 연결한다.
 abstract final class BattleGoldRewards {
-  static const int minGold = 15;
-  static const int maxGold = 30;
-
-  static int forStage(int stage) => switch (stage) {
-        1 => minGold,
-        2 => 25,
-        _ => 0,
-      };
-
-  static String goldLabel(int gold) => '+$gold 골드';
+  /// 노드 타입·층수에 따른 골드 보상. [GoldRewards.forVictory]로 위임.
+  static int forVictory(NodeType nodeType, int floor, Random random) =>
+      GoldRewards.forVictory(nodeType, floor, random);
 }
 
 /// 전투 화면 에셋 경로 상수.
@@ -129,6 +125,10 @@ abstract final class BattleColors {
   // ── 배경 ──────────────────────────────────────────────────────────────
   /// 배경 이미지 위에 씌우는 반투명 어두운 오버레이 (가독성 확보).
   static const backgroundOverlay = Color(0x4D000000); // 30% 검정
+
+  /// 보상·런종료 팝업이 전투 화면 위에 뜰 때, 그 아래 전투 장면을
+  /// 어둡게 덮어 팝업에 시선이 집중되도록 하는 스크림.
+  static const popupScrim = Color(0x991A1510); // 60% 다크 브라운
 
   // ── 패널 ──────────────────────────────────────────────────────────────
   /// 몬스터·플레이어 패널의 반투명 배경. 배경 이미지가 살짝 비치도록 한다.

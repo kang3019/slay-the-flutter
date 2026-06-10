@@ -10,15 +10,15 @@ class UnlockedCardsGrid extends StatelessWidget {
 
   final List<GameCard> cards;
 
-  static const double _scale = 1.4;
+  static const double _scale = 0.85;
   static const double _w = CardWidget.cardWidth  * _scale;
   static const double _h = CardWidget.cardHeight * _scale;
 
   @override
   Widget build(BuildContext context) {
     return Wrap(
-      spacing: 12,
-      runSpacing: 12,
+      spacing: 8,
+      runSpacing: 8,
       alignment: WrapAlignment.center,
       children: cards
           .map((c) => GestureDetector(

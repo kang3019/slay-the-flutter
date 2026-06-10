@@ -48,6 +48,13 @@ abstract final class RewardStrings {
       };
 }
 
+/// 보상 화면 크기 상수.
+abstract final class RewardSizes {
+  /// 보상 카드 타일의 고정 높이 — 이름·효과 설명 길이에 관계없이
+  /// 카드 3장의 크기를 동일하게 맞춘다.
+  static const cardTileHeight = 230.0;
+}
+
 /// 보상 화면 색상 상수.
 abstract final class RewardColors {
   static const surface    = Color(0xFF16213E);

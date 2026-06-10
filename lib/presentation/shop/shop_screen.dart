@@ -13,6 +13,9 @@ const double _kMerchantH = 360;
 /// battle_bg.mp4 그라운드 섀도우가 전체 화면 하단 28% 지점 → Expanded 기준 약 68%.
 const double _kFloorRatio = 0.68;
 
+/// 돗자리 팝업 최대 너비 — [RewardScreen] 보상 팝업과 동일한 폭으로 맞춘다.
+const double _kMatMaxWidth = 480;
+
 /// 상점 화면 — 골드로 카드·유물 구매 및 카드 제거.
 ///
 /// 상인을 탭하면 돗자리 팝업이 화면 중앙에 열리며, 다시 탭하거나 바깥을 터치하면 닫힌다.
@@ -185,6 +188,7 @@ class _ShopScreenState extends ConsumerState<ShopScreen>
                       ),
                       child: ConstrainedBox(
                         constraints: BoxConstraints(
+                          maxWidth: _kMatMaxWidth,
                           maxHeight:
                               MediaQuery.of(context).size.height * 0.65,
                         ),
