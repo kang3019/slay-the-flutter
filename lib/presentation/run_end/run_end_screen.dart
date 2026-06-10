@@ -3,7 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../application/meta_progress_provider.dart';
 import '../../application/run_provider.dart';
+import '../../domain/entities/card.dart';
 import '../../domain/entities/player.dart';
+import '../battle/battle_constants.dart';
+import 'widgets/unlocked_cards_grid.dart';
 
 /// 보스 처치(런 클리어) 또는 플레이어 사망 후 표시되는 런 종료 결과 팝업.
 ///
@@ -106,11 +109,15 @@ class _RunEndContent extends StatelessWidget {
   Widget build(BuildContext context) {
     final titleColor =
         isVictory ? const Color(0xFFFFD700) : const Color(0xFFEF5350);
-    final title = isVictory ? '런 클리어!' : '패배...';
+    final title = isVictory ? BattleStrings.runClear : BattleStrings.defeat;
     final icon  = isVictory
         ? Icons.emoji_events_outlined
         : Icons.sentiment_very_dissatisfied_outlined;
     final floorsCleared = run.floor + 1;
+    final newlyUnlockedCards = run.newlyUnlockedCardsThisRun
+        .map(Cards.byTypeName)
+        .whereType<GameCard>()
+        .toList();
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -166,6 +173,30 @@ class _RunEndContent extends StatelessWidget {
         ),
         _StatRow(icon: Icons.trending_up, label: '누적 XP',
             value: '${meta.xp} XP'),
+        _StatRow(
+          icon: Icons.bolt,
+          label: '이번 런 획득 XP',
+          value: '${run.xpGainedThisRun} XP',
+          valueColor: const Color(0xFF66BB6A),
+        ),
+
+        // ── 신규 해금 카드 ───────────────────────────────────────────────
+        if (newlyUnlockedCards.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          _Divider(color: titleColor.withValues(alpha: 0.3)),
+          const SizedBox(height: 12),
+          const Text(
+            '신규 해금 카드',
+            style: TextStyle(
+              color: Color(0xFFFFD700),
+              fontSize: 13,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 1,
+            ),
+          ),
+          const SizedBox(height: 12),
+          UnlockedCardsGrid(cards: newlyUnlockedCards),
+        ],
         const SizedBox(height: 24),
 
         // ── 새 런 시작 버튼 ───────────────────────────────────────────────
@@ -184,7 +215,7 @@ class _RunEndContent extends StatelessWidget {
               elevation: 0,
             ),
             child: const Text(
-              '새 런 시작',
+              BattleStrings.restart,
               style: TextStyle(
                 color: Colors.white,
                 fontSize: 15,

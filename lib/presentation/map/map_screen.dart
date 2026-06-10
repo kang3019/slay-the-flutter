@@ -1,16 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../application/level_up_pending_provider.dart';
 import '../../application/run_provider.dart';
 import '../../domain/entities/card.dart';
-import '../../domain/entities/meta_progress.dart';
 import '../../domain/entities/player.dart';
 import '../../domain/map/map_node.dart';
 import '../../domain/map/node_type.dart';
 import '../save_slot/save_slot_screen.dart';
 import '../settings/settings_screen.dart';
-import 'level_up_dialog.dart';
 import 'map_constants.dart';
 import 'widgets/deck_view_sheet.dart';
 import 'widgets/map_painter.dart';
@@ -29,32 +26,8 @@ class MapScreen extends ConsumerStatefulWidget {
 
 class _MapScreenState extends ConsumerState<MapScreen> {
   @override
-  void initState() {
-    super.initState();
-    // 맵으로 전환될 때 이미 대기 중인 레벨업 결과를 확인한다.
-    WidgetsBinding.instance.addPostFrameCallback((_) => _maybeShowLevelUp());
-  }
-
-  void _maybeShowLevelUp() {
-    final pending = ref.read(levelUpPendingProvider);
-    if (pending == null || !mounted) return;
-    showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => LevelUpDialog(result: pending),
-    ).then((_) => ref.read(levelUpPendingProvider.notifier).state = null);
-  }
-
-  @override
   Widget build(BuildContext context) {
     final run = ref.watch(runProvider);
-
-    // 맵 화면이 유지되는 동안 새로운 레벨업이 발생할 경우에도 대응한다.
-    ref.listen<LevelUpResult?>(levelUpPendingProvider, (_, next) {
-      if (next != null) {
-        WidgetsBinding.instance.addPostFrameCallback((_) => _maybeShowLevelUp());
-      }
-    });
 
     return Scaffold(
       backgroundColor: MapColors.background,
