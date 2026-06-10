@@ -1,6 +1,6 @@
 # 09-current-status.md — 현재 구현 상태
 
-**기준일**: 2026-06-09 | **스프린트**: Sprint 5 (06/09 ~ 06/13)
+**기준일**: 2026-06-10 | **스프린트**: Sprint 5 (06/09 ~ 06/13)
 
 ---
 
@@ -8,10 +8,10 @@
 
 | 구분 | 상태 |
 |------|------|
-| 테스트 | ✅ 421개 전부 통과 |
+| 테스트 | ✅ 431/431 전부 통과 |
 | 린트 | ✅ `flutter analyze` 경고 0건 |
 | 핵심 게임 루프 | ✅ 전투 → 보상 → 맵 이동 동작 |
-| 미구현 화면 | ⚠️ ShopScreen / RunEndScreen / MetaProgressScreen |
+| 미구현 화면 | ✅ 없음 (전체 구현 완료) |
 
 ---
 
@@ -20,19 +20,19 @@
 ### Domain
 - `BattleEngine` — 전투 규칙, 카드 효과, 유물 효과, 상태이상
 - `Deck` — 셔플, 드로우, 버림, 소각(exhaust)
-- `GameCard` / `Cards` — 26종 + 강화(upgraded) 버전
+- `GameCard` / `Cards` — 30종 이상 + 강화(upgraded) 버전 (총 62종 정의)
 - `Monster` — 5종 (StickySlime, IronScavenger, VenomSentinel, CaveGuardian, IronGolem), AI 의도 패턴
 - `Player` — HP, 방어도, 힘, 상태이상
 - `StatusEffect` — Vulnerable, Weak, Poison
 - `Relic` / `GameRelics` — 20종 이상 패시브 효과
 - `GameEvent` / `GameEvents` — 텍스트 이벤트 + 선택지
-- `MapNode` / `MapGenerator` — 절차적 생성 5층 맵
+- `MapNode` / `MapGenerator` — 절차적 생성 12층 DAG 맵 (Floor 0~11)
 - `MetaProgress` — XP 레벨 1~10, 카드 해금 시스템
 - `SaveSlot` — 3슬롯 JSON 직렬화
 
 ### Application
 - `BattleProvider` — 전투 상태 머신
-- `RunProvider` — 런 진행 (6가지 RunPhase)
+- `RunProvider` — 런 진행 (8가지 RunPhase: map·battle·reward·event·treasure·rest·shop·runEnd)
 - `MetaProgressProvider` — XP/레벨 영속 저장
 - `SaveSlotProvider` — 슬롯 저장/로드
 
@@ -44,35 +44,12 @@
 - `TreasureScreen` — 유물 획득/건너뛰기
 - `RestScreen` — HP 회복 / 카드 강화 선택
 - `SaveSlotScreen` — 슬롯 선택·저장·로드
-- `SettingsScreen`
-
----
-
-## 미구현 항목
-
-### ⬜ ShopScreen (T043)
-- `NodeType.shop` 도메인에 존재, `RunPhase`에 없음
-- 필요 작업:
-  1. `RunPhase.shop` 추가
-  2. `RunNotifier.enterShop()` / `buyCard()` / `removeCard()` 메서드
-  3. `ShopScreen` 위젯 — 골드 표시, 카드 구매(50G), 카드 제거(75G), 유물 구매
-  4. `AppRouter`에 `RunPhase.shop` 케이스 추가
-
-### ⬜ RunEndScreen (T044)
-- `isRunOver = true` 시 AppRouter가 MapScreen을 그대로 띄움
-- 필요 작업:
-  1. `RunPhase.runEnd` 추가 (또는 별도 오버레이 처리)
-  2. 승리/패배 구분 표시
-  3. 클리어 스테이지, 획득 골드 요약
-  4. XP 지급 → 레벨업 연출 (현재 BattleScreen 내부에 일부 로직 있음)
-  5. "새 런 시작" 버튼 → `RunNotifier.startNewRun()`
-
-### ⚠️ MetaProgressScreen (T045)
-- `MetaProgressProvider` 완성됨, 화면 접근 경로 없음
-- 필요 작업:
-  1. SaveSlotScreen 또는 타이틀에서 레벨·XP 바 노출
-  2. 해금 카드 목록 그리드 뷰
-  3. 현재 레벨 진행률 시각화
+- `SettingsScreen` — 메타 진행 표시, 레벨·XP 바, 초기화
+- `LevelProgressDialog` — 레벨 1~10 해금 진행도 다이얼로그 (T045 완료)
+- `IntroScreen` — 타이틀 화면, 줌·파티클·버튼 등장 애니메이션
+- `CodexScreen` — 카드 도감, 해금 그룹별 표시
+- `ShopScreen` — 골드로 카드·유물 구매 및 카드 제거 (T043 완료)
+- `RunEndScreen` — 승리/패배 결과, XP 지급, 새 런 시작 (T044 완료)
 
 ---
 
@@ -101,7 +78,7 @@
 [x] 레벨업 시 카드 해금 정상 등록
 [x] 보스전 패턴 정상 동작
 [x] 메모리 누수 없음 (ProviderContainer dispose)
-[ ] ShopScreen 골드 소비 정상 동작
-[ ] RunEndScreen XP 지급 및 레벨업 연출
+[x] ShopScreen 골드 소비 정상 동작
+[x] RunEndScreen XP 지급 및 레벨업 연출
 [ ] 세이브 슬롯 저장/로드 전체 흐름
 ```

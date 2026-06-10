@@ -84,8 +84,8 @@ void main() {
         expect(container.read(runProvider).playerHp, Player.maxHp);
       });
 
-      test('골드는 0이다', () {
-        expect(container.read(runProvider).gold, 0);
+      test('골드는 75이다 (초기 지급)', () {
+        expect(container.read(runProvider).gold, 75);
       });
 
       test('기본 덱은 10장이다 (강타 5 + 방어 5)', () {
@@ -223,7 +223,7 @@ void main() {
 
         final state = container.read(runProvider);
         expect(state.playerHp, 50);
-        expect(state.gold, 20);
+        expect(state.gold, 95); // 초기 75 + 전투 보상 20
       });
 
       test('HP가 최대치를 초과하지 않는다', () {
@@ -258,7 +258,7 @@ void main() {
         notifier.applyBattleResult(remainingHp: 70, goldEarned: 15);
         notifier.applyBattleResult(remainingHp: 70, goldEarned: 20);
 
-        expect(container.read(runProvider).gold, 35);
+        expect(container.read(runProvider).gold, 110); // 초기 75 + 15 + 20
       });
     });
 
@@ -377,7 +377,7 @@ void main() {
 
         final state = container.read(runProvider);
         expect(state.playerHp, 55);
-        expect(state.gold, 20);
+        expect(state.gold, 95); // 초기 75 + 전투 보상 20
       });
 
       test('exitBattleToMap HP가 최대치를 초과하지 않는다', () {
@@ -826,7 +826,7 @@ void main() {
           effect: EventEffect(goldDelta: 25),
         );
         container.read(runProvider.notifier).resolveEvent(goldChoice);
-        expect(container.read(runProvider).gold, 25);
+        expect(container.read(runProvider).gold, 100); // 초기 75 + 이벤트 +25
       });
 
       test('addRandomCard가 true면 덱에 카드가 1장 추가된다', () {
@@ -900,7 +900,7 @@ void main() {
         expect(state.floor, -1);
         expect(state.currentNodeId, isNull);
         expect(state.playerHp, Player.maxHp);
-        expect(state.gold, 0);
+        expect(state.gold, 75); // startNewRun은 초기 골드 75로 리셋
         expect(state.deck.length, 10);
         expect(state.visitedNodeIds, isEmpty);
         expect(state.isRunOver, isFalse);

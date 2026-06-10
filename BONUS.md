@@ -30,16 +30,22 @@
 
 > 강의 내용을 넘어서 **직접 설계하거나 응용한 독창적 기법**이 코드·문서에 녹아 있음
 
-- [ ] 4-Layer + Riverpod 패턴을 로그라이크 턴제 전투에 맞게 직접 설계 (BattleProvider 구조)
-  - 근거:
-- [ ] 카드 효과를 `CardEffect` 인터페이스로 추상화해 확장 가능한 구조로 구현
-  - 근거:
-- [ ] 기존 라이브러리를 사용하지 않고 덱 셔플·드로우 사이클을 순수 Dart로 구현하고 단위 테스트 작성
-  - 근거:
-- [ ] 본인이 직접 도출한 게임 공식(데미지 계산, 상태 이상 배율 등)을 상수화하고 ADR에 근거 기록
-  - 근거:
+- [x] 4-Layer + Riverpod 패턴을 로그라이크 턴제 전투에 맞게 직접 설계 (BattleProvider 구조)
+  - 근거: `lib/application/battle_provider.dart` — BattleNotifier 상태 머신 설계,
+    `docs/architecture.md` — 4계층 의존 방향 및 Provider 패턴 문서화,
+    `docs/decisions/ADR-0002` ~ `ADR-0003` — 아키텍처·상태관리 결정 근거
+- [x] 카드 효과를 `CardEffectType` 열거형으로 추상화해 확장 가능한 구조로 구현
+  - 근거: `lib/domain/entities/card.dart` — `CardEffectType` 열거형(damage/block/buff/heal/draw 등) 및 `GameCard` 모델 정의,
+    `lib/domain/battle_engine.dart` — 카드 타입별 효과 분기 처리
+- [x] 기존 라이브러리를 사용하지 않고 덱 셔플·드로우 사이클을 순수 Dart로 구현하고 단위 테스트 작성
+  - 근거: `lib/domain/deck.dart` — `shuffle()`, `draw()`, `discard()`, `discardHand()` 순수 Dart 구현,
+    `test/domain/` — 덱 로직 단위 테스트
+- [x] 본인이 직접 도출한 게임 공식(데미지 계산, 상태 이상 배율 등)을 상수화하고 ADR에 근거 기록
+  - 근거: `lib/presentation/battle/battle_constants.dart` — 취약(×1.5)·약화(×0.75) 배율 상수 정의,
+    `lib/domain/battle_engine.dart` — `_weakAdjusted()` 공식 적용,
+    `SPECS.md` — 전체 게임 공식 명세
 
-**달성 여부**: ☐ 미달성 / ☑ 달성
+**달성 여부**: ☑ 달성
 
 ---
 
@@ -54,7 +60,7 @@
 - [x] 직접 수정·보완한 AI 코드에 대해 "왜 바꿨는지"를 Wiki 또는 ADR에 기록
   - 근거: `docs/llm-wiki/001-architecture-naming.md` — 수정 이유 및 배운 점 기록
 - [x] ADR(Architecture Decision Records) 3건 이상 작성 (`.planning/adr/` 참고)
-  - 근거: `docs/decisions/ADR-0001` ~ `ADR-0004` (4건)
+  - 근거: `docs/decisions/ADR-0001` ~ `ADR-0006` (6건)
 - [ ] Wiki 항목이 다른 사람이 읽어도 이해할 수 있도록 작성됨 (제3자 가독성)
   - 근거:
 
@@ -67,9 +73,9 @@
 | 항목 | 배점 | 달성 |
 |------|------|------|
 | A. AI Agent / 워크플로우 적극 활용 | +1점 | ☐ |
-| B. 본인만의 기법 구성 | +2점 | ☐ |
+| B. 본인만의 기법 구성 | +2점 | ☑ |
 | C. 본인 암묵지(LLM Wiki) 운영 | +3점 | ☑ |
-| **합계** | **+6점** | **3 / 6** |
+| **합계** | **+6점** | **5 / 6** |
 
 ---
 
