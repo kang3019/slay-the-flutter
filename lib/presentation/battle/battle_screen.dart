@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'dart:ui';
 
 import 'package:flame/game.dart';
@@ -46,6 +47,9 @@ class _BattleScreenState extends ConsumerState<BattleScreen>
   late final Animation<double>   _shakeAnim;
   bool _showRedBorder      = false;
   bool _pendingEndTurnShake = false;
+
+  /// 골드 보상 무작위 폭(±) 계산용 — 인스턴스당 한 번만 생성한다.
+  final _random = Random();
 
   @override
   void initState() {
@@ -144,7 +148,9 @@ class _BattleScreenState extends ConsumerState<BattleScreen>
       final nodeType   = _currentNodeType();
       final isBoss     = nodeType == NodeType.boss;
       final xp         = BattleXpRewards.xpFor(nodeType, isVictory: isVictory);
-      final goldEarned = BattleGoldRewards.forStage(next.stage);
+      final goldEarned = isVictory
+          ? BattleGoldRewards.forVictory(nodeType, runState.floor, _random)
+          : 0;
 
       if (xp > 0) {
         var newlyUnlocked = const <String>[];

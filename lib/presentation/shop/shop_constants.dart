@@ -13,6 +13,17 @@ abstract final class ShopStrings {
   static const soldLabel           = '구매 완료';
 }
 
+/// 상점 화면 크기 상수.
+abstract final class ShopSizes {
+  /// 상점 카드 타일의 고정 높이 — 카드 이름·효과 설명 길이에 관계없이
+  /// 카드 3장의 크기를 동일하게 맞춘다.
+  static const cardTileHeight = 200.0;
+
+  /// 상점 유물 타일의 고정 높이 — 유물 설명 길이에 관계없이
+  /// 유물 3개의 크기를 동일하게 맞춘다.
+  static const relicTileHeight = 150.0;
+}
+
 /// 상점 화면 색상 상수.
 abstract final class ShopColors {
   static const background  = Color(0xFF0D0A07);

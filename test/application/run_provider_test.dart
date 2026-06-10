@@ -9,6 +9,7 @@ import 'package:slay_the_flutter/data/local_storage.dart';
 import 'package:slay_the_flutter/domain/entities/card.dart';
 import 'package:slay_the_flutter/domain/entities/meta_progress.dart';
 import 'package:slay_the_flutter/domain/entities/player.dart';
+import 'package:slay_the_flutter/domain/entities/relic.dart';
 import 'package:slay_the_flutter/domain/events/game_event.dart';
 import 'package:slay_the_flutter/domain/map/map_node.dart';
 import 'package:slay_the_flutter/domain/map/node_type.dart';
@@ -460,6 +461,48 @@ void main() {
           expect(card.type, isNot(CardType.defend));
         }
       });
+
+      test('엘리트 노드 처치 시 보유하지 않은 유물 1개를 추가로 획득한다', () {
+        final notifier = container.read(runProvider.notifier);
+        notifier.moveToNode('f0n0'); // monster
+        notifier.moveToNode('f1n1'); // elite
+        final relicsBefore = container.read(runProvider).relics.length;
+
+        notifier.startReward(remainingHp: 60, goldEarned: 10);
+
+        final state = container.read(runProvider);
+        expect(state.relics.length, relicsBefore + 1);
+        expect(state.pendingRelicReward, isNotNull);
+        expect(state.relics, contains(state.pendingRelicReward));
+      });
+
+      test('일반 몬스터 노드 처치 시에는 유물을 획득하지 않는다', () {
+        final notifier = container.read(runProvider.notifier);
+        notifier.moveToNode('f0n0'); // monster
+        final relicsBefore = container.read(runProvider).relics.length;
+
+        notifier.startReward(remainingHp: 60, goldEarned: 10);
+
+        final state = container.read(runProvider);
+        expect(state.relics.length, relicsBefore);
+        expect(state.pendingRelicReward, isNull);
+      });
+
+      test('이미 모든 유물을 보유했다면 엘리트 처치 시에도 추가 유물을 받지 않는다', () {
+        final notifier = container.read(runProvider.notifier);
+        for (final relic in GameRelics.all) {
+          notifier.addRelic(relic);
+        }
+        notifier.moveToNode('f0n0'); // monster
+        notifier.moveToNode('f1n1'); // elite
+        final relicsBefore = container.read(runProvider).relics.length;
+
+        notifier.startReward(remainingHp: 60, goldEarned: 10);
+
+        final state = container.read(runProvider);
+        expect(state.relics.length, relicsBefore);
+        expect(state.pendingRelicReward, isNull);
+      });
     });
 
     group('claimGoldReward', () {
@@ -543,6 +586,19 @@ void main() {
         container.read(runProvider.notifier).selectRewardCard(Cards.bash);
         expect(container.read(runProvider).deck.length, deckBefore);
       });
+
+      test('카드를 선택하면 pendingRelicReward가 초기화된다', () {
+        final notifier = container.read(runProvider.notifier);
+        notifier.moveToNode('f0n0'); // monster
+        notifier.moveToNode('f1n1'); // elite
+        notifier.startReward(remainingHp: 60, goldEarned: 10);
+        expect(container.read(runProvider).pendingRelicReward, isNotNull);
+
+        final rewardCard = container.read(runProvider).rewardCards.first;
+        notifier.selectRewardCard(rewardCard);
+
+        expect(container.read(runProvider).pendingRelicReward, isNull);
+      });
     });
 
     group('skipReward', () {
@@ -580,6 +636,99 @@ void main() {
         expect(container.read(runProvider).phase, RunPhase.map);
         container.read(runProvider.notifier).skipReward();
         expect(container.read(runProvider).phase, RunPhase.map);
+      });
+
+      test('건너뛰기 시 pendingRelicReward가 초기화된다', () {
+        final notifier = container.read(runProvider.notifier);
+        notifier.moveToNode('f0n0'); // monster
+        notifier.moveToNode('f1n1'); // elite
+        notifier.startReward(remainingHp: 60, goldEarned: 10);
+        expect(container.read(runProvider).pendingRelicReward, isNotNull);
+
+        notifier.skipReward();
+
+        expect(container.read(runProvider).pendingRelicReward, isNull);
+      });
+    });
+
+    // ──────────────────────────────────────────────
+    // endRun
+    // ──────────────────────────────────────────────
+
+    group('endRun', () {
+      /// f0n0(monster) → f1n0(monster) → f2n0(rest) → f3n0(elite) → f4n0(boss) 경로로 이동한다.
+      void moveToBoss(RunNotifier notifier) {
+        notifier.moveToNode('f0n0');
+        notifier.moveToNode('f1n0');
+        notifier.moveToNode('f2n0');
+        notifier.moveToNode('f3n0');
+        notifier.moveToNode('f4n0');
+      }
+
+      test('호출 시 phase가 RunPhase.runEnd가 되고 골드·HP가 반영된다', () {
+        final notifier = container.read(runProvider.notifier);
+        moveToBoss(notifier);
+        final goldBefore = container.read(runProvider).gold;
+
+        notifier.endRun(remainingHp: 40, goldEarned: 5);
+
+        final state = container.read(runProvider);
+        expect(state.phase, RunPhase.runEnd);
+        expect(state.playerHp, 40);
+        expect(state.gold, goldBefore + 5);
+        expect(state.isRunOver, isTrue);
+      });
+
+      test('보스 승리(HP > 0) 시 보유하지 않은 유물 1개를 추가로 획득한다', () {
+        final notifier = container.read(runProvider.notifier);
+        moveToBoss(notifier);
+        final relicsBefore = container.read(runProvider).relics.length;
+
+        notifier.endRun(remainingHp: 40, goldEarned: 0);
+
+        final state = container.read(runProvider);
+        expect(state.relics.length, relicsBefore + 1);
+        expect(state.pendingRelicReward, isNotNull);
+        expect(state.relics, contains(state.pendingRelicReward));
+      });
+
+      test('패배(HP 0)로 런이 끝나면 유물을 획득하지 않는다', () {
+        final notifier = container.read(runProvider.notifier);
+        moveToBoss(notifier);
+        final relicsBefore = container.read(runProvider).relics.length;
+
+        notifier.endRun(remainingHp: 0, goldEarned: 0);
+
+        final state = container.read(runProvider);
+        expect(state.relics.length, relicsBefore);
+        expect(state.pendingRelicReward, isNull);
+      });
+
+      test('보스가 아닌 노드에서 패배해도 유물을 획득하지 않는다', () {
+        final notifier = container.read(runProvider.notifier);
+        notifier.moveToNode('f0n0'); // monster
+        final relicsBefore = container.read(runProvider).relics.length;
+
+        notifier.endRun(remainingHp: 0, goldEarned: 0);
+
+        final state = container.read(runProvider);
+        expect(state.relics.length, relicsBefore);
+        expect(state.pendingRelicReward, isNull);
+      });
+
+      test('이미 모든 유물을 보유했다면 보스 승리 시에도 추가 유물을 받지 않는다', () {
+        final notifier = container.read(runProvider.notifier);
+        for (final relic in GameRelics.all) {
+          notifier.addRelic(relic);
+        }
+        moveToBoss(notifier);
+        final relicsBefore = container.read(runProvider).relics.length;
+
+        notifier.endRun(remainingHp: 40, goldEarned: 0);
+
+        final state = container.read(runProvider);
+        expect(state.relics.length, relicsBefore);
+        expect(state.pendingRelicReward, isNull);
       });
     });
 

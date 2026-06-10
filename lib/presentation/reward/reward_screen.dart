@@ -3,11 +3,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../application/run_provider.dart';
 import '../../domain/entities/card.dart';
+import '../battle/battle_constants.dart';
+import '../shared/relic_reward_badge.dart';
 import 'reward_constants.dart';
 
 /// 전투 승리 직후 자동으로 표시되는 보상 팝업.
 ///
-/// "전투 승리!" 헤더와 함께 골드 보상(클릭해야 획득)·카드 3장을 보여준다.
+/// [AppRouter]가 전투 화면 위에 겹쳐 그리므로, 어두운 스크림으로 그
+/// 아래 전투 장면을 가린 채 "전투 승리!" 헤더와 함께 골드 보상(클릭해야
+/// 획득)·카드 3장을 보여준다.
 /// [RunState.rewardCards] 중 1장을 탭하면 덱에 추가되고 [RunPhase.map]으로
 /// 전환된다. "건너뛰기" 버튼으로 카드 없이 넘어갈 수 있다.
 class RewardScreen extends ConsumerWidget {
@@ -22,20 +26,9 @@ class RewardScreen extends ConsumerWidget {
       backgroundColor: Colors.transparent,
       body: Stack(
         children: [
-          // ── 반투명 어두운 배경 ───────────────────────────────────────
-          Positioned.fill(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    const Color(0xFF0D0A07).withValues(alpha: 0.92),
-                    const Color(0xFF000000).withValues(alpha: 0.85),
-                  ],
-                ),
-              ),
-            ),
+          // ── 전투 화면을 어둡게 덮는 스크림 ─────────────────────────────
+          const Positioned.fill(
+            child: ColoredBox(color: BattleColors.popupScrim),
           ),
           // ── 중앙 팝업 카드 ───────────────────────────────────────────
           Center(
@@ -84,6 +77,12 @@ class RewardScreen extends ConsumerWidget {
                               claimed: run.goldClaimed,
                               onTap: notifier.claimGoldReward,
                             ),
+                          ],
+
+                          // ── 유물 보상 (엘리트 처치) ───────────────────────
+                          if (run.pendingRelicReward != null) ...[
+                            const SizedBox(height: 16),
+                            RelicRewardBadge(relic: run.pendingRelicReward!),
                           ],
 
                           const SizedBox(height: 20),
@@ -229,6 +228,7 @@ class _RewardCardTile extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
+        height: RewardSizes.cardTileHeight,
         decoration: BoxDecoration(
           color: RewardColors.surface,
           borderRadius: BorderRadius.circular(16),
@@ -277,6 +277,8 @@ class _RewardCardTile extends StatelessWidget {
                 fontWeight: FontWeight.bold,
               ),
               textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
 
             const SizedBox(height: 10),
@@ -290,6 +292,8 @@ class _RewardCardTile extends StatelessWidget {
                 fontWeight: FontWeight.w500,
               ),
               textAlign: TextAlign.center,
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),
