@@ -10,6 +10,12 @@
 
 ---
 
+## 시현 영상
+
+[▶ 플레이 영상 보기 (docs/demo/slay_the_flutter.mp4)](docs/demo/slay_the_flutter.mp4)
+
+---
+
 ## 게임 개요
 
 턴제 카드 전투 + 덱빌딩 + 로그라이크 진행 구조를 결합한 모바일 게임이다.
