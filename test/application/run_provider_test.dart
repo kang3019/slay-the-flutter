@@ -428,14 +428,17 @@ void main() {
         expect(container.read(runProvider).phase, RunPhase.reward);
       });
 
-      test('startReward 호출 시 HP와 골드가 갱신된다', () {
+      test('startReward 호출 시 HP는 갱신되지만 골드는 보류 상태로 대기한다', () {
+        final goldBefore = container.read(runProvider).gold;
         container.read(runProvider.notifier).startReward(
           remainingHp: 55,
           goldEarned: 15,
         );
         final state = container.read(runProvider);
         expect(state.playerHp, 55);
-        expect(state.gold, 15);
+        expect(state.gold, goldBefore);
+        expect(state.pendingGoldReward, 15);
+        expect(state.goldClaimed, isFalse);
       });
 
       test('startReward 호출 시 rewardCards가 정확히 3장이다', () {
@@ -459,6 +462,37 @@ void main() {
       });
     });
 
+    group('claimGoldReward', () {
+      test('호출 시 pendingGoldReward만큼 gold가 증가하고 goldClaimed가 true가 된다', () {
+        final notifier = container.read(runProvider.notifier);
+        final goldBefore = container.read(runProvider).gold;
+        notifier.startReward(remainingHp: 60, goldEarned: 20);
+
+        notifier.claimGoldReward();
+
+        final state = container.read(runProvider);
+        expect(state.gold, goldBefore + 20);
+        expect(state.goldClaimed, isTrue);
+      });
+
+      test('이미 획득한 골드는 다시 호출해도 중복 지급되지 않는다', () {
+        final notifier = container.read(runProvider.notifier);
+        notifier.startReward(remainingHp: 60, goldEarned: 20);
+        notifier.claimGoldReward();
+        final goldAfterFirstClaim = container.read(runProvider).gold;
+
+        notifier.claimGoldReward();
+
+        expect(container.read(runProvider).gold, goldAfterFirstClaim);
+      });
+
+      test('reward 페이즈가 아닐 때 claimGoldReward는 아무것도 하지 않는다', () {
+        final goldBefore = container.read(runProvider).gold;
+        container.read(runProvider.notifier).claimGoldReward();
+        expect(container.read(runProvider).gold, goldBefore);
+      });
+    });
+
     group('selectRewardCard', () {
       test('카드를 선택하면 덱에 추가되고 phase가 RunPhase.map이 된다', () {
         container.read(runProvider.notifier).startReward(
@@ -474,6 +508,34 @@ void main() {
         expect(state.phase, RunPhase.map);
         expect(state.deck.length, deckBefore + 1);
         expect(state.rewardCards, isEmpty);
+        expect(state.pendingGoldReward, 0);
+        expect(state.goldClaimed, isFalse);
+      });
+
+      test('골드를 획득하지 않은 상태로 카드를 선택하면 보류 골드가 자동으로 합산된다', () {
+        final notifier = container.read(runProvider.notifier);
+        final goldBefore = container.read(runProvider).gold;
+        notifier.startReward(remainingHp: 70, goldEarned: 15);
+        final rewardCard = container.read(runProvider).rewardCards.first;
+
+        notifier.selectRewardCard(rewardCard);
+
+        final state = container.read(runProvider);
+        expect(state.gold, goldBefore + 15);
+        expect(state.pendingGoldReward, 0);
+        expect(state.goldClaimed, isFalse);
+      });
+
+      test('골드를 이미 획득한 상태로 카드를 선택하면 골드가 중복 합산되지 않는다', () {
+        final notifier = container.read(runProvider.notifier);
+        notifier.startReward(remainingHp: 70, goldEarned: 15);
+        notifier.claimGoldReward();
+        final goldAfterClaim = container.read(runProvider).gold;
+        final rewardCard = container.read(runProvider).rewardCards.first;
+
+        notifier.selectRewardCard(rewardCard);
+
+        expect(container.read(runProvider).gold, goldAfterClaim);
       });
 
       test('reward 페이즈가 아닐 때 selectRewardCard는 아무것도 하지 않는다', () {
@@ -497,6 +559,21 @@ void main() {
         expect(state.phase, RunPhase.map);
         expect(state.deck.length, deckBefore);
         expect(state.rewardCards, isEmpty);
+        expect(state.pendingGoldReward, 0);
+        expect(state.goldClaimed, isFalse);
+      });
+
+      test('건너뛰기 시 미획득 골드가 자동으로 합산된다', () {
+        final notifier = container.read(runProvider.notifier);
+        final goldBefore = container.read(runProvider).gold;
+        notifier.startReward(remainingHp: 70, goldEarned: 12);
+
+        notifier.skipReward();
+
+        final state = container.read(runProvider);
+        expect(state.gold, goldBefore + 12);
+        expect(state.pendingGoldReward, 0);
+        expect(state.goldClaimed, isFalse);
       });
 
       test('reward 페이즈가 아닐 때 skipReward는 아무것도 하지 않는다', () {
@@ -630,6 +707,32 @@ void main() {
     });
 
     // ──────────────────────────────────────────────
+    // recordXpGain
+    // ──────────────────────────────────────────────
+
+    group('recordXpGain', () {
+      test('xpGainedThisRun이 누적된다', () {
+        final notifier = container.read(runProvider.notifier);
+
+        notifier.recordXpGain(xp: 10);
+        notifier.recordXpGain(xp: 5);
+
+        expect(container.read(runProvider).xpGainedThisRun, 15);
+      });
+
+      test('newlyUnlockedCardsThisRun에 신규 해금 카드가 중복 없이 누적된다', () {
+        final notifier = container.read(runProvider.notifier);
+
+        notifier.recordXpGain(xp: 10, newlyUnlockedCards: ['bash', 'swiftCut']);
+        notifier.recordXpGain(xp: 10, newlyUnlockedCards: ['swiftCut', 'ironWall']);
+
+        final unlocked = container.read(runProvider).newlyUnlockedCardsThisRun;
+        expect(unlocked.toSet(), {'bash', 'swiftCut', 'ironWall'});
+        expect(unlocked.length, 3);
+      });
+    });
+
+    // ──────────────────────────────────────────────
     // startNewRun
     // ──────────────────────────────────────────────
 
@@ -654,6 +757,21 @@ void main() {
         expect(state.isRunOver, isFalse);
         expect(state.phase, RunPhase.map);
         expect(state.rewardCards, isEmpty);
+      });
+
+      test('startNewRun 호출 시 보상·XP 누적 필드가 초기화된다', () {
+        final notifier = container.read(runProvider.notifier);
+
+        notifier.recordXpGain(xp: 50, newlyUnlockedCards: ['bash']);
+        notifier.startReward(remainingHp: 30, goldEarned: 10);
+
+        notifier.startNewRun();
+
+        final state = container.read(runProvider);
+        expect(state.pendingGoldReward, 0);
+        expect(state.goldClaimed, isFalse);
+        expect(state.xpGainedThisRun, 0);
+        expect(state.newlyUnlockedCardsThisRun, isEmpty);
       });
     });
   });

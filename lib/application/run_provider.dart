@@ -118,6 +118,19 @@ class RunState {
   /// 이번 상점 방문에서 카드 제거 서비스를 이미 사용했으면 true.
   final bool shopCardRemovalDone;
 
+  /// 보상 화면에서 아직 획득하지 않은 골드. [RunPhase.reward]일 때만 0보다 크다.
+  final int pendingGoldReward;
+
+  /// 보상 화면에서 [pendingGoldReward]를 클릭해 획득했으면 true.
+  final bool goldClaimed;
+
+  /// 이번 런에서 누적 획득한 XP. [RunEndScreen]에 표시된다.
+  final int xpGainedThisRun;
+
+  /// 이번 런 동안 레벨업으로 신규 해금된 카드 타입명 목록 (중복 없음).
+  /// [RunEndScreen]에 표시된다.
+  final List<String> newlyUnlockedCardsThisRun;
+
   const RunState({
     required this.phase,
     required this.floor,
@@ -139,6 +152,10 @@ class RunState {
     this.shopRelicPrices = const [],
     this.shopRelicSold = const [],
     this.shopCardRemovalDone = false,
+    this.pendingGoldReward = 0,
+    this.goldClaimed = false,
+    this.xpGainedThisRun = 0,
+    this.newlyUnlockedCardsThisRun = const [],
   });
 
   // ── 직렬화 ────────────────────────────────────────────────────────────
@@ -165,6 +182,10 @@ class RunState {
     'shopRelicPrices': shopRelicPrices,
     'shopRelicSold': shopRelicSold,
     'shopCardRemovalDone': shopCardRemovalDone,
+    'pendingGoldReward': pendingGoldReward,
+    'goldClaimed': goldClaimed,
+    'xpGainedThisRun': xpGainedThisRun,
+    'newlyUnlockedCardsThisRun': newlyUnlockedCardsThisRun,
   };
 
   static Map<String, dynamic> _cardToJson(GameCard c) => {
@@ -253,6 +274,11 @@ class RunState {
       shopRelicPrices:    shopRelicPrices,
       shopRelicSold:      shopRelicSold,
       shopCardRemovalDone: json['shopCardRemovalDone'] as bool? ?? false,
+      pendingGoldReward:  json['pendingGoldReward'] as int? ?? 0,
+      goldClaimed:        json['goldClaimed'] as bool? ?? false,
+      xpGainedThisRun:    json['xpGainedThisRun'] as int? ?? 0,
+      newlyUnlockedCardsThisRun:
+          List<String>.from(json['newlyUnlockedCardsThisRun'] as List? ?? []),
     );
   }
 
@@ -352,6 +378,10 @@ class RunState {
     List<int>? shopRelicPrices,
     List<bool>? shopRelicSold,
     bool? shopCardRemovalDone,
+    int? pendingGoldReward,
+    bool? goldClaimed,
+    int? xpGainedThisRun,
+    List<String>? newlyUnlockedCardsThisRun,
   }) =>
       RunState(
         phase: phase ?? this.phase,
@@ -378,6 +408,11 @@ class RunState {
         shopRelicPrices:     shopRelicPrices     ?? this.shopRelicPrices,
         shopRelicSold:       shopRelicSold       ?? this.shopRelicSold,
         shopCardRemovalDone: shopCardRemovalDone ?? this.shopCardRemovalDone,
+        pendingGoldReward:   pendingGoldReward   ?? this.pendingGoldReward,
+        goldClaimed:         goldClaimed         ?? this.goldClaimed,
+        xpGainedThisRun:     xpGainedThisRun     ?? this.xpGainedThisRun,
+        newlyUnlockedCardsThisRun:
+            newlyUnlockedCardsThisRun ?? this.newlyUnlockedCardsThisRun,
       );
 }
 
@@ -555,36 +590,61 @@ class RunNotifier extends Notifier<RunState> {
   /// 일반 전투 승리 후 보상 화면으로 전환한다.
   ///
   /// [remainingHp]: 전투 후 남은 플레이어 HP.
-  /// [goldEarned]: 이번 전투에서 획득한 골드.
+  /// [goldEarned]: 이번 전투에서 획득한 골드. 보상 화면에서 클릭해 획득하기 전까지는
+  /// [RunState.pendingGoldReward]에 보류되며 [RunState.gold]에는 반영되지 않는다.
   /// 전풀에서 무작위로 고른 카드 3장이 [RunState.rewardCards]에 담긴다.
   void startReward({required int remainingHp, required int goldEarned}) {
     final clampedHp = remainingHp.clamp(0, Player.maxHp);
     state = state.copyWith(
       phase: RunPhase.reward,
       playerHp: clampedHp,
-      gold: state.gold + goldEarned,
+      pendingGoldReward: goldEarned,
+      goldClaimed: false,
       rewardCards: _generateRewardCards(),
+    );
+  }
+
+  /// 보상 화면에서 보류 중인 골드([RunState.pendingGoldReward])를 획득한다.
+  ///
+  /// [RunPhase.reward]가 아니거나 이미 획득했으면 아무것도 하지 않는다(중복 지급 방지).
+  void claimGoldReward() {
+    if (state.phase != RunPhase.reward) return;
+    if (state.goldClaimed) return;
+    state = state.copyWith(
+      gold: state.gold + state.pendingGoldReward,
+      goldClaimed: true,
     );
   }
 
   /// 보상 화면에서 카드를 선택한다.
   ///
   /// 선택한 [card]를 덱에 추가하고 맵 화면으로 돌아간다.
+  /// 보류 중인 골드를 아직 획득하지 않았다면 자동으로 합산하여 잃지 않도록 한다.
   void selectRewardCard(GameCard card) {
     if (state.phase != RunPhase.reward) return;
+    final unclaimedGold = state.goldClaimed ? 0 : state.pendingGoldReward;
     state = state.copyWith(
       phase: RunPhase.map,
+      gold: state.gold + unclaimedGold,
       deck: List.unmodifiable([...state.deck, card]),
       rewardCards: const [],
+      pendingGoldReward: 0,
+      goldClaimed: false,
     );
   }
 
   /// 보상을 건너뛰고 맵 화면으로 돌아간다.
+  ///
+  /// 보류 중인 골드를 아직 획득하지 않았다면 자동으로 합산하여 잃지 않도록 한다.
   void skipReward() {
     if (state.phase != RunPhase.reward) return;
+    final unclaimedGold = state.goldClaimed ? 0 : state.pendingGoldReward;
     state = state.copyWith(
       phase: RunPhase.map,
+      gold: state.gold + unclaimedGold,
       rewardCards: const [],
+      pendingGoldReward: 0,
+      goldClaimed: false,
     );
   }
 
@@ -687,6 +747,23 @@ class RunNotifier extends Notifier<RunState> {
     state = state.copyWith(
       phase: RunPhase.map,
       deck: List.unmodifiable(newDeck),
+    );
+  }
+
+  // ── XP 누적 ────────────────────────────────────────────────────────────
+
+  /// 전투 종료 시 획득한 [xp]와 신규 해금 카드를 이번 런 누적치에 더한다.
+  ///
+  /// [RunEndScreen]에서 [RunState.xpGainedThisRun]·
+  /// [RunState.newlyUnlockedCardsThisRun]으로 표시된다.
+  /// [newlyUnlockedCards]는 기존 누적 목록과 중복 없이 병합된다.
+  void recordXpGain({required int xp, List<String> newlyUnlockedCards = const []}) {
+    state = state.copyWith(
+      xpGainedThisRun: state.xpGainedThisRun + xp,
+      newlyUnlockedCardsThisRun: List.unmodifiable({
+        ...state.newlyUnlockedCardsThisRun,
+        ...newlyUnlockedCards,
+      }),
     );
   }
 

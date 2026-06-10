@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../application/battle_provider.dart';
-import '../../application/level_up_pending_provider.dart';
 import '../../application/meta_progress_provider.dart';
 import '../../application/run_provider.dart';
 import '../../domain/battle_engine.dart';
@@ -47,9 +46,6 @@ class _BattleScreenState extends ConsumerState<BattleScreen>
   late final Animation<double>   _shakeAnim;
   bool _showRedBorder      = false;
   bool _pendingEndTurnShake = false;
-
-  bool _isProcessingXp = false;
-  String? _levelUpBanner;
 
   @override
   void initState() {
@@ -138,51 +134,44 @@ class _BattleScreenState extends ConsumerState<BattleScreen>
 
       if (!next.isBattleOver || (prev?.isBattleOver ?? false)) return;
 
+      final isVictory = next.result == BattleResult.playerWon;
+
       // 승리 시 몬스터 사망 애니메이션 트리거
-      if (next.result == BattleResult.playerWon) {
+      if (isVictory) {
         _monsterDeadTrigger.value = true;
       }
 
-      // XP 처리 시작: 결과 오버레이를 숨겨 조기 탭을 방지한다.
-      if (mounted) setState(() => _isProcessingXp = true);
+      final nodeType   = _currentNodeType();
+      final isBoss     = nodeType == NodeType.boss;
+      final xp         = BattleXpRewards.xpFor(nodeType, isVictory: isVictory);
+      final goldEarned = BattleGoldRewards.forStage(next.stage);
 
-      try {
-        final nodeType  = _currentNodeType();
-        final isVictory = next.result == BattleResult.playerWon;
-        final xp        = BattleXpRewards.xpFor(nodeType, isVictory: isVictory);
-
-        if (xp > 0) {
+      if (xp > 0) {
+        var newlyUnlocked = const <String>[];
+        try {
           final levelUpResult =
               await ref.read(metaProgressProvider.notifier).addXp(xp);
-
-          if (!mounted) return;
-
-          // 레벨업 시 배너를 2초간 표시한다. 카드 선택 없이 해금만 적용된다.
-          if (levelUpResult.didLevelUp) {
-            // 맵 화면 다이얼로그를 위해 결과를 보관한다.
-            ref.read(levelUpPendingProvider.notifier).state = levelUpResult;
-
-            setState(() {
-              _levelUpBanner = 'LEVEL UP!  Lv.${levelUpResult.newLevel}';
-            });
-            Future.delayed(const Duration(seconds: 2), () {
-              if (mounted) setState(() => _levelUpBanner = null);
-            });
-          }
+          newlyUnlocked = levelUpResult.newlyUnlockedCards;
+        } catch (_) {
+          // XP 저장 실패 시에도 이번 런 누적 XP·화면 전환은 계속 진행한다.
         }
-      } catch (_) {
-        // XP 저장 실패 시에도 전투 결과 오버레이는 반드시 표시한다.
+
+        if (!mounted) return;
+        ref.read(runProvider.notifier).recordXpGain(
+              xp: xp,
+              newlyUnlockedCards: newlyUnlocked,
+            );
       }
 
-      if (mounted) setState(() => _isProcessingXp = false);
-    });
+      if (!mounted) return;
 
-    final isBossBattle = runState.currentNode?.type == NodeType.boss;
-    final nodeType     = runState.currentNode?.type ?? NodeType.monster;
-    final isVictory    = state.result == BattleResult.playerWon;
-    final xpGained     = state.isBattleOver
-        ? BattleXpRewards.xpFor(nodeType, isVictory: isVictory)
-        : 0;
+      final runNotifier = ref.read(runProvider.notifier);
+      if (isVictory && !isBoss) {
+        runNotifier.startReward(remainingHp: next.playerHp, goldEarned: goldEarned);
+      } else {
+        runNotifier.endRun(remainingHp: next.playerHp, goldEarned: goldEarned);
+      }
+    });
 
     return Scaffold(
       body: Stack(
@@ -341,51 +330,6 @@ class _BattleScreenState extends ConsumerState<BattleScreen>
               ),
             ),
           ),
-          if (state.isBattleOver && !_isProcessingXp)
-            _BattleResultOverlay(
-              result: state.result!,
-              xpGained: xpGained,
-              goldEarned: BattleGoldRewards.forStage(state.stage),
-              isBossBattle: isBossBattle,
-              onReturnToMap: () => ref.read(runProvider.notifier).startReward(
-                    remainingHp: state.playerHp,
-                    goldEarned: BattleGoldRewards.forStage(state.stage),
-                  ),
-              onEndRun: () => ref.read(runProvider.notifier).endRun(
-                    remainingHp: state.playerHp,
-                    goldEarned: BattleGoldRewards.forStage(state.stage),
-                  ),
-            ),
-          // ── 레벨업 배너 (2초간 표시 후 자동 소멸) ───────────────────────
-          if (_levelUpBanner != null)
-            IgnorePointer(
-              child: Center(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                  decoration: BoxDecoration(
-                    color: const Color(0xCC000000),
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: Color(0xFFFFD700), width: 1.5),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.star, color: Color(0xFFFFD700), size: 20),
-                      const SizedBox(width: 8),
-                      Text(
-                        _levelUpBanner!,
-                        style: const TextStyle(
-                          color: Color(0xFFFFD700),
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 1.2,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
         ],
       ),
     );
@@ -736,121 +680,6 @@ class _EndTurnButton extends StatelessWidget {
     );
   }
 }
-
-/// 전투 결과 오버레이 (승리·패배·보스 클리어).
-class _BattleResultOverlay extends StatelessWidget {
-  final BattleResult result;
-  final int xpGained;
-  final int goldEarned;
-  final bool isBossBattle;
-  final VoidCallback onReturnToMap;
-  final VoidCallback onEndRun;
-
-  const _BattleResultOverlay({
-    required this.result,
-    required this.xpGained,
-    required this.goldEarned,
-    required this.isBossBattle,
-    required this.onReturnToMap,
-    required this.onEndRun,
-  });
-
-  bool get _isVictory => result == BattleResult.playerWon;
-
-  @override
-  Widget build(BuildContext context) {
-    return ColoredBox(
-      color: const Color(0x99000000),
-      child: Center(
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: BattleColors.panelBg,
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(
-              color: _isVictory ? BattleColors.torchGold : const Color(0xFFB71C1C),
-              width: 1.5,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: (_isVictory ? BattleColors.torchGold : const Color(0xFFB71C1C))
-                    .withValues(alpha: 0.4),
-                blurRadius: 20,
-              ),
-            ],
-          ),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 36),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  _isVictory ? Icons.emoji_events : Icons.sentiment_very_dissatisfied,
-                  size: 48,
-                  color: _isVictory ? BattleColors.torchGold : const Color(0xFFEF5350),
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  _titleText,
-                  style: TextStyle(
-                    fontSize: 30,
-                    fontWeight: FontWeight.bold,
-                    color: _isVictory ? BattleColors.torchGold : const Color(0xFFEF5350),
-                    letterSpacing: 1,
-                  ),
-                ),
-                // ── XP 표시 (승리·패배 모두) ──────────────────────────
-                if (xpGained > 0) ...[
-                  const SizedBox(height: 8),
-                  Text(
-                    _isVictory
-                        ? BattleXpRewards.xpGainedLabel(xpGained)
-                        : BattleXpRewards.xpLostLabel(xpGained),
-                    style: TextStyle(
-                      color: _isVictory
-                          ? const Color(0xFF66BB6A)
-                          : const Color(0xFF90A4AE),
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-                if (_isVictory && !isBossBattle && goldEarned > 0) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    BattleGoldRewards.goldLabel(goldEarned),
-                    style: const TextStyle(color: BattleColors.torchGold, fontSize: 14, fontWeight: FontWeight.w600),
-                  ),
-                ],
-                const SizedBox(height: 28),
-                ElevatedButton(
-                  onPressed: _isVictory && !isBossBattle ? onReturnToMap : onEndRun,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _isVictory ? BattleColors.torchOrange : const Color(0xFF455A64),
-                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                  ),
-                  child: Text(_buttonLabel, style: const TextStyle(color: Colors.white, fontSize: 14)),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  String get _titleText {
-    if (!_isVictory) return BattleStrings.defeat;
-    if (isBossBattle) return BattleStrings.runClear;
-    return BattleStrings.victory;
-  }
-
-  String get _buttonLabel {
-    if (_isVictory && !isBossBattle) return BattleStrings.selectReward;
-    return BattleStrings.viewResult;
-  }
-}
-
 
 /// 몬스터 이미지를 배경 문 앞에 배치한다.
 /// 피격 시 좌우 흔들림, 사망 시 위로 드리프트하며 페이드아웃 모션을 재생한다.

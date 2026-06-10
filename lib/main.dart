@@ -4,8 +4,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'application/meta_progress_provider.dart';
 import 'data/local_storage.dart';
-import 'presentation/app_router.dart';
 import 'presentation/battle/battle_constants.dart';
+import 'presentation/intro/intro_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -29,7 +29,7 @@ class App extends StatelessWidget {
       theme: ThemeData.dark().copyWith(
         scaffoldBackgroundColor: const Color(0xFF1A1A2E),
       ),
-      home: const AppRouter(),
+      home: const IntroScreen(),
     );
   }
 }

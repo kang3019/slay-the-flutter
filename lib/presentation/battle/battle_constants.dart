@@ -13,12 +13,9 @@ abstract final class BattleStrings {
   static const intentAttack      = '공격';
   static const intentHeavyAttack = '강공격';
   static const intentBlock       = '방어';
-  static const victory           = '승리!';
   static const runClear          = '런 클리어!';
   static const defeat            = '패배...';
   static const restart           = '새 런 시작';
-  static const viewResult        = '결과 보기';
-  static const selectReward      = '보상 카드 선택';
   static const returnToMap       = '맵으로 이동';
   static const peekMap           = '지도 보기';
   static const vulnerable            = '취약';

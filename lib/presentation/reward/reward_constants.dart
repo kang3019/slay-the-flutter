@@ -4,9 +4,14 @@ import '../../domain/entities/card.dart';
 
 /// 보상 화면 문자열 상수.
 abstract final class RewardStrings {
-  static const title      = '보상 카드 선택';
-  static const subtitle   = '카드 1장을 덱에 추가하세요';
-  static const skipButton = '건너뛰기';
+  static const victoryTitle = '전투 승리!';
+  static const subtitle    = '카드 1장을 덱에 추가하세요';
+  static const skipButton  = '건너뛰기';
+  static const claimButton = '획득하기';
+  static const claimedLabel = '획득 완료';
+
+  /// 골드 보상 표시 문자열.
+  static String goldLabel(int gold) => '+$gold 골드';
 
   /// 카드 효과 설명.
   static String cardEffect(GameCard card) => switch (card.type) {
@@ -45,9 +50,14 @@ abstract final class RewardStrings {
 
 /// 보상 화면 색상 상수.
 abstract final class RewardColors {
-  static const background = Color(0xFF1A1A2E);
   static const surface    = Color(0xFF16213E);
   static const cardBorder = Color(0xFFFFD700);
+
+  // ── 팝업형 레이아웃 (RunEndScreen과 톤 통일) ────────────────────────────
+  static const popupBackground = Color(0xFF1A1510);
+  static const popupBorder     = Color(0xFFB8860B);
+  static const gold            = Color(0xFFFFD700);
+  static const claimedAccent   = Color(0xFF66BB6A);
 
   /// 카드 효과 타입별 강조 색상.
   static Color forEffectType(CardEffectType type) => switch (type) {

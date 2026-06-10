@@ -5,83 +5,203 @@ import '../../application/run_provider.dart';
 import '../../domain/entities/card.dart';
 import 'reward_constants.dart';
 
-/// 전투 승리 후 카드 보상을 선택하는 화면.
+/// 전투 승리 직후 자동으로 표시되는 보상 팝업.
 ///
-/// [RunState.rewardCards]에 담긴 3장 중 1장을 탭하면 덱에 추가되고
-/// [RunPhase.map]으로 전환된다. "건너뛰기" 버튼으로 카드 없이 넘어갈 수 있다.
+/// "전투 승리!" 헤더와 함께 골드 보상(클릭해야 획득)·카드 3장을 보여준다.
+/// [RunState.rewardCards] 중 1장을 탭하면 덱에 추가되고 [RunPhase.map]으로
+/// 전환된다. "건너뛰기" 버튼으로 카드 없이 넘어갈 수 있다.
 class RewardScreen extends ConsumerWidget {
   const RewardScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final rewardCards = ref.watch(runProvider.select((s) => s.rewardCards));
-    final notifier    = ref.read(runProvider.notifier);
+    final run      = ref.watch(runProvider);
+    final notifier = ref.read(runProvider.notifier);
 
     return Scaffold(
-      backgroundColor: RewardColors.background,
-      body: SafeArea(
-        child: Column(
-          children: [
-            const SizedBox(height: 32),
-
-            // ── 타이틀 ────────────────────────────────────────────────────
-            const Text(
-              RewardStrings.title,
-              style: TextStyle(
-                color: Color(0xFFFFD700),
-                fontSize: 26,
-                fontWeight: FontWeight.bold,
-                letterSpacing: 1.2,
+      backgroundColor: Colors.transparent,
+      body: Stack(
+        children: [
+          // ── 반투명 어두운 배경 ───────────────────────────────────────
+          Positioned.fill(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    const Color(0xFF0D0A07).withValues(alpha: 0.92),
+                    const Color(0xFF000000).withValues(alpha: 0.85),
+                  ],
+                ),
               ),
             ),
-            const SizedBox(height: 8),
-            const Text(
-              RewardStrings.subtitle,
-              style: TextStyle(color: Colors.white54, fontSize: 14),
-            ),
-
-            const SizedBox(height: 40),
-
-            // ── 카드 3장 ───────────────────────────────────────────────────
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: rewardCards
-                      .map(
-                        (card) => Expanded(
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 8),
-                            child: _RewardCardTile(
-                              card: card,
-                              onTap: () => notifier.selectRewardCard(card),
+          ),
+          // ── 중앙 팝업 카드 ───────────────────────────────────────────
+          Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(vertical: 40),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 480),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: RewardColors.popupBackground,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: RewardColors.popupBorder, width: 1.5),
+                      boxShadow: [
+                        BoxShadow(
+                          color: RewardColors.popupBorder.withValues(alpha: 0.25),
+                          blurRadius: 40,
+                          spreadRadius: 4,
+                        ),
+                      ],
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // ── 승리 헤더 ─────────────────────────────────
+                          const Icon(Icons.emoji_events, size: 48, color: RewardColors.gold),
+                          const SizedBox(height: 10),
+                          const Text(
+                            RewardStrings.victoryTitle,
+                            style: TextStyle(
+                              color: RewardColors.gold,
+                              fontSize: 26,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 1.5,
                             ),
                           ),
-                        ),
-                      )
-                      .toList(),
+
+                          // ── 골드 보상 (클릭해야 획득) ───────────────────
+                          if (run.pendingGoldReward > 0) ...[
+                            const SizedBox(height: 16),
+                            _GoldRewardChip(
+                              amount: run.pendingGoldReward,
+                              claimed: run.goldClaimed,
+                              onTap: notifier.claimGoldReward,
+                            ),
+                          ],
+
+                          const SizedBox(height: 20),
+                          const Text(
+                            RewardStrings.subtitle,
+                            style: TextStyle(color: Colors.white54, fontSize: 14),
+                          ),
+                          const SizedBox(height: 16),
+
+                          // ── 카드 3장 ───────────────────────────────────
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: run.rewardCards
+                                .map(
+                                  (card) => Expanded(
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(horizontal: 6),
+                                      child: _RewardCardTile(
+                                        card: card,
+                                        onTap: () => notifier.selectRewardCard(card),
+                                      ),
+                                    ),
+                                  ),
+                                )
+                                .toList(),
+                          ),
+
+                          const SizedBox(height: 20),
+
+                          // ── 건너뛰기 ───────────────────────────────────
+                          TextButton(
+                            onPressed: notifier.skipReward,
+                            child: const Text(
+                              RewardStrings.skipButton,
+                              style: TextStyle(
+                                color: Colors.white38,
+                                fontSize: 15,
+                                decoration: TextDecoration.underline,
+                                decorationColor: Colors.white38,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
-            const SizedBox(height: 32),
+// ──────────────────────────────────────────────────────────────────────────
+// _GoldRewardChip — 골드 보상 (탭하여 획득)
+// ──────────────────────────────────────────────────────────────────────────
 
-            // ── 건너뛰기 ───────────────────────────────────────────────────
-            TextButton(
-              onPressed: notifier.skipReward,
-              child: const Text(
-                RewardStrings.skipButton,
-                style: TextStyle(
-                  color: Colors.white38,
-                  fontSize: 15,
-                  decoration: TextDecoration.underline,
-                  decorationColor: Colors.white38,
-                ),
-              ),
+/// 보상 화면의 골드 칩. 탭하면 [onTap]을 호출해 골드를 획득한다.
+///
+/// [claimed]가 true면 체크 아이콘과 함께 비활성 상태로 표시된다.
+class _GoldRewardChip extends StatelessWidget {
+  final int amount;
+  final bool claimed;
+  final VoidCallback onTap;
+
+  const _GoldRewardChip({
+    required this.amount,
+    required this.claimed,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final accentColor = claimed ? RewardColors.claimedAccent : RewardColors.gold;
+
+    return GestureDetector(
+      onTap: claimed ? null : onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        decoration: BoxDecoration(
+          color: accentColor.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: accentColor, width: 1.5),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              claimed ? Icons.check_circle : Icons.toll,
+              color: accentColor,
+              size: 22,
             ),
-
-            const SizedBox(height: 24),
+            const SizedBox(width: 10),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  RewardStrings.goldLabel(amount),
+                  style: const TextStyle(
+                    color: RewardColors.gold,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  claimed ? RewardStrings.claimedLabel : RewardStrings.claimButton,
+                  style: TextStyle(
+                    color: claimed ? RewardColors.claimedAccent : Colors.white60,
+                    fontSize: 11,
+                  ),
+                ),
+              ],
+            ),
           ],
         ),
       ),
