@@ -1,6 +1,6 @@
 # 08-test-plan.md — 테스트 계획서
 
-**버전**: 1.0 | **생성일**: 2026-05-22 (AI Agent 자동 생성)
+**버전**: 2.0 | **생성일**: 2026-05-22 | **최종 수정**: 2026-06-11
 
 ---
 
@@ -15,313 +15,224 @@
 
 ---
 
+## 테스트 현황 (2026-06-11 기준)
+
+| 항목 | 수치 |
+|------|------|
+| 전체 테스트 수 | **446개** |
+| 통과 | **446 / 446** |
+| `flutter analyze` 경고 | **0건** |
+
+---
+
 ## 테스트 디렉토리 구조
 
 ```
 test/
 ├── domain/
-│   ├── battle_engine_test.dart   # BattleEngine 핵심 로직
-│   ├── deck_test.dart            # 드로우/셔플/버림 덱
-│   ├── card_test.dart            # Card 데이터 검증
-│   ├── monster_test.dart         # Monster 스탯 공식
-│   ├── player_test.dart          # Player 상태 변이
-│   ├── status_effect_test.dart   # 취약/약화 배율
-│   └── xp_system_test.dart       # XP 산정/레벨업
+│   ├── battle_engine_test.dart   # BattleEngine 카드 플레이·턴 종료·상태이상·유물 효과
+│   ├── deck_test.dart            # Deck 드로우·셔플·버림 덱·Exhaust
+│   ├── card_test.dart            # GameCard 정의 및 Cards.byTypeName 조회
+│   ├── monster_test.dart         # Monster 스탯 공식·데미지 처리·상태이상·패턴 행동
+│   ├── player_test.dart          # Player 데미지·회복·블록·StatusEffect 관리
+│   ├── event_test.dart           # GameEvent 선택지·보상 유형 검증
+│   ├── map_generator_test.dart   # MapGenerator DAG 구조·노드 분포 검증
+│   ├── relic_test.dart           # Relic 유물 효과 20종 BattleEngine 통합 검증
+│   ├── meta_progress_test.dart   # MetaProgress.computeLevel·computeUnlockedCards·addXp
+│   ├── gold_rewards_test.dart    # GoldRewards.forVictory 골드 범위 검증
+│   └── save_slot_test.dart       # SaveSlot JSON 직렬화·왕복 복원
 ├── application/
-│   ├── battle_provider_test.dart
-│   ├── run_provider_test.dart
-│   └── meta_provider_test.dart
-└── data/
-    └── local_storage_test.dart
+│   ├── battle_provider_test.dart         # BattleNotifier 상태 갱신·승패 판정
+│   ├── run_provider_test.dart            # RunNotifier 스테이지 전환·보상·런 종료
+│   ├── meta_progress_provider_test.dart  # MetaProgressNotifier XP 적립·레벨업·저장
+│   └── save_slot_provider_test.dart      # SaveSlotNotifier 슬롯 저장·로드·삭제
+├── data/
+│   └── local_storage_test.dart   # LocalStorage SharedPreferences 읽기/쓰기
+└── widget_test.dart              # IntroScreen smoke test
 ```
 
 ---
 
 ## Domain 테스트 케이스
 
-### BattleEngine — 데미지 계산
+### BattleEngine
 
+**엔진 생성 패턴**
 ```dart
-group('BattleEngine.calculateDamage', () {
-  test('일반 데미지: 배율 없음', () {
-    expect(BattleEngine.calculateDamage(6, weak: false, vulnerable: false), 6);
-  });
-
-  test('약화 적용: floor(6 × 0.75) = 4', () {
-    expect(BattleEngine.calculateDamage(6, weak: true, vulnerable: false), 4);
-  });
-
-  test('취약 적용: floor(6 × 1.5) = 9', () {
-    expect(BattleEngine.calculateDamage(6, weak: false, vulnerable: true), 9);
-  });
-
-  test('약화+취약 동시: floor(floor(6×0.75)×1.5) = floor(4×1.5) = 6', () {
-    expect(BattleEngine.calculateDamage(6, weak: true, vulnerable: true), 6);
-  });
-
-  test('데미지 0: 최솟값 0 보장', () {
-    expect(BattleEngine.calculateDamage(0, weak: true, vulnerable: false), 0);
-  });
-});
+BattleEngine _makeEngine({required List<GameCard> cards, Player? player, Monster? monster}) {
+  final engine = BattleEngine(
+    player: player ?? Player(),
+    monster: monster ?? Monster(stage: 1),
+    deck: Deck(initialCards: cards),
+  );
+  engine.startPlayerTurn();
+  return engine;
+}
 ```
 
-### BattleEngine — 방어도 적용
-
+**주요 검증 항목**
 ```dart
-group('BattleEngine.applyDamage', () {
-  test('방어도가 데미지 전부 흡수', () {
-    final player = Player(currentHp: 70, block: 10);
-    BattleEngine.applyDamage(player, 8);
-    expect(player.block, 2);
-    expect(player.currentHp, 70);
-  });
+// 카드 플레이 — 에너지 및 효과
+engine.playCard(Cards.strike);              // bool 반환 (성공 여부)
+expect(engine.energy, equals(2));           // 에너지 1 소모
+expect(monster.hp, equals(18));            // Strike: 6 데미지 (24 - 6 = 18)
+expect(monster.isVulnerable, isTrue);      // Bash: 취약 부여 확인
 
-  test('데미지가 방어도 초과 — 초과분이 HP 감소', () {
-    final player = Player(currentHp: 70, block: 5);
-    BattleEngine.applyDamage(player, 8);
-    expect(player.block, 0);
-    expect(player.currentHp, 67);
-  });
+// 턴 종료
+engine.endPlayerTurn();
+expect(engine.deck.hand, isEmpty);          // 손패 전부 버림 덱 이동
+expect(player.hp, equals(60));             // 몬스터 공격 10 (stage 1) 반영
+expect(player.block, equals(0));           // player.endTurn() 후 블록 소멸
 
-  test('HP가 0 미만으로 내려가지 않음', () {
-    final player = Player(currentHp: 3, block: 0);
-    BattleEngine.applyDamage(player, 100);
-    expect(player.currentHp, 0);
-  });
-
-  test('방어도 0일 때 전부 HP에 적용', () {
-    final player = Player(currentHp: 70, block: 0);
-    BattleEngine.applyDamage(player, 6);
-    expect(player.currentHp, 64);
-  });
-});
+// 승리 판정
+expect(engine.isBattleOver, isTrue);
+expect(engine.result, equals(BattleResult.playerWon));
 ```
 
-### BattleEngine — 카드 사용
+---
+
+### Monster
 
 ```dart
-group('BattleEngine.playCard', () {
-  test('Strike: 에너지 1 소모, 몬스터에 6 데미지', () {
-    final state = makeBattleState(energy: 3, monsterHp: 30);
-    final next = BattleEngine.playCard(strikeCard, state);
-    expect(next.player.energy, 2);
-    expect(next.monster.hp, 24);
-  });
+// 스탯 공식 (MonsterType.basic)
+Monster(stage: 1)  → hp: 24, attackPower: 10
+Monster(stage: 2)  → hp: 32, attackPower: 12
+Monster(stage: 3)  → hp: 40, attackPower: 14
 
-  test('Defend: 에너지 1 소모, 플레이어 방어도 +5', () {
-    final state = makeBattleState(energy: 3, playerBlock: 0);
-    final next = BattleEngine.playCard(defendCard, state);
-    expect(next.player.energy, 2);
-    expect(next.player.block, 5);
-  });
+// 생성자: Monster(stage: n) 또는 Monster(stage: n, type: MonsterType.stickySlime)
+// 네임드 몬스터는 고정 HP 사용 (IronGolem: 96 등)
 
-  test('에너지 부족 시 카드 사용 불가', () {
-    final state = makeBattleState(energy: 0);
-    expect(() => BattleEngine.playCard(strikeCard, state),
-           throwsAssertionError);
-  });
-
-  test('Bash: 데미지 8 + 몬스터 취약 2턴', () {
-    final state = makeBattleState(energy: 3, monsterHp: 30);
-    final next = BattleEngine.playCard(bashCard, state);
-    expect(next.monster.hp, 22);
-    expect(next.monster.vulnerableTurns, 2);
-  });
-});
+monster.takeDamage(10);
+expect(monster.hp, equals(14));
+expect(monster.isVulnerable, isTrue);  // Bash 효과 확인
 ```
 
-### BattleEngine — 턴 종료
+---
+
+### Player
 
 ```dart
-group('BattleEngine.endPlayerTurn', () {
-  test('플레이어 방어도 0으로 초기화', () {
-    final state = makeBattleState(playerBlock: 8);
-    final next = BattleEngine.endPlayerTurn(state);
-    expect(next.player.block, 0);
-  });
-
-  test('에너지 3으로 초기화', () {
-    final state = makeBattleState(energy: 0);
-    final next = BattleEngine.endPlayerTurn(state);
-    expect(next.player.energy, 3);
-  });
-
-  test('손패 전부 버림 덱으로 이동 후 5장 드로우', () {
-    final state = makeBattleState(handSize: 3, deckSize: 10);
-    final next = BattleEngine.endPlayerTurn(state);
-    expect(next.hand.length, 5);
-  });
-
-  test('상태이상 턴 수 1 감소', () {
-    final state = makeBattleState(playerWeakTurns: 2);
-    final next = BattleEngine.endPlayerTurn(state);
-    expect(next.player.weakTurns, 1);
-  });
-
-  test('상태이상 0 미만으로 내려가지 않음', () {
-    final state = makeBattleState(playerWeakTurns: 0);
-    final next = BattleEngine.endPlayerTurn(state);
-    expect(next.player.weakTurns, 0);
-  });
-});
+// 생성자: Player() 기본값 hp=70 / Player(hp: 50)
+player.takeDamage(8);   // 블록 우선 흡수 후 HP 감소
+player.gainBlock(5);
+player.heal(10);        // maxHp(70) 초과 불가
+player.endTurn();       // block=0, statusEffects duration 1 감소 후 만료 제거
 ```
 
-### Deck — 드로우/셔플
+---
+
+### MetaProgress
 
 ```dart
-group('Deck', () {
-  test('drawCards(5): 덱에서 5장 드로우', () {
-    final deck = Deck(cards: List.generate(10, (_) => strikeCard));
-    final hand = deck.drawCards(5);
-    expect(hand.length, 5);
-    expect(deck.remaining, 5);
-  });
+// computeLevel — 10레벨 임계치
+MetaProgress.computeLevel(0)    → 1
+MetaProgress.computeLevel(100)  → 2
+MetaProgress.computeLevel(249)  → 2
+MetaProgress.computeLevel(250)  → 3
+MetaProgress.computeLevel(2700) → 10
+MetaProgress.computeLevel(9999) → 10  // 최대 레벨 유지
 
-  test('덱 소진 시 버림 덱 셔플 후 드로우', () {
-    final deck = Deck(cards: [strikeCard],
-                      discardPile: List.generate(9, (_) => defendCard));
-    deck.drawCards(5);
-    expect(deck.remaining + deck.discardCount, 5);
-  });
+// computeUnlockedCards
+MetaProgress.computeUnlockedCards(1)  → 9종 (기본 7 + 스타터 2)
+MetaProgress.computeUnlockedCards(3)  → 14종
+MetaProgress.computeUnlockedCards(10) → 31종 (전체 해금)
 
-  test('덱+버림덱 합산보다 많이 드로우 요청 시 가능한 수만큼 드로우', () {
-    final deck = Deck(cards: [strikeCard, defendCard]);
-    final hand = deck.drawCards(5);
-    expect(hand.length, 2);
-  });
-});
+// addXp — (MetaProgress, LevelUpResult) 반환
+final (newMeta, result) = meta.addXp(100);
+expect(result.didLevelUp, isTrue);
+expect(result.newlyUnlockedCards, isNotEmpty);
 ```
 
-### Monster — 스탯 공식
+---
+
+### GoldRewards
 
 ```dart
-group('Monster 스탯 공식', () {
-  test('스테이지 1: HP=30, 공격=10', () {
-    final m = Monster.fromStage(1);
-    expect(m.hp, 30);
-    expect(m.attack, 10);
-  });
+// GoldRewards.forVictory(NodeType, floor, Random)
+// monster: (floor + 1) + 10~14
+// elite:   (floor + 1) + 20~25
+// boss:    0
 
-  test('스테이지 2: HP=40, 공격=12', () {
-    final m = Monster.fromStage(2);
-    expect(m.hp, 40);
-    expect(m.attack, 12);
-  });
+final gold = GoldRewards.forVictory(NodeType.monster, 0, Random());
+expect(gold, inInclusiveRange(11, 15));   // floor 0: 1 + 10~14
 
-  test('스테이지 3: HP=50, 공격=14', () {
-    final m = Monster.fromStage(3);
-    expect(m.hp, 50);
-    expect(m.attack, 14);
-  });
-
-  test('보스(스테이지 4): HP=80, 공격=22', () {
-    final m = Monster.fromStage(4);
-    expect(m.hp, 80);
-    expect(m.attack, 22);
-  });
-});
-```
-
-### XpSystem
-
-```dart
-group('XpSystem', () {
-  test('레벨 1: XP=0', () {
-    expect(XpSystem.calcLevel(0), 1);
-  });
-
-  test('레벨 2: XP=100 도달 시', () {
-    expect(XpSystem.calcLevel(100), 2);
-  });
-
-  test('레벨 2: XP=249 (임계치 미달)', () {
-    expect(XpSystem.calcLevel(249), 2);
-  });
-
-  test('레벨 3: XP=250', () {
-    expect(XpSystem.calcLevel(250), 3);
-  });
-
-  test('런 클리어 XP: 100', () {
-    expect(XpSystem.runClearXp, 100);
-  });
-
-  test('스테이지 클리어 XP: 30', () {
-    expect(XpSystem.stageClearXp, 30);
-  });
-
-  test('몬스터 처치 XP: 10', () {
-    expect(XpSystem.monsterKillXp, 10);
-  });
-});
+final bossGold = GoldRewards.forVictory(NodeType.boss, 5, Random());
+expect(bossGold, equals(0));
 ```
 
 ---
 
 ## Application 테스트 케이스
 
-### BattleProvider
+### BattleNotifier
 
+**컨테이너 생성 패턴** — `battleEngineFactoryProvider`를 오버라이드해 결정론적 덱 주입
 ```dart
-group('BattleNotifier', () {
-  late ProviderContainer container;
+ProviderContainer _makeContainer({List<GameCard>? cards}) {
+  return ProviderContainer(
+    overrides: [
+      battleEngineFactoryProvider.overrideWith(
+        (ref) => (s, relics, _, __, ___) {
+          final engine = BattleEngine(
+            player: Player(),
+            monster: Monster(stage: s),
+            deck: Deck(initialCards: cards ?? List.filled(10, Cards.strike)),
+            relics: relics,
+          );
+          engine.startPlayerTurn();
+          return engine;
+        },
+      ),
+    ],
+  );
+}
+```
 
-  setUp(() => container = ProviderContainer());
-  tearDown(() => container.dispose());
+**주요 검증 항목**
+```dart
+container.read(battleProvider).playerHp      // 70
+container.read(battleProvider).energy        // 3
+container.read(battleProvider).hand.length   // 5
 
-  test('playCard: 상태가 올바르게 갱신됨', () {
-    container.read(battleProvider.notifier).startBattle(Monster.fromStage(1));
-    container.read(battleProvider.notifier).playCard(strikeCard);
-    final state = container.read(battleProvider);
-    expect(state.monster.hp, lessThan(30));
-    expect(state.player.energy, 2);
-  });
+container.read(battleProvider.notifier).playCard(Cards.strike);
+expect(container.read(battleProvider).energy, equals(2));
 
-  test('endTurn: 몬스터 턴 실행 후 플레이어 턴으로 복귀', () {
-    container.read(battleProvider.notifier).startBattle(Monster.fromStage(1));
-    container.read(battleProvider.notifier).endTurn();
-    final state = container.read(battleProvider);
-    expect(state.phase, BattlePhase.playerTurn);
-    expect(state.player.energy, 3);
-    expect(state.hand.length, 5);
-  });
+container.read(battleProvider.notifier).endTurn();
+// 승패 판정
+expect(container.read(battleProvider).isBattleOver, isTrue);
+expect(container.read(battleProvider).result, equals(BattleResult.playerWon));
+```
 
-  test('몬스터 HP 0 → isOver=true, playerWon=true', () {
-    // 몬스터 HP를 1로 설정 후 Strike 사용
-    final state = container.read(battleProvider);
-    expect(state.isOver, isTrue);
-    expect(state.playerWon, isTrue);
-  });
+---
+
+### MetaProgressNotifier
+
+**컨테이너 생성 패턴** — `localStorageProvider`를 fake SharedPreferences로 오버라이드
+```dart
+setUp(() async {
+  SharedPreferences.setMockInitialValues({});
+  prefs = await SharedPreferences.getInstance();
+  container = ProviderContainer(
+    overrides: [localStorageProvider.overrideWithValue(LocalStorage(prefs))],
+  );
 });
 ```
 
-### MetaProvider
-
+**주요 검증 항목**
 ```dart
-group('MetaNotifier', () {
-  late ProviderContainer container;
+// 초기 상태
+container.read(metaProgressProvider).level          // 1
+container.read(metaProgressProvider).xp             // 0
+container.read(metaProgressProvider).unlockedCardTypes  // ['strike','defend',...]
 
-  setUp(() => container = ProviderContainer());
-  tearDown(() => container.dispose());
+// XP 적립 및 레벨업
+container.read(metaProgressProvider.notifier).addXp(100);
+expect(container.read(metaProgressProvider).level, equals(2));
 
-  test('addXp: XP 누적 저장', () async {
-    await container.read(metaProvider.notifier).addXp(50);
-    final state = await container.read(metaProvider.future);
-    expect(state.xp, 50);
-  });
-
-  test('addXp: 임계치 초과 시 레벨업', () async {
-    await container.read(metaProvider.notifier).addXp(100);
-    final state = await container.read(metaProvider.future);
-    expect(state.level, 2);
-  });
-
-  test('레벨업 시 해금 카드 목록 갱신', () async {
-    await container.read(metaProvider.notifier).addXp(100);
-    final state = await container.read(metaProvider.future);
-    expect(state.unlockedCardIds, contains('bash'));
-  });
-});
+// SharedPreferences 영속 저장 확인
+await prefs.setInt('meta_level', 3);
+await prefs.setInt('meta_xp', 300);
+// 새 컨테이너 생성 후 저장 값 복원 검증
 ```
 
 ---
@@ -335,7 +246,6 @@ flutter test
 # 커버리지 포함
 flutter test --coverage
 genhtml coverage/lcov.info -o coverage/html
-open coverage/html/index.html
 
 # 특정 파일만
 flutter test test/domain/battle_engine_test.dart
@@ -354,6 +264,6 @@ flutter test test/domain/
 ```yaml
 # .github/workflows에서 자동 검증
 - flutter analyze   # 경고 0건
-- flutter test      # 모든 테스트 GREEN
+- flutter test      # 446개 전체 GREEN
 - 커버리지 리포트   # domain/ ≥ 80%
 ```

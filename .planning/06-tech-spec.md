@@ -1,6 +1,6 @@
 # 06-tech-spec.md — 기술 명세서
 
-**버전**: 1.0 | **생성일**: 2026-05-22 (AI Agent 자동 생성)
+**버전**: 2.0 | **생성일**: 2026-05-22 | **최종 수정**: 2026-06-11
 
 ---
 
@@ -20,68 +20,107 @@
 
 ## 2. 도메인 모델 명세
 
-### 2-1. Card
+### 2-1. GameCard
 
 ```dart
-class Card {
-  final String id;          // 'strike', 'defend', 'bash' …
-  final String name;        // 표시 이름
-  final CardType type;      // attack | defense | special
-  final int cost;           // 에너지 비용 (0~3)
-  final int value;          // 데미지 또는 방어도 수치
-  final StatusEffect? effect; // 부가 상태이상 (nullable)
-  final int? effectDuration;  // 상태이상 지속 턴
+/// 카드가 전투에서 수행하는 효과 분류.
+enum CardEffectType { damage, block, buff, heal, draw, blockDraw, strength }
+
+/// 카드 식별자 — SPECS.md에 정의된 31종.
+enum CardType {
+  strike, bash, swiftCut, defend, ironWall, focus, recover,
+  rageBurst, toxicJab, regroup, crushingBlow, fury,
+  tripleSlash, quickMend, swiftGuard, exploitWeakness, sharpen,
+  weakSlash, blockStrike, bloodRush, devilsDeal,
+  battleCry, indomitable, comboStrike, gamble, poisonDart,
+  limitBreak, impervious, doubleTap, fiendFire,
 }
 
-enum CardType { attack, defense, special }
+/// 불변 카드 정의. 비용·효과 분류·수치를 보유한다.
+class GameCard {
+  final CardType type;
+  final String name;          // 표시 이름
+  final int cost;             // 에너지 비용 (0~3, -1 = X비용)
+  final CardEffectType effectType;
+  final int value;            // 데미지 또는 방어도 수치
+  final bool isUpgraded;      // 휴식처 강화 여부
+}
+
+// 카드 인스턴스: Cards.strike, Cards.defend, Cards.bash …
+// 강화 인스턴스: Cards.strikeUpgraded, Cards.defendUpgraded …
+// 강화 헬퍼: Cards.upgrade(GameCard card) → GameCard
 ```
 
 ### 2-2. StatusEffect
 
 ```dart
-enum StatusEffect { vulnerable, weak }
+/// 상태 이상 종류.
+enum StatusEffectType { vulnerable, weak, poison }
 
-// 배율 상수
-const double kVulnerableMultiplier = 1.5;
-const double kWeakMultiplier       = 0.75;
+/// 남은 지속 턴을 가진 단일 상태 이상.
+class StatusEffect {
+  final StatusEffectType type;
+  final int duration; // vulnerable·weak: 남은 턴 수 / poison: 스택 수
+}
+
+// 배율 상수 (Player·Monster 클래스에 선언)
+static const double vulnerableMultiplier = 1.5;  // 받는 데미지 ×1.5
+static const double weakMultiplier       = 0.75; // 주는 데미지 ×0.75 (floor)
+// Poison: 턴 시작 시 스택 수만큼 HP 감소 (방어도 무시), 매 턴 스택 1 감소
 ```
 
 ### 2-3. Player
 
 ```dart
 class Player {
-  final int maxHp;          // 고정 70
-  int currentHp;
-  int block;                // 턴 종료 시 0으로 초기화
-  int energy;               // 턴 시작 시 3으로 초기화
-  int weakTurns;
-  int vulnerableTurns;
-  int xp;
-  int level;
-  List<String> unlockedCardIds;
+  static const int maxHp = 70;
+
+  int hp;
+  int block;       // 턴 종료 시 0으로 초기화
+  int strength;    // 전투 내 공격력 보너스 (전투 종료 시 자동 초기화)
+  List<StatusEffect> statusEffects; // Vulnerable·Weak·Poison 포함
 }
 ```
+
+> `energy`(에너지)는 `BattleEngine`이 관리.
+> `xp` / `level` / `unlockedCardTypes`는 `MetaProgress` 클래스에서 관리 — Player와 별개.
 
 ### 2-4. Monster
 
 ```dart
-class Monster {
-  final String id;
-  final String name;
-  final int stage;          // 1~4 (4 = 보스)
-  late int hp;              // 20 + (stage × 10)
-  late int attack;          // 8  + (stage × 2)
-  int block;
-  MonsterIntent nextIntent; // attack | defend
-  int weakTurns;
-  int vulnerableTurns;
+/// 몬스터 한 턴의 행동 명세 — UI 의도 아이콘 및 실행에 사용.
+enum MonsterIntentType { attack, defend, buff, attackDebuff, sleep }
+
+class MonsterTurnAction {
+  final MonsterIntentType intentType;
+  final int attackDamage; // 타격당 데미지 (없으면 0)
+  final int hitCount;     // 타격 횟수
+  final int blockGain;
+  final int strengthGain;
+  final StatusEffect? playerDebuff; // 플레이어에게 부여할 상태 이상
 }
 
-enum MonsterIntent { attack, defend }
+/// 몬스터 종류 (6종).
+enum MonsterType { basic, stickySlime, ironScavenger, venomSentinel, caveGuardian, ironGolem }
 
-// 스탯 공식
-// hp     = 20 + (stage * 10)
-// attack = 8  + (stage * 2)
+class Monster {
+  final int stage;
+  final MonsterType type;
+  int hp;
+  int block;
+  int strength;
+  List<StatusEffect> statusEffects;
+  // currentIntent: MonsterTurnAction — 패턴 인덱스로 자동 결정
+
+  bool get isVulnerable; // statusEffects에서 계산
+  bool get isWeak;
+  int get poisonStacks;
+}
+
+// 스탯 공식 (MonsterType.basic 전용 — 테스트 전용 타입)
+// hp     = 16 + (stage * 8)   → stage 1: 24 / 2: 32 / 3: 40
+// attack = 8  + (stage * 2)   → stage 1: 10 / 2: 12 / 3: 14
+// 네임드 몬스터(슬라임·고철수집가·독파수꾼·석굴수호자·철갑골렘)는 고정 HP 사용
 ```
 
 ### 2-5. BattleState
@@ -103,29 +142,47 @@ class BattleState {
   final BattleResult? result;
 }
 
-enum BattleResult { playerWon, monsterWon }
+enum BattleResult { playerWon, playerLost }
 ```
 
 ### 2-6. RunState / RunPhase
 
 ```dart
-/// 현재 런의 화면 단계.
-enum RunPhase { map, battle, reward }
+/// 현재 런이 어느 화면에 있는지를 나타내는 단계 값 (8종).
+enum RunPhase {
+  map,      // 지도 화면
+  battle,   // 전투 화면
+  reward,   // 카드 보상 선택
+  event,    // 텍스트 이벤트
+  treasure, // 유물 보관소
+  rest,     // 휴식처
+  shop,     // 상점
+  runEnd,   // 런 종료 결과
+}
 
 class RunState {
-  final RunPhase phase;          // 현재 화면 단계
-  final int floor;               // 현재 층 (-1 = 미시작)
+  final RunPhase phase;
+  final int floor;                    // 현재 층 (-1 = 미시작)
   final int playerHp;
   final int gold;
-  final List<GameCard> deck;     // 이번 런에서 보유한 카드
-  final List<MapNode> mapNodes;  // Act 1 전체 노드
-  final String? currentNodeId;   // 현재 위치 노드 ID
+  final List<GameCard> deck;
+  final List<MapNode> mapNodes;
+  final String? currentNodeId;
   final List<String> visitedNodeIds;
   final bool isRunOver;
-  final List<GameCard> rewardCards; // reward 단계에서만 채워짐
+  final List<GameCard> rewardCards;   // reward 단계에서만 채워짐
+  final List<Relic> relics;           // 보유 유물 목록
+  final GameEvent? currentEvent;      // event 단계에서만 non-null
+  final Relic? currentTreasureRelic;  // treasure 단계에서만 non-null
+  final int pendingGoldReward;        // 미수령 골드 (reward 화면 클릭 전)
+  final bool goldClaimed;
+  final Relic? pendingRelicReward;    // 엘리트/보스 처치 시 자동 지급된 유물
+  final int xpGainedThisRun;
+  final List<String> newlyUnlockedCardsThisRun;
+  // 상점 관련 필드 생략 (shopCards, shopCardPrices 등)
 
-  // 파생값: floor → stage (0·1→1, 2·3→2, 4+→3)
-  int get currentStage;
+  // 파생값
+  int get currentStage;  // floor 0·1→1, 2·3→2, 4+→3
   MapNode? get currentNode;
 }
 ```
@@ -154,37 +211,42 @@ applyDamage(target, damage):
 
 ```
 playCard(card, player, monster):
-  assert player.energy >= card.cost
-  player.energy -= card.cost
+  assert energy >= card.cost
+  energy -= card.cost
 
-  switch card.type:
-    attack:
-      dmg = calcDamage(card.value, player.weakTurns > 0,
-                                   monster.vulnerableTurns > 0)
+  switch card.effectType:
+    damage:
+      dmg = calcDamage(card.value + player.strength,
+                       player.isWeak, monster.isVulnerable)
       applyDamage(monster, dmg)
-    defense:
-      player.block += card.value
-    special:
+    block:
+      player.gainBlock(card.value)
+    heal:
+      player.heal(card.value)
+    buff / strength / draw / …:
       applySpecialEffect(card, player, monster)
 
-  if card.effect != null:
-    applyStatusEffect(card.effect, card.effectDuration, monster)
-
   hand.remove(card)
-  discardPile.add(card)
+  discardPile.add(card)   // Exhaust 카드는 discardPile 대신 소멸
 ```
 
 ### 3-3. 턴 종료
 
 ```
 endPlayerTurn(player, hand, discardPile):
-  player.block  = 0          // 방어도 소멸
-  player.energy = 3          // 에너지 초기화
-  player.weakTurns      = max(0, player.weakTurns - 1)
-  player.vulnerableTurns= max(0, player.vulnerableTurns - 1)
   discardPile.addAll(hand)
   hand.clear()
-  drawCards(5)               // 5장 드로우
+  applyTurnEndRelics()       // 유물 턴 종료 효과 (턴 종료 유물)
+  monster.executeAction(player)  // 몬스터 행동 실행
+  monster.endTurn()          // 몬스터 블록 소멸·상태이상 duration 감소
+  player.endTurn()           // 플레이어 블록 소멸·상태이상 duration 감소
+  // player.endTurn() 내부:
+  //   block = 0
+  //   statusEffects = statusEffects.map(e → duration-1).where(duration>0)
+
+startPlayerTurn():
+  energy = energyPerTurn     // 3 (유물로 증가 가능)
+  drawCards(drawPerTurn)     // 기본 5장
 
 drawCards(n):
   while hand.length < n:
@@ -197,19 +259,20 @@ drawCards(n):
 ### 3-4. 몬스터 턴
 
 ```
-executeMonsterTurn(monster, player):
-  if monster.nextIntent == attack:
-    dmg = calcDamage(monster.attack,
-                     monster.weakTurns > 0,
-                     player.vulnerableTurns > 0)
-    applyDamage(player, dmg)
-  else:
-    monster.block += floor(monster.attack × 0.8)
+monster.executeAction(player):
+  action = monster.currentIntent  // 패턴 인덱스로 결정
+  if action.attackDamage > 0:
+    dmg = (action.attackDamage + monster.strength) × hitCount
+    // player.takeDamage() 내부에서 player.isVulnerable 배율 적용
+    player.takeDamage(dmg / hitCount) × hitCount  // 히트마다 개별 적용
+  if action.blockGain > 0:   monster.gainBlock(action.blockGain)
+  if action.strengthGain > 0: monster.strength += action.strengthGain
+  if action.playerDebuff != null: player.applyStatusEffect(action.playerDebuff)
+  _turnIndex++  // 다음 패턴으로 진행
 
-  monster.block  = 0
-  monster.weakTurns       = max(0, monster.weakTurns - 1)
-  monster.vulnerableTurns = max(0, monster.vulnerableTurns - 1)
-  monster.nextIntent = randomIntent()
+monster.endTurn():
+  block = 0
+  statusEffects = statusEffects.map(e → duration-1).where(duration>0)
 ```
 
 ---
@@ -220,28 +283,37 @@ executeMonsterTurn(monster, player):
 
 | 이벤트 | XP |
 |--------|----|
-| 일반 몬스터 처치 | +10 |
-| 스테이지 클리어 | +30 |
-| 런 클리어 (보스 처치) | +100 |
+| 일반 몬스터 처치 (승리) | +10 |
+| 엘리트 처치 (승리) | +25 |
+| 보스 처치 — 런 클리어 (승리) | +100 |
+| 일반 몬스터 전투 (패배) | +3 |
+| 엘리트 전투 (패배) | +8 |
+| 보스 전투 (패배) | +20 |
 
 ### 레벨업 임계치
 
-| 레벨 | 누적 XP | 해금 |
-|------|---------|------|
-| 1 | 0 | Strike, Defend |
-| 2 | 100 | Bash, Swift Cut |
-| 3 | 250 | Iron Wall, Focus |
-| 4 | 450 | Recover, 유물 1종 |
-| 5+ | +200 per level | 추가 카드/유물 |
+| 레벨 | 누적 XP | 해금 카드 |
+|------|---------|----------|
+| 1 | 0 | strike, defend (스타터 덱) |
+| 2 | 100 | tripleSlash, toxicJab, comboStrike |
+| 3 | 250 | bash, ironWall |
+| 4 | 450 | focus, recover, indomitable |
+| 5 | 700 | exploitWeakness, weakSlash, blockStrike |
+| 6 | 1000 | poisonDart, battleCry |
+| 7 | 1350 | crushingBlow, bloodRush |
+| 8 | 1750 | devilsDeal, gamble |
+| 9 | 2200 | limitBreak, fiendFire |
+| 10 | 2700 | doubleTap, impervious |
+
+> 기본 해금 카드 7종 (swiftCut·rageBurst·quickMend·regroup·swiftGuard·sharpen·fury)은 레벨과 무관하게 항상 보상 풀에 포함된다.
 
 ```dart
-int calcLevel(int totalXp) {
-  const thresholds = [0, 100, 250, 450];
-  int level = 1;
-  for (final t in thresholds) {
-    if (totalXp >= t) level++;
+// MetaProgress.computeLevel() — lib/domain/entities/meta_progress.dart
+static int computeLevel(int xp) {
+  for (int i = xpThresholds.length - 1; i >= 0; i--) {
+    if (xp >= xpThresholds[i]) return i + 1;
   }
-  return level - 1; // 1-based
+  return 1;
 }
 ```
 
@@ -253,11 +325,12 @@ int calcLevel(int totalXp) {
 
 | 키 | 타입 | 설명 |
 |----|------|------|
-| `player_xp` | int | 누적 XP |
-| `player_level` | int | 현재 레벨 |
-| `unlocked_cards` | String (JSON) | `["bash","swift_cut",…]` |
-| `unlocked_relics` | String (JSON) | `["relic_01",…]` |
-| `run_state` | String (JSON) | 진행 중인 런 스냅샷 (nullable) |
+| `meta_xp` | int | 누적 XP |
+| `meta_level` | int | 현재 레벨 |
+| `meta_unlocked_cards` | String (JSON) | `["bash","swiftCut",…]` |
+| `save_slot_1` | String (JSON) | 세이브 슬롯 1 (RunState 스냅샷, nullable) |
+| `save_slot_2` | String (JSON) | 세이브 슬롯 2 (RunState 스냅샷, nullable) |
+| `save_slot_3` | String (JSON) | 세이브 슬롯 3 (RunState 스냅샷, nullable) |
 
 ---
 
@@ -266,8 +339,9 @@ int calcLevel(int totalXp) {
 | Provider | 타입 | 파일 | 책임 |
 |----------|------|------|------|
 | `battleProvider` | `Notifier<BattleState>` | `battle_provider.dart` | 카드 사용, 턴 종료, 승패 판정 |
-| `runProvider` | `Notifier<RunState>` | `run_provider.dart` | 맵 이동, 보상 단계 전환, 런 리셋 |
+| `runProvider` | `Notifier<RunState>` | `run_provider.dart` | 맵 이동, 보상 단계 전환, 런 리셋 (8 RunPhase) |
 | `metaProgressProvider` | `Notifier<MetaProgress>` | `meta_progress_provider.dart` | XP 적립, 레벨업, 해금 목록 관리 |
+| `saveSlotProvider` | `Notifier<List<SaveSlot?>>` | `save_slot_provider.dart` | 3슬롯 저장·로드·삭제 |
 
 > **참고**: 덱 관리(`draw`, `shuffle`, `discard`)는 `BattleState` 안에서 처리되며 별도 Provider가 없다.
 

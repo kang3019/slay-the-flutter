@@ -1,6 +1,6 @@
 # 09-current-status.md — 현재 구현 상태
 
-**기준일**: 2026-06-10 | **스프린트**: Sprint 5 (06/09 ~ 06/13)
+**기준일**: 2026-06-11 | **스프린트**: Sprint 5 (06/09 ~ 06/13)
 
 ---
 
@@ -8,7 +8,7 @@
 
 | 구분 | 상태 |
 |------|------|
-| 테스트 | ✅ 431/431 전부 통과 |
+| 테스트 | ✅ 446/446 전부 통과 |
 | 린트 | ✅ `flutter analyze` 경고 0건 |
 | 핵심 게임 루프 | ✅ 전투 → 보상 → 맵 이동 동작 |
 | 미구현 화면 | ✅ 없음 (전체 구현 완료) |
@@ -20,7 +20,7 @@
 ### Domain
 - `BattleEngine` — 전투 규칙, 카드 효과, 유물 효과, 상태이상
 - `Deck` — 셔플, 드로우, 버림, 소각(exhaust)
-- `GameCard` / `Cards` — 30종 이상 + 강화(upgraded) 버전 (총 62종 정의)
+- `GameCard` / `Cards` — 30종 + 강화(upgraded) 버전 (총 60종 정의)
 - `Monster` — 5종 (StickySlime, IronScavenger, VenomSentinel, CaveGuardian, IronGolem), AI 의도 패턴
 - `Player` — HP, 방어도, 힘, 상태이상
 - `StatusEffect` — Vulnerable, Weak, Poison
@@ -80,5 +80,5 @@
 [x] 메모리 누수 없음 (ProviderContainer dispose)
 [x] ShopScreen 골드 소비 정상 동작
 [x] RunEndScreen XP 지급 및 레벨업 연출
-[ ] 세이브 슬롯 저장/로드 전체 흐름
+[x] 세이브 슬롯 저장/로드 전체 흐름
 ```

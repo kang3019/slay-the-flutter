@@ -65,10 +65,30 @@ lib/presentation/
 ├── reward/
 │   ├── reward_screen.dart        # 카드 보상 선택 화면
 │   └── reward_constants.dart     # 보상 화면 상수
-├── shared/
-│   └── hp_bar_widget.dart        # HP/블록 바 (공용)
-└── meta/                         # [미구현] 레벨·해금 화면 (예정)
-    └── meta_screen.dart
+├── shop/
+│   ├── shop_screen.dart          # 상점 화면 (카드·유물 구매, 카드 제거)
+│   ├── shop_widgets.dart         # 상점 공통 위젯
+│   └── shop_constants.dart
+├── run_end/
+│   ├── run_end_screen.dart       # 런 종료 화면 (결과·XP·레벨업 연출)
+│   └── widgets/unlocked_cards_grid.dart
+├── settings/
+│   ├── settings_screen.dart      # 레벨·XP 바·메타 진행 표시
+│   └── level_progress_dialog.dart # 해금 진행도 다이얼로그
+├── event/
+│   └── event_screen.dart         # 텍스트 이벤트 선택지 화면
+├── treasure/
+│   └── treasure_screen.dart      # 유물 보관소 화면
+├── rest/
+│   └── rest_screen.dart          # 휴식처 화면 (HP 회복 / 카드 강화)
+├── codex/
+│   └── codex_screen.dart         # 카드 도감
+├── intro/
+│   └── intro_screen.dart         # 타이틀 화면
+├── save_slot/
+│   └── save_slot_screen.dart     # 세이브 슬롯 선택·저장·로드
+└── shared/
+    └── hp_bar_widget.dart        # HP/블록 바 (공용)
 ```
 
 **규칙**
@@ -85,8 +105,9 @@ lib/presentation/
 ```
 lib/application/
 ├── battle_provider.dart          # BattleNotifier — 전투 상태 관리
-├── run_provider.dart             # RunNotifier — 맵 이동·보상·런 관리
-└── meta_progress_provider.dart   # MetaProgressNotifier — XP·레벨·해금
+├── run_provider.dart             # RunNotifier — 맵 이동·보상·런 관리 (8 RunPhase)
+├── meta_progress_provider.dart   # MetaProgressNotifier — XP·레벨·해금
+└── save_slot_provider.dart       # SaveSlotNotifier — 3슬롯 저장·로드·삭제
 ```
 
 **BattleNotifier 공개 API**
@@ -103,14 +124,38 @@ class BattleNotifier extends Notifier<BattleState> {
 
 ```dart
 class RunNotifier extends Notifier<RunState> {
-  void moveToNode(String nodeId);                          // 맵 이동
-  void startReward({required int remainingHp,              // 일반 승리 → 보상 화면
-                    required int goldEarned});
-  void selectRewardCard(GameCard card);                    // 카드 선택 → 맵 복귀
-  void skipReward();                                       // 보상 건너뛰기
-  void exitBattleToMap({required int remainingHp,          // 보스 승리·패배 → 맵
-                        required int goldEarned});
-  void startNewRun();                                      // 런 초기화
+  // 맵 이동
+  void moveToNode(String nodeId);
+  // 전투 보상 (일반·엘리트)
+  void startReward({required int remainingHp, required int goldEarned});
+  void claimGoldReward();
+  void selectRewardCard(GameCard card);
+  void skipReward();
+  // 보스 승리 / 패배
+  void endRun({required int remainingHp, required int goldEarned});
+  void exitBattleToMap({required int remainingHp, required int goldEarned});
+  // 이벤트
+  void resolveEvent(EventChoice choice, {GameCard? prePickedCard});
+  GameCard? pickPreviewCard();
+  // 유물 보관소
+  void takeTreasure();
+  void skipTreasure();
+  // 휴식처
+  void rest();
+  void skipRest();
+  // 상점
+  void buyShopCard(int index);
+  void buyShopRelic(int index);
+  void removeCardInShop(GameCard card);
+  void exitShop();
+  // 덱 관리
+  void addCardToDeck(GameCard card);
+  void removeCardFromDeck(GameCard card);
+  void upgradeCard(GameCard card);
+  // XP / 런 리셋
+  void recordXpGain({required int xp, List<String> newlyUnlockedCards});
+  void startNewRun();
+  void restoreFromSaveSlot(RunState savedState);
 }
 ```
 
@@ -125,15 +170,20 @@ lib/domain/
 ├── entities/
 │   ├── card.dart            # GameCard, CardType, CardEffectType
 │   ├── player.dart          # Player 상태
-│   ├── monster.dart         # Monster 상태 + 스탯 공식
-│   └── meta_progress.dart   # MetaProgress — XP·레벨·해금 목록
+│   ├── monster.dart         # Monster 상태 + 5종 네임드 + 스탯 공식
+│   ├── relic.dart           # Relic, GameRelics — 20종 유물 정의
+│   ├── gold_rewards.dart    # GoldRewards — 골드 보상 공식
+│   ├── meta_progress.dart   # MetaProgress — XP·레벨·해금 목록
+│   └── save_slot.dart       # SaveSlot — 3슬롯 JSON 직렬화
+├── events/
+│   └── game_event.dart      # GameEvent, GameEvents — 10종 이벤트
 ├── map/
-│   ├── map_generator.dart   # Act 1 맵 생성 (5층 12노드)
+│   ├── map_generator.dart   # Act 1 맵 생성 (12층 DAG)
 │   ├── map_node.dart        # MapNode 데이터 클래스
-│   └── node_type.dart       # NodeType 열거형
-├── battle_engine.dart       # 데미지 계산, 카드 효과, 턴 로직
-├── deck.dart                # 드로우, 셔플, 버림 덱
-└── status_effect.dart       # 취약/약화 열거형 + 배율 상수
+│   └── node_type.dart       # NodeType 열거형 (7종)
+├── battle_engine.dart       # 데미지 계산, 카드 효과, 유물 효과, 턴 로직
+├── deck.dart                # 드로우, 셔플, 버림 덱, 소멸(Exhaust)
+└── status_effect.dart       # Vulnerable·Weak·Poison + 배율 상수
 ```
 
 **절대 금지**

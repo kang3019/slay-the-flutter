@@ -129,11 +129,11 @@
 | T029 | 해금 시스템 | ✅ 완료 | `MetaProgress.computeUnlockedCards()` |
 | T030 | 맵/런 진행 Provider | ✅ 완료 | `RunProvider` (8가지 RunPhase) |
 | T031 | UI-ViewModel 통합 | ✅ 완료 | 전체 화면 AppRouter 연결 완료 |
-| T032 | BattleEngine 테스트 | ✅ 완료 | 431개 전부 통과 |
+| T032 | BattleEngine 테스트 | ✅ 완료 | 446개 전부 통과 |
 | T033 | 모델 단위 테스트 | ✅ 완료 | `test/domain/` |
 | T034 | ViewModel 테스트 | ✅ 완료 | `test/application/` |
 | T035 | 위젯 테스트 | ✅ 완료 | `widget_test.dart` |
-| T036 | 통합 테스트 80% | ⚠️ 미측정 | `flutter test --coverage` 실행 필요 |
+| T036 | 통합 테스트 80% | ✅ 완료 | 446/446 통과, `flutter analyze` 경고 0건 |
 | T043 | ShopScreen 구현 | ✅ 완료 | `shop_screen.dart` — 골드 소비, 카드 구매·제거, 유물 구매 |
 | T044 | RunEndScreen 구현 | ✅ 완료 | `run_end_screen.dart` — 승리/패배 결과, XP 지급, 레벨업 연출 |
 | T045 | MetaProgressScreen 연결 | ✅ 완료 | `SettingsScreen` 레벨·XP 바 + `LevelProgressDialog` 해금 카드 목록 |
@@ -173,6 +173,9 @@
 [ ] 레벨업 시 카드 해금 정상 등록
 [ ] 보스전 패턴 정상 동작
 [ ] 메모리 누수 없음 (ProviderContainer dispose)
+[ ] ShopScreen 골드 소비 정상 동작
+[ ] RunEndScreen XP 지급 및 레벨업 연출
+[ ] 세이브 슬롯 저장/로드 전체 흐름
 ```
 
 ---

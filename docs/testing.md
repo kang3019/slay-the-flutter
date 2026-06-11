@@ -1,6 +1,6 @@
 # docs/testing.md — 테스트 작성 및 실행 가이드
 
-> **현재 상태**: `flutter test` → **431/431 전부 통과** | `flutter analyze` → **경고 0건**
+> **현재 상태**: `flutter test` → **446/446 전부 통과** | `flutter analyze` → **경고 0건**
 
 ---
 
@@ -27,6 +27,7 @@ test/
 │   ├── event_test.dart            # 이벤트 10종 선택지 효과 검증
 │   ├── map_generator_test.dart    # DAG 맵 생성 5대 제약 전수 검증
 │   ├── relic_test.dart            # 유물 20종 패시브 효과
+│   ├── gold_rewards_test.dart      # 골드 보상 공식 검증 (일반·엘리트·보스)
 │   ├── meta_progress_test.dart    # XP 누적·레벨업·카드 해금
 │   └── save_slot_test.dart        # SaveSlot JSON 직렬화 왕복 검증
 ├── application/
@@ -44,7 +45,7 @@ test/
 ## 테스트 실행 명령어
 
 ```bash
-# 전체 테스트 (186개)
+# 전체 테스트 (446개)
 flutter test
 
 # 상세 출력 — 각 test() 이름 표시
@@ -70,25 +71,26 @@ start coverage/html/index.html   # Windows
 ## Application 계층 테스트 패턴
 
 ```dart
-// test/application/battle_provider_test.dart
+// test/application/meta_progress_provider_test.dart
 late ProviderContainer container;
+late SharedPreferences prefs;
 
-setUp(() {
+setUp(() async {
+  SharedPreferences.setMockInitialValues({});
+  prefs = await SharedPreferences.getInstance();
   container = ProviderContainer(
     overrides: [
-      localStorageProvider.overrideWithValue(FakeLocalStorage()),
+      localStorageProvider.overrideWithValue(LocalStorage(prefs)),
     ],
   );
 });
 
 tearDown(() => container.dispose());
 
-test('카드 사용 시 에너지가 차감된다', () {
-  container.read(battleProvider.notifier).startBattle(1);
-  final hand = container.read(battleProvider).hand;
-  container.read(battleProvider.notifier).playCard(hand.first);
+test('XP 적립 시 레벨이 오른다', () {
+  container.read(metaProgressProvider.notifier).addXp(100);
 
-  expect(container.read(battleProvider).energy, lessThan(3));
+  expect(container.read(metaProgressProvider).level, equals(2));
 });
 ```
 

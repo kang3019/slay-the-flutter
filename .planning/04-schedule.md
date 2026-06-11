@@ -11,7 +11,7 @@
 | 시작일 | 2026-05-12 (월) |
 | 발표일 | 2026-06-20 (토) |
 | 총 기간 | 6주 (40일) |
-| 총 태스크 | 42개 (마일스톤 포함) |
+| 총 태스크 | 45개 (마일스톤 포함, T043~T045 추가) |
 | 총 예상 공수 | 약 211시간 |
 
 ---
@@ -216,15 +216,10 @@ T009 폴더구조
 
 | 파일 | 역할 |
 |------|------|
-| `.planning/02-wbs.json` | 원본 (이 파일을 편집) |
-| `docs/02-wbs.json` | 간트 차트 뷰어용 사본 |
+| `docs/wbs.json` | 원본 (이 파일을 직접 편집) |
 
-### 동기화
-
-`.planning/02-wbs.json` 수정 후 반드시 실행:
-```bash
-cp .planning/02-wbs.json docs/02-wbs.json
-```
+> ⚠️ 초기 설계 당시 `.planning/02-wbs.json` / `docs/02-wbs.json` 두 파일을 사용하는 구조였으나,
+> 실제 구현에서는 `docs/wbs.json` 단일 파일로 통합되었다.
 
 ### 상태(status) 값
 
@@ -242,7 +237,7 @@ cp .planning/02-wbs.json docs/02-wbs.json
 [ ] 이번 주 태스크 status → "active"
 [ ] 지연 태스크 end 날짜 조정
 [ ] updatedAt 오늘 날짜로 갱신
-[ ] cp .planning/02-wbs.json docs/02-wbs.json
+[ ] docs/wbs.json updatedAt 오늘 날짜로 갱신
 [ ] 간트 차트(localhost:8080/docs/) 시각 확인
 [ ] 크리티컬 패스 지연 여부 점검
 ```
@@ -255,7 +250,7 @@ cp .planning/02-wbs.json docs/02-wbs.json
 |------|------|
 | 게임 비전 | `.planning/00-vision.md` |
 | 요구사항 MoSCoW | `.planning/01-requirements.md` |
-| WBS 데이터 | `.planning/02-wbs.json` |
+| WBS 데이터 | `docs/wbs.json` |
 | 위험 관리 | `.planning/03-risks.md` |
 | 스프린트 계획 | `.planning/05-sprint-plan.md` |
 | 기술 명세 | `.planning/06-tech-spec.md` |

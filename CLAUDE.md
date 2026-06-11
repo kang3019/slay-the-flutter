@@ -70,6 +70,7 @@ test/
 │   ├── map_generator_test.dart
 │   ├── relic_test.dart
 │   ├── meta_progress_test.dart
+│   ├── gold_rewards_test.dart
 │   └── save_slot_test.dart
 ├── application/
 │   ├── battle_provider_test.dart
@@ -97,12 +98,15 @@ For all game logic (damage calculation, status effects, card effects, deck mecha
 ## Key Game Formulas (SPECS.md)
 
 ```
-Monster HP         = 16 + (stage × 8)
-Monster attack     = 8 + (stage × 2)
+Monster HP         = 16 + (stage × 8)   → stage 1: 24 / 2: 32 / 3: 40
+Monster attack     = 8 + (stage × 2)    → stage 1: 10 / 2: 12 / 3: 14
+Stage mapping      = floor 0-1 → stage 1, floor 2-3 → stage 2, floor 4+ → stage 3
 Vulnerable damage  = base × 1.5   (received damage multiplier)
 Weak damage        = base × 0.75  (dealt damage multiplier, floor the result)
 Block              = absorbs damage before HP, resets to 0 on turn end
 Energy per turn    = 3  |  Draw per turn = 5
+Gold reward        = (floor + 1) + 10~14  (monster) / + 20~25 (elite) / 0 (boss)
+Relic reward       = elite victory → 1 relic (auto) / boss victory → 1 relic (auto)
 ```
 
 ## Code Conventions (AGENTS.md)
