@@ -2,6 +2,21 @@
 
 Windows · macOS · Linux 공통 가이드입니다. 이 문서만 보고 5분 안에 앱을 실행할 수 있습니다.
 
+## 목차
+
+- [필요한 도구](#필요한-도구)
+- [1단계: Flutter SDK 설치](#1단계-flutter-sdk-설치)
+- [2단계: JDK 17 설치](#2단계-jdk-17-설치)
+- [3단계: 저장소 클론 및 의존성 설치](#3단계-저장소-클론-및-의존성-설치)
+- [4단계: 환경 확인](#4단계-환경-확인)
+- [5단계: 첫 실행](#5단계-첫-실행)
+- [Web(Chrome) 실행 — 세이브 슬롯 데이터 유지](#webchrome-실행--세이브-슬롯-데이터-유지)
+- [안드로이드 실기기에서 실행](#안드로이드-실기기에서-실행)
+- [릴리스 빌드 (배포)](#릴리스-빌드-배포)
+- [Git Hook 설치 — 커밋 전 자동 검증 (pre-commit)](#git-hook-설치--커밋-전-자동-검증-pre-commit)
+- [자주 쓰는 명령어](#자주-쓰는-명령어)
+- [문제 해결 (FAQ)](#문제-해결-faq)
+
 ---
 
 ## 필요한 도구
@@ -163,6 +178,116 @@ flutter run -d chrome --web-browser-flag "--user-data-dir=$env:LOCALAPPDATA\flut
 > Flutter Web은 `shared_preferences`를 브라우저 `localStorage`에 저장합니다.
 > `flutter run -d chrome`은 매번 새로운 임시 디렉터리로 Chrome을 열기 때문에
 > `localStorage`가 초기화됩니다. `--user-data-dir`로 고정 경로를 지정하면 해결됩니다.
+
+---
+
+## 안드로이드 실기기에서 실행
+
+PC에 연결한 안드로이드 폰에서 직접 실행하거나, 빌드한 APK를 설치해서 사용할 수 있습니다.
+
+### 방법 A — 디버그 모드로 바로 실행 (개발용)
+
+1. **개발자 옵션 활성화**: 설정 → 휴대전화 정보 → 빌드 번호 7번 연속 탭
+2. **USB 디버깅 켜기**: 설정 → 개발자 옵션 → USB 디버깅 ON
+3. PC와 USB로 연결 후, 폰에 뜨는 "USB 디버깅 허용" 팝업에서 허용
+4. 인식 확인:
+
+   ```bash
+   flutter devices
+   ```
+
+5. 실행:
+
+   ```bash
+   flutter run
+   # 기기가 여러 개라면
+   flutter run -d <device-id>
+   ```
+
+> Wi-Fi(무선 디버깅)도 가능합니다 — 설정 → 개발자 옵션 → 무선 디버깅 ON 후
+> `adb pair` / `adb connect`로 연결합니다.
+
+### 방법 B — APK를 빌드해서 설치 (디버깅 없이 사용)
+
+[릴리스 빌드 (배포)](#릴리스-빌드-배포) 절의 Android 명령어로 APK를 빌드한 뒤,
+생성된 `app-release.apk`를 폰으로 전송(USB·카카오톡·구글 드라이브 등)해서 설치합니다.
+이때 **"출처를 알 수 없는 앱 설치" 허용**이 필요합니다
+(설정 → 보안 → 알 수 없는 앱 설치).
+
+> 현재 release 빌드는 debug 서명 키를 사용하므로 정식 배포용은 아니지만,
+> 개인 테스트 설치에는 문제없습니다.
+
+---
+
+## 릴리스 빌드 (배포)
+
+배포용 산출물은 플랫폼별로 아래 명령어로 생성합니다. 모두 프로젝트 루트에서 실행합니다.
+
+### Android — APK / App Bundle
+
+```bash
+# 단일 APK (테스트 배포·사이드로딩용)
+flutter build apk --release
+# 산출물: build/app/outputs/flutter-apk/app-release.apk
+
+# App Bundle (Google Play 등록용, 권장)
+flutter build appbundle --release
+# 산출물: build/app/outputs/bundle/release/app-release.aab
+```
+
+> ⚠️ 현재 release 빌드는 `android/app/build.gradle.kts`에서 **debug 서명 키**를 사용합니다
+> (`signingConfig = signingConfigs.getByName("debug")`, Flutter 기본 템플릿의 TODO 미해결 상태).
+> Play 스토어 정식 등록 시에는 `keytool`로 release keystore를 생성하고
+> `key.properties` + `signingConfigs.release`를 추가해야 합니다
+> ([Flutter 공식 가이드: Sign the app](https://docs.flutter.dev/deployment/android#sign-the-app)).
+> `.planning/01-requirements.md`에서 CI/CD·앱 서명·스토어 등록은 Out of Scope로 명시했으므로,
+> 이 프로젝트 범위에서는 debug 서명을 그대로 사용합니다.
+
+### iOS — IPA (macOS + Xcode 필요)
+
+```bash
+flutter build ipa --release
+# 산출물: build/ios/ipa/*.ipa
+```
+
+> Apple Developer 계정과 프로비저닝 프로파일이 필요합니다. `ios/Runner.xcworkspace`를
+> Xcode로 열어 **Signing & Capabilities**에서 Team을 설정한 뒤 빌드하세요.
+
+### Web
+
+```bash
+flutter build web --release
+# 산출물: build/web/ (정적 파일 — 임의의 웹 서버/호스팅에 그대로 배포)
+```
+
+---
+
+## Git Hook 설치 — 커밋 전 자동 검증 (pre-commit)
+
+`tools/git-hooks/pre-commit`은 커밋 전에 `flutter analyze` → `flutter test` 순서로 실행해,
+AGENTS.md의 "analyze 0 warnings·테스트 통과" 규칙을 커밋 시점에 자동으로 강제합니다.
+
+```bash
+# macOS / Linux / Git Bash
+cp tools/git-hooks/pre-commit .git/hooks/pre-commit
+chmod +x .git/hooks/pre-commit
+```
+
+```powershell
+# Windows PowerShell
+Copy-Item tools\git-hooks\pre-commit .git\hooks\pre-commit
+```
+
+설치 후 `git commit` 시 두 검사 중 하나라도 실패하면 커밋이 중단됩니다.
+의도적으로 건너뛰려면 `git commit --no-verify`를 사용할 수 있지만,
+`flutter analyze` 경고 0건은 머지 전 필수 조건이므로 권장하지 않습니다.
+
+> **참고**: `dart format --set-exit-if-changed`는 의도적으로 제외했습니다.
+> 현재 Dart SDK 3.9.2의 "tall-style" 포매터 기준으로는 기존 코드 63개 파일이
+> 재포맷 대상으로 표시되는데(이전 SDK의 "short-style" 포매터로 작성됨),
+> 이는 이번 변경과 무관한 별도의 전체 재포맷 작업이 필요한 사항입니다.
+> // TODO(kang3019): SDK 3.9.2 tall-style 기준으로 `dart format lib/ test/` 일괄 적용 후
+> pre-commit에 포맷 체크를 다시 추가한다.
 
 ---
 
