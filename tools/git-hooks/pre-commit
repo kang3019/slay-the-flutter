@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# Quality gate run before every commit: static analysis, format check, tests.
+# Install: copy this file to .git/hooks/pre-commit (see docs/setup.md).
+set -e
+
+echo "[pre-commit] flutter analyze"
+flutter analyze
+
+echo "[pre-commit] flutter test"
+flutter test
+
+echo "[pre-commit] all checks passed"

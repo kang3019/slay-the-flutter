@@ -166,12 +166,84 @@ flutter run -d chrome --web-browser-flag "--user-data-dir=$env:LOCALAPPDATA\flut
 
 ---
 
+## 릴리스 빌드 (배포)
+
+배포용 산출물은 플랫폼별로 아래 명령어로 생성합니다. 모두 프로젝트 루트에서 실행합니다.
+
+### Android — APK / App Bundle
+
+```bash
+# 단일 APK (테스트 배포·사이드로딩용)
+flutter build apk --release
+# 산출물: build/app/outputs/flutter-apk/app-release.apk
+
+# App Bundle (Google Play 등록용, 권장)
+flutter build appbundle --release
+# 산출물: build/app/outputs/bundle/release/app-release.aab
+```
+
+> ⚠️ 현재 release 빌드는 `android/app/build.gradle.kts`에서 **debug 서명 키**를 사용합니다
+> (`signingConfig = signingConfigs.getByName("debug")`, Flutter 기본 템플릿의 TODO 미해결 상태).
+> Play 스토어 정식 등록 시에는 `keytool`로 release keystore를 생성하고
+> `key.properties` + `signingConfigs.release`를 추가해야 합니다
+> ([Flutter 공식 가이드: Sign the app](https://docs.flutter.dev/deployment/android#sign-the-app)).
+> `.planning/01-requirements.md`에서 CI/CD·앱 서명·스토어 등록은 Out of Scope로 명시했으므로,
+> 이 프로젝트 범위에서는 debug 서명을 그대로 사용합니다.
+
+### iOS — IPA (macOS + Xcode 필요)
+
+```bash
+flutter build ipa --release
+# 산출물: build/ios/ipa/*.ipa
+```
+
+> Apple Developer 계정과 프로비저닝 프로파일이 필요합니다. `ios/Runner.xcworkspace`를
+> Xcode로 열어 **Signing & Capabilities**에서 Team을 설정한 뒤 빌드하세요.
+
+### Web
+
+```bash
+flutter build web --release
+# 산출물: build/web/ (정적 파일 — 임의의 웹 서버/호스팅에 그대로 배포)
+```
+
+---
+
+## Git Hook 설치 — 커밋 전 자동 검증 (pre-commit)
+
+`tools/git-hooks/pre-commit`은 커밋 전에 `flutter analyze` → `flutter test` 순서로 실행해,
+AGENTS.md의 "analyze 0 warnings·테스트 통과" 규칙을 커밋 시점에 자동으로 강제합니다.
+
+```bash
+# macOS / Linux / Git Bash
+cp tools/git-hooks/pre-commit .git/hooks/pre-commit
+chmod +x .git/hooks/pre-commit
+```
+
+```powershell
+# Windows PowerShell
+Copy-Item tools\git-hooks\pre-commit .git\hooks\pre-commit
+```
+
+설치 후 `git commit` 시 두 검사 중 하나라도 실패하면 커밋이 중단됩니다.
+의도적으로 건너뛰려면 `git commit --no-verify`를 사용할 수 있지만,
+`flutter analyze` 경고 0건은 머지 전 필수 조건이므로 권장하지 않습니다.
+
+> **참고**: `dart format --set-exit-if-changed`는 의도적으로 제외했습니다.
+> 현재 Dart SDK 3.9.2의 "tall-style" 포매터 기준으로는 기존 코드 63개 파일이
+> 재포맷 대상으로 표시되는데(이전 SDK의 "short-style" 포매터로 작성됨),
+> 이는 이번 변경과 무관한 별도의 전체 재포맷 작업이 필요한 사항입니다.
+> // TODO(kang3019): SDK 3.9.2 tall-style 기준으로 `dart format lib/ test/` 일괄 적용 후
+> pre-commit에 포맷 체크를 다시 추가한다.
+
+---
+
 ## 자주 쓰는 명령어
 
 ```bash
 flutter analyze          # 정적 분석 — 0 warnings (필수)
 dart format lib/ test/   # 코드 자동 포맷
-flutter test             # 전체 테스트 — 186개 전량 통과
+flutter test             # 전체 테스트 — 431개 전량 통과
 flutter test --coverage  # 커버리지 측정 → coverage/lcov.info
 flutter clean && flutter pub get  # 빌드 캐시 초기화
 ```
