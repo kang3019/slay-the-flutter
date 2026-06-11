@@ -166,6 +166,48 @@ flutter run -d chrome --web-browser-flag "--user-data-dir=$env:LOCALAPPDATA\flut
 
 ---
 
+## 안드로이드 실기기에서 실행
+
+PC에 연결한 안드로이드 폰에서 직접 실행하거나, 빌드한 APK를 설치해서 사용할 수 있습니다.
+
+### 방법 A — 디버그 모드로 바로 실행 (개발용)
+
+1. **개발자 옵션 활성화**: 설정 → 휴대전화 정보 → 빌드 번호 7번 연속 탭
+2. **USB 디버깅 켜기**: 설정 → 개발자 옵션 → USB 디버깅 ON
+3. PC와 USB로 연결 후, 폰에 뜨는 "USB 디버깅 허용" 팝업에서 허용
+4. 인식 확인:
+
+   ```bash
+   flutter devices
+   ```
+
+5. 실행:
+
+   ```bash
+   flutter run
+   # 기기가 여러 개라면
+   flutter run -d <device-id>
+   ```
+
+> Wi-Fi(무선 디버깅)도 가능합니다 — 설정 → 개발자 옵션 → 무선 디버깅 ON 후
+> `adb pair` / `adb connect`로 연결합니다.
+
+### 방법 B — APK를 빌드해서 설치 (디버깅 없이 사용)
+
+```bash
+flutter build apk --release
+# 산출물: build/app/outputs/flutter-apk/app-release.apk
+```
+
+생성된 APK를 폰으로 전송(USB·카카오톡·구글 드라이브 등)한 뒤 설치합니다.
+이때 **"출처를 알 수 없는 앱 설치" 허용**이 필요합니다
+(설정 → 보안 → 알 수 없는 앱 설치).
+
+> 현재 release 빌드는 debug 서명 키를 사용하므로 정식 배포용은 아니지만,
+> 개인 테스트 설치에는 문제없습니다. 자세한 내용은 아래 "릴리스 빌드 (배포)" 절을 참고하세요.
+
+---
+
 ## 릴리스 빌드 (배포)
 
 배포용 산출물은 플랫폼별로 아래 명령어로 생성합니다. 모두 프로젝트 루트에서 실행합니다.
