@@ -51,7 +51,7 @@
 
 ## 메타 진행 (영구 성장)
 
-- **경험치(XP)**: 런 클리어, 스테이지 클리어, 몬스터 처치 등으로 획득
+- **경험치(XP)**: 런 클리어(보스 처치), 엘리트·일반 몬스터 처치, 패배 시에도 소량 획득
 - **레벨업**: XP 누적 시 레벨 상승, 레벨마다 해금 항목 1~2개 선택
 - **해금 대상**: 카드(공격/방어/특수) 또는 유물(패시브 효과 아이템)
 - **초기 상태**: 기본 카드(강타, 방어)만 존재 → 레벨업으로 점차 풀 확장
@@ -84,7 +84,7 @@
 |------|------|
 | 프레임워크 | Flutter (Dart) |
 | 상태 관리 | Riverpod (flutter_riverpod) |
-| 로컬 저장소 | (추후 결정: Hive 또는 sqflite) |
+| 로컬 저장소 | shared_preferences |
 | 아키텍처 | 4-Layer Layered Architecture + Riverpod |
 | 테스트 | flutter_test + mockito |
 
@@ -101,7 +101,7 @@ Phase 2 — 게임 코어 (완료 ✅)
   ├─ 카드/캐릭터/몬스터 Model 구현
   ├─ 전투 로직 ViewModel 구현 (BattleEngine, BattleProvider)
   ├─ XP 및 레벨업 시스템 구현 (MetaProgress, MetaProgressProvider)
-  └─ 단위 테스트 작성 (421개 전부 통과)
+  └─ 단위 테스트 작성 (446개 전부 통과)
 
 Phase 3 — UI 구현 (완료 ✅)
   ├─ 전투 화면 (BattleScreen) — 애니메이션, 유물 효과 포함
@@ -110,9 +110,9 @@ Phase 3 — UI 구현 (완료 ✅)
   ├─ 이벤트/보물/휴식 화면 (EventScreen, TreasureScreen, RestScreen)
   └─ 세이브 슬롯 화면 (SaveSlotScreen)
 
-Phase 4 — 완성 (진행 중 🔄)
+Phase 4 — 완성 (완료 ✅)
   ├─ 상점 화면 (ShopScreen) — 골드 소비·카드 구매·제거
   ├─ 런 종료 화면 (RunEndScreen) — 결과·XP 지급·레벨업 연출
-  ├─ 메타 진행 화면 (MetaProgressScreen) — 레벨·해금 카드 목록
-  └─ QA 및 발표 준비
+  ├─ 메타 진행 화면 (SettingsScreen + LevelProgressDialog) — 레벨·해금 카드 목록
+  └─ QA 및 발표 준비 (Sprint 6 예정)
 ```

@@ -216,7 +216,7 @@ class MapGenerator {
 
   /// Elite·Shop이 없으면 강제 삽입한다.
   ///
-  /// Treasure는 Floor 8 고정, Rest는 Floor 14 고정이므로 별도 보장 불필요.
+  /// Treasure는 Floor 5 고정, Rest는 Floor 10 고정이므로 별도 보장 불필요.
   static void _guaranteeContent(
     List<List<NodeType>> grid,
     List<int> nodeCounts,

@@ -4,7 +4,7 @@
 
 ![Flutter](https://img.shields.io/badge/Flutter-3.x-02569B?logo=flutter)
 ![Dart](https://img.shields.io/badge/Dart-3.x-0175C2?logo=dart)
-![Tests](https://img.shields.io/badge/Tests-431%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/Tests-446%20passing-brightgreen)
 ![Analyze](https://img.shields.io/badge/flutter%20analyze-0%20warnings-brightgreen)
 ![Platform](https://img.shields.io/badge/Platform-Android%20%7C%20iOS-lightgrey)
 
@@ -46,7 +46,7 @@
 | 시스템 | 상세 |
 |--------|------|
 | **카드 전투** | 에너지 3, 드로우 5, 방어도·상태이상 포함 전투 상태 머신 |
-| **카드 30종 (업그레이드 포함 62종)** | 공격·방어·버프·X비용 카드, 소멸·복사 메커니즘 |
+| **카드 30종 (업그레이드 포함 60종)** | 공격·방어·버프·X비용 카드, 소멸·복사 메커니즘 |
 | **몬스터 5종** | 각 고유 행동 패턴 (슬라임·고철수집가·독파수꾼·석굴수호자·철갑골렘 보스) |
 | **상태이상 3종** | 취약(×1.5), 약화(×0.75), 독(방어도 무시 피해) |
 | **유물 20종** | 전투 시작·턴 종료·부활·힘 버프 등 패시브 효과 |
@@ -78,7 +78,7 @@ flutter run
 ```bash
 flutter analyze          # 정적 분석 (0 warnings 확인)
 dart format lib/ test/   # 코드 포맷
-flutter test             # 전체 테스트 (431개 전부 통과)
+flutter test             # 전체 테스트 (446개 전부 통과)
 flutter test --coverage  # 커버리지 → coverage/lcov.info
 flutter clean && flutter pub get
 ```
@@ -124,7 +124,7 @@ lib/
 | 로컬 저장소 | shared_preferences | 오프라인 완전 동작, 저장 데이터 규모가 키-값 수준으로 단순 |
 | 게임 엔진 | flame | 보스 배경 파티클 이펙트 |
 | 영상 재생 | video_player | 인트로 배경 루프 |
-| 테스트 | flutter_test, mockito | 186개 테스트 전량 통과 |
+| 테스트 | flutter_test, mockito | 446개 테스트 전량 통과 |
 
 아키텍처 결정 근거는 `docs/decisions/` ADR 5건에 기록되어 있다.
 
@@ -132,7 +132,7 @@ lib/
 
 ## 테스트
 
-`test/`는 Domain·Application·Data 계층을 미러링한다. **431개 전부 통과 (`flutter analyze` 경고 0건).**
+`test/`는 Domain·Application·Data 계층을 미러링한다. **446개 전부 통과 (`flutter analyze` 경고 0건).**
 
 ```
 test/
@@ -145,6 +145,7 @@ test/
 │   ├── event_test.dart            # 이벤트 선택지 효과
 │   ├── map_generator_test.dart    # DAG 생성 5대 제약 검증
 │   ├── relic_test.dart            # 유물 20종 효과
+│   ├── gold_rewards_test.dart      # 골드 보상 공식 검증
 │   ├── meta_progress_test.dart    # XP·레벨업·해금
 │   └── save_slot_test.dart        # JSON 직렬화 왕복
 ├── application/

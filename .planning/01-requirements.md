@@ -12,7 +12,7 @@
 
 1. 앱 실행 → 메인 화면에서 **"새 게임 시작"** 탭
 2. 초기 덱(Strike×5, Defend×5) 10장이 자동 배정됨
-3. 스테이지 1 몬스터 등장 (HP 30, 공격력 10)
+3. 스테이지 1 몬스터 등장 (기본형 HP 24, 공격력 10 / 네임드 몬스터는 고정 HP)
 4. 턴 시작: 에너지 3 충전, 5장 드로우
 5. 플레이어가 Strike 카드(비용 1)를 드래그해 몬스터에 사용 → 6 데미지
 6. Defend 카드(비용 1)를 사용해 방어도 5 획득
@@ -28,7 +28,7 @@
 > 스테이지 3까지 진행한 플레이어가 보스에게 패배하고, 메타 보상을 확인한다.
 
 1. 스테이지 1→2→3을 클리어하며 카드 보상으로 덱을 강화
-2. 보스 등장 (HP 80, 공격력 22, 패턴 있음)
+2. 보스 등장 (HP 96, 패턴 기반 행동: 장갑 강화 → 분쇄 강타 → 연속 타격 순환)
 3. 덱 구성 실수 또는 운 부족으로 플레이어 HP 0 → **패배**
 4. 패배 결과 화면: 클리어 스테이지, 처치 몬스터 수, 획득 XP 표시
 5. XP가 레벨업 임계치를 넘지 않더라도 누적 저장됨
@@ -43,9 +43,9 @@
 > 누적 XP가 임계치를 초과해 레벨업하고, 잠겨 있던 카드가 보상 풀에 추가된다.
 
 1. 이전 런에서 쌓인 XP가 임계치(예: 100 XP) 초과 → 레벨업 연출
-2. 레벨업 보상 화면: 새로 해금된 카드 1~2장 표시 (예: Whirlwind, Limit Break)
+2. 레벨업 보상 화면: 새로 해금된 카드 1~2장 표시 (예: 혈기(Blood Rush), 극한 각성(Limit Break))
 3. 다음 런에서 카드 보상 선택지에 해금 카드가 포함됨
-4. 플레이어가 Whirlwind(에너지 X, X만큼 데미지 2회)를 보상으로 획득
+4. 플레이어가 혈기(Blood Rush, 에너지 X, X×6 데미지)를 보상으로 획득
 5. 해금 카드로 강화된 덱으로 더 높은 스테이지 도전
 
 **핵심 검증 포인트**: XP 누적 → 레벨업 트리거, 카드 해금 상태 영속 저장, 보상 풀 갱신
@@ -85,7 +85,7 @@
 
 - [x] 단일 몬스터 등장 per 전투
 - [x] 의도(Intent) 아이콘 표시: 공격 / 방어
-- [x] 스테이지별 스탯 공식: HP = 20 + (stage × 10), 공격 = 8 + (stage × 2)
+- [x] 스테이지별 스탯 공식 (MonsterType.basic): HP = 16 + (stage × 8), 공격 = 8 + (stage × 2)
 
 ### M-04. 플레이어 상태 관리
 
@@ -94,7 +94,7 @@
 
 ### M-05. 로그라이크 진행 구조
 
-- [x] 스테이지 1 → 2 → 3 → 보스 순서 진행 (5층 맵, 절차적 생성)
+- [x] 스테이지 1 → 2 → 3 → 보스 순서 진행 (12층 맵, 절차적 생성)
 - [x] 전투 승리 시 카드 보상 3장 중 1장 선택
 - [ ] 패배 시 Soft Reset: HP 절반 · 스테이지 1 복귀 *(현재: 런 종료 후 새 런 시작)*
 
@@ -117,19 +117,19 @@
 
 ### S-02. 보스 고유 패턴
 
-- [x] 보스는 일반 몬스터와 다른 공격 패턴 보유 (IronGolem: 공격→공격→방어 사이클)
-- [x] 보스 전용 스탯 (HP 80, 공격력 22)
+- [x] 보스는 일반 몬스터와 다른 공격 패턴 보유 (IronGolem: 방어→공격→공격 사이클, 장갑 강화 → 분쇄 강타 → 연속 타격)
+- [x] 보스 전용 스탯 (HP 96, 패턴 기반 행동)
 
 ### S-03. 특수 카드
 
 - [x] **Focus**: 비용 0, 다음 카드 효과 +50%
 - [x] **Recover**: 비용 2, HP 8 회복
 - [x] **Swift Cut**: 비용 1, 데미지 4 × 2회 (총 8)
-- [x] 추가 구현: RageBurst, ToxicJab, Regroup, CrushingBlow, Fury, TripleSlash, QuickMend, SwiftGuard, ExploitWeakness, Sharpen, WeakSlash, BlockStrike, BloodRush, DevilsDeal, BattleCry, Indomitable, ComboStrike, Gamble, PoisonDart (총 26종)
+- [x] 추가 구현: RageBurst, ToxicJab, Regroup, CrushingBlow, Fury, TripleSlash, QuickMend, SwiftGuard, ExploitWeakness, Sharpen, WeakSlash, BlockStrike, BloodRush, DevilsDeal, BattleCry, Indomitable, ComboStrike, Gamble, PoisonDart, LimitBreak, Impervious, DoubleTap, FiendFire (총 30종)
 
 ### S-04. 유물(Relic) 시스템
 
-- [x] 전투 보상 또는 보물 노드에서 유물 획득
+- [x] 전투 보상(엘리트 처치 시 자동 지급), 보스 처치 시 자동 지급, 유물 보관소 노드, 상점에서 유물 획득
 - [x] 유물 패시브 효과 20종 이상 구현 (healOnTurnStart, firstAttackBonus, blockPerRemainingEnergy 등)
 
 ### S-05. 데이터 영속성
@@ -200,4 +200,4 @@
 | 호환성 | Android 6.0+, iOS 12.0+ |
 | 접근성 | 최소 글자 크기 14sp, 색상 대비 WCAG AA |
 | 코드 품질 | `flutter analyze` 경고 0건 |
-| 테스트 커버리지 | `models/` ≥ 80%, `viewmodels/` ≥ 70% |
+| 테스트 커버리지 | `domain/` ≥ 80%, `application/` ≥ 70% |

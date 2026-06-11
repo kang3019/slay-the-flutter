@@ -1,6 +1,6 @@
 # architecture.md — 아키텍처 설계 문서
 
-**버전**: 1.0 | **날짜**: 2026-05-19
+**버전**: 1.1 | **날짜**: 2026-06-11
 
 > 이 문서만 보고 60초 안에 앱 구조를 설명할 수 있도록 작성되었습니다.
 
@@ -46,7 +46,7 @@ graph TD
 | 핵심 기능 | Presentation | Application | Domain | Data |
 |-----------|-------------|-------------|--------|------|
 | **1. 전투 시스템** | 카드를 드래그해 `playCard()` 호출 | `BattleProvider`가 명령 수신·상태 갱신 | `BattleEngine`이 데미지·상태이상 계산 | — |
-| **2. 카드 / 덱 관리** | 핸드 카드 위젯 표시 | `DeckProvider`가 드로우·셔플 조율 | `Deck`이 순수 로직 처리 | — |
+| **2. 카드 / 덱 관리** | 핸드 카드 위젯 표시 | `BattleProvider`가 드로우·셔플 조율 | `Deck`이 순수 로직 처리 | — |
 | **3. 로그라이크 런 진행** | 스테이지 지도·결과 화면 표시 | `RunProvider`가 스테이지 전환·XP 산정 | `Player` · `Monster` 엔티티 상태 계산 | `LocalStorage`에 XP·레벨·해금 카드 저장 |
 
 ---
@@ -57,29 +57,32 @@ graph TD
 lib/
 ├── presentation/              # 화면에 그리는 위젯만
 │   ├── battle/
-│   │   ├── battle_screen.dart
-│   │   └── widgets/
-│   │       ├── card_widget.dart
-│   │       ├── hand_widget.dart
-│   │       └── monster_widget.dart
 │   ├── map/
-│   │   └── map_screen.dart
-│   └── shared/
-│       └── hp_bar_widget.dart
+│   ├── reward/
+│   ├── shop/
+│   └── save_slot/
 │
 ├── application/               # 상태 소유 + 명령 처리 (Riverpod Notifier)
 │   ├── battle_provider.dart
-│   ├── deck_provider.dart
-│   └── run_provider.dart
+│   ├── run_provider.dart
+│   ├── meta_progress_provider.dart
+│   └── save_slot_provider.dart
 │
 ├── domain/                    # 게임 규칙 순수 Dart (Flutter 임포트 없음)
 │   ├── entities/
 │   │   ├── card.dart
 │   │   ├── monster.dart
-│   │   └── player.dart
+│   │   ├── player.dart
+│   │   ├── relic.dart
+│   │   ├── gold_rewards.dart
+│   │   ├── meta_progress.dart
+│   │   └── save_slot.dart
+│   ├── events/
+│   │   └── game_event.dart
 │   ├── battle_engine.dart
 │   ├── deck.dart
-│   └── status_effect.dart
+│   ├── status_effect.dart
+│   └── map/
 │
 ├── data/                      # 저장·불러오기
 │   └── local_storage.dart

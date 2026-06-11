@@ -52,7 +52,8 @@
   - 근거: `lib/domain/deck.dart` — `shuffle()`, `draw()`, `discard()`, `discardHand()` 순수 Dart 구현,
     `test/domain/` — 덱 로직 단위 테스트
 - [x] 본인이 직접 도출한 게임 공식(데미지 계산, 상태 이상 배율 등)을 상수화하고 ADR에 근거 기록
-  - 근거: `lib/presentation/battle/battle_constants.dart` — 취약(×1.5)·약화(×0.75) 배율 상수 정의,
+  - 근거: `lib/domain/entities/player.dart` — `Player.vulnerableMultiplier = 1.5`, `Player.weakMultiplier = 0.75` 상수 정의,
+    `lib/domain/entities/monster.dart` — `Monster.vulnerableMultiplier` 상수 정의,
     `lib/domain/battle_engine.dart` — `_weakAdjusted()` 공식 적용,
     `SPECS.md` — 전체 게임 공식 명세
 
