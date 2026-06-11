@@ -169,7 +169,7 @@ test/
 |------|------|
 | [SPECS.md](SPECS.md) | 카드·몬스터·맵·전투 규칙 전체 도메인 명세 |
 | [docs/architecture.md](docs/architecture.md) | 4계층 구조 상세 및 의존성 흐름 |
-| [docs/setup.md](docs/setup.md) | 개발 환경 설정 (5분 실행 가이드) |
+| [docs/setup.md](docs/setup.md) | 개발 환경 설정 (5분 실행 가이드) + 릴리스 빌드(배포)·pre-commit 훅 설치 |
 | [docs/testing.md](docs/testing.md) | TDD 가이드 + 테스트 실행 방법 |
 | [docs/decisions/](docs/decisions/) | ADR 0001~0005 |
 | [.planning/00-vision.md](.planning/00-vision.md) | 프로젝트 비전 및 로드맵 |
