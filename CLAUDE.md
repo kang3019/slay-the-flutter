@@ -2,6 +2,8 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+@AGENTS.md
+
 ## Project Overview
 
 **Slay the Flutter** is a Flutter deckbuilding roguelike card game (Android/iOS). Each run starts with a 10-card default deck and progresses through stages 1→2→3→Boss. Cards, relics, and mechanics unlock permanently via an XP/level system. See `SPECS.md` for full game rules and `AGENTS.md` for mandatory coding principles.
@@ -35,24 +37,15 @@ flutter clean && flutter pub get
 
 ## Architecture
 
-4-Layer Layered Architecture + Riverpod. Four layers with strict import rules enforced by `AGENTS.md`:
+4-Layer Layered Architecture + Riverpod — see `AGENTS.md` for the enforced layer rules, dependency direction, and provider conventions. Directory layout:
 
 ```
 lib/
 ├── presentation/  # Widgets only — reads state, dispatches events to Application
-│                  # No business logic; >3 lines of conditional logic → extract
-├── application/   # Riverpod Notifier/AsyncNotifier providers
-│                  # Files named with _provider.dart suffix
-│                  # Never imports presentation/
-├── domain/        # Pure Dart — game rules only (damage calc, deck logic, entities)
-│                  # No Flutter, no Riverpod imports allowed here
+├── application/   # Riverpod Notifier/AsyncNotifier providers (_provider.dart suffix)
+├── domain/        # Pure Dart — game rules only, no Flutter/Riverpod imports
 └── data/          # SharedPreferences wrapper — read/write only
-                   # No business logic; called only by application/
 ```
-
-**Dependency direction**: `Presentation → Application → Domain ← Data`. Reverse imports are forbidden.
-
-**Provider pattern**: Use `Notifier` / `AsyncNotifier` (not deprecated `StateNotifier`). `ref.watch` is only valid inside `build()` or Widget tree. `BuildContext` must never be passed into Application layer.
 
 ## Test Structure
 
@@ -108,15 +101,6 @@ Energy per turn    = 3  |  Draw per turn = 5
 Gold reward        = (floor + 1) + 10~14  (monster) / + 20~25 (elite) / 0 (boss)
 Relic reward       = elite victory → 1 relic (auto) / boss victory → 1 relic (auto)
 ```
-
-## Code Conventions (AGENTS.md)
-
-- All `public` classes, methods, and fields require `///` dartdoc comments explaining *why*, not what.
-- Magic numbers must be extracted to named `const` values.
-- TODO format: `// TODO(kang3019): description`
-- Files over 300 lines should be split.
-- Remove all `print()` statements before committing.
-- Hardcoded strings must not live inside view logic — use a separate constants file.
 
 ## Planning Docs
 
