@@ -56,9 +56,13 @@
     `lib/domain/entities/monster.dart` — `Monster.vulnerableMultiplier` 상수 정의,
     `lib/domain/battle_engine.dart` — `_weakAdjusted()` 공식 적용,
     `SPECS.md` — 전체 게임 공식 명세
+- [x] Claude Code 공식 메모리 문서의 `@import` 규칙을 적용해 `CLAUDE.md` ↔ `AGENTS.md` 중복 제거
+  - 저희는 `docs/llm-wiki/010`에서 발췌한 "CLAUDE.md는 AGENTS.md를 `@import`하고, 중복 규칙은 AGENTS.md로 일원화하라"는 공식 권장 패턴을 그대로 적용해, `CLAUDE.md`의 `## Architecture`·`## Code Conventions` 중복 절을 제거하고 `@AGENTS.md` import로 연결했습니다.
+  - 근거: `CLAUDE.md`(상단 `@AGENTS.md` import, `## Architecture` 절 축약), `AGENTS.md`(규칙의 단일 진실 공급원), `docs/llm-wiki/010-claude-md-agents-md-overlap.md` — 공식 문서 발췌 및 적용 기록
 
 **발표 시 설명(2~3분)**: "왜 4-Layer + Riverpod을 카드게임 전투 상태 머신에 맞게 변형했는가"를
-`docs/decisions/ADR-0002`·`ADR-0003`의 결정 근거를 바탕으로 설명한다.
+`docs/decisions/ADR-0002`·`ADR-0003`의 결정 근거를 바탕으로 설명하고,
+CLAUDE.md/AGENTS.md 중복 제거는 한 문장으로 짧게 언급한다.
 
 **달성 여부**: ☑ 달성
 
