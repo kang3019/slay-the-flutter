@@ -395,7 +395,7 @@ html,body{width:100%;height:100%;overflow:hidden;
   state = _engine.toState();  <span class="c3">// ② 상태 갱신 → 화면 리빌드</span>
 }</div>
   <div style="margin-top:10px;background:linear-gradient(135deg,rgba(124,58,237,.15),rgba(167,139,250,.07));border:1px solid rgba(167,139,250,.35);border-radius:12px;padding:9px 22px;font-size:14px;font-weight:600;color:var(--t);text-align:center;max-width:920px">
-    💡 <b>본인만의 기법</b> — <code>CardEffectType</code> enum으로 카드 효과를 추상화해 새 카드는 분기 추가만으로 확장되고, <code>BattleEngine</code>을 상태머신으로 직접 설계해 Riverpod과 자연스럽게 연결됩니다.
+    💡 <b>저희만의 기법</b> — <code>CardEffectType</code> enum으로 카드 효과를 추상화해 새 카드는 분기 추가만으로 확장되고, <code>BattleEngine</code>을 상태머신으로 직접 설계해 Riverpod과 자연스럽게 연결됩니다.
   </div>
 </div>
 
@@ -531,14 +531,10 @@ html,body{width:100%;height:100%;overflow:hidden;
 <div class="sl bg-g" id="s12">
   <div class="tag">Performance &amp; Quality</div>
   <div class="sh" style="font-size:clamp(20px,2.6vw,32px)">성능 최적화 &amp; 코드 품질 관리</div>
-  <div class="grid4" style="max-width:1160px;margin-top:6px">
+  <div class="grid3" style="max-width:1000px;margin-top:6px">
     <div class="icard">
       <h4>🖌️ 렌더링 &amp; 애니메이션</h4>
       <p>9노드·13연결선 DAG 맵을 위젯 트리 없이 Canvas에 직접 드로우, <code>shouldRepaint</code>로 재드로우 방지. 전투 이펙트는 단순 트랜지션으로 60fps 유지.</p>
-    </div>
-    <div class="icard">
-      <h4>🧪 테스트 자원 격리</h4>
-      <p>매 테스트마다 <code>ProviderContainer</code>를 생성·dispose해 상태·메모리가 테스트 간 누적되지 않도록 관리.</p>
     </div>
     <div class="icard">
       <h4>📏 AGENTS.md 코딩 원칙</h4>
@@ -637,7 +633,7 @@ flutter run</div>
 <!-- ── S16: 마무리 및 향후 발전 방향 ─────────────────────── -->
 <div class="sl bg-v" id="s16">
   <div class="tag">Wrap-up &amp; Roadmap</div>
-  <div class="sh" style="font-size:clamp(20px,2.6vw,32px)">마무리 및 향후 발전 방향</div>
+  <div class="sh" style="font-size:clamp(20px,2.6vw,32px)">마무리 · 느낀점 · 향후 발전 방향</div>
   <div class="meta" style="margin-top:6px">
     <div class="mi" style="color:var(--g);border-color:rgba(52,211,153,.3);background:rgba(52,211,153,.08)">✅ 446 / 446 테스트 통과</div>
     <div class="mi" style="color:var(--g);border-color:rgba(52,211,153,.3);background:rgba(52,211,153,.08)">✅ analyze 경고 0건</div>
