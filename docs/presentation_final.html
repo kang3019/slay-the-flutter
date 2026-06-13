@@ -63,6 +63,17 @@ html,body{width:100%;height:100%;overflow:hidden;
   font-size:13.5px;font-weight:700;color:#c4b5fd;
   letter-spacing:.12em;text-transform:uppercase;margin-bottom:18px;
 }
+.wbs-link-btn{
+  position:absolute;top:24px;right:32px;z-index:10;
+  display:inline-flex;align-items:center;gap:6px;
+  background:linear-gradient(135deg,#7c3aed,var(--v));
+  color:#fff;text-decoration:none;
+  border-radius:20px;padding:8px 18px;
+  font-size:14px;font-weight:700;
+  box-shadow:0 0 16px rgba(167,139,250,.35);
+  transition:box-shadow .2s;
+}
+.wbs-link-btn:hover{box-shadow:0 0 24px rgba(167,139,250,.55)}
 .sh{
   font-size:clamp(24px,3.2vw,40px);font-weight:800;letter-spacing:-.4px;
   text-align:center;margin-bottom:12px;
@@ -324,6 +335,7 @@ html,body{width:100%;height:100%;overflow:hidden;
 
 <!-- ── S4: 프로젝트 계획 & 진행 현황 (WBS + 스프린트, 구 S4+S5 병합) ── -->
 <div class="sl bg-y" id="s4">
+  <a class="wbs-link-btn" href="./index.html" target="_blank">📊 WBS 일정 보기</a>
   <div class="tag">Project Plan &amp; Progress</div>
   <div class="sh" style="font-size:clamp(20px,2.6vw,32px)">프로젝트 계획 &amp; 진행 현황 — WBS 100% · Sprint 1~6 완료</div>
   <div class="grid7" style="max-width:1140px;margin-top:8px">
